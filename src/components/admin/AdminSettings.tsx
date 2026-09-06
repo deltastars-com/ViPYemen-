@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Save, Smartphone, Globe, Share2, ShieldCheck, CheckCircle2 } from "lucide-react";
+import {
+  Save,
+  Smartphone,
+  Share2,
+  ShieldCheck,
+  CheckCircle2,
+  KeyRound,
+  AlertTriangle,
+} from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Button, Card, Input, Label, Spinner } from "@/components/ui";
-import { getAdminToken } from "@/lib/convex";
 
 const CONTACT_FIELDS = [
   { key: "brandName", label: "اسم المنصة" },
@@ -32,10 +39,19 @@ export function AdminSettings({ token }: { token: string }) {
   const settings = useQuery(api.settings.getAll, { token });
   const updateSetting = useMutation(api.settings.updateSetting);
   const ensureDefaults = useMutation(api.settings.ensureDefaults);
+  const changePassword = useMutation(api.users.changePassword);
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Password change form state
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwError, setPwError] = useState("");
+  const [pwDone, setPwDone] = useState(false);
 
   useEffect(() => {
     if (settings) {
@@ -58,6 +74,32 @@ export function AdminSettings({ token }: { token: string }) {
       setTimeout(() => setSaved(false), 2500);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwError("");
+    setPwDone(false);
+    if (pwNew !== pwConfirm) {
+      setPwError("كلمتا المرور غير متطابقتين");
+      return;
+    }
+    if (pwNew.length < 8) {
+      setPwError("كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل");
+      return;
+    }
+    setPwBusy(true);
+    try {
+      await changePassword({ token, currentPassword: pwCurrent, newPassword: pwNew });
+      setPwDone(true);
+      setPwCurrent("");
+      setPwNew("");
+      setPwConfirm("");
+    } catch (err: any) {
+      setPwError(err.message ?? "تعذر تغيير كلمة المرور");
+    } finally {
+      setPwBusy(false);
     }
   }
 
@@ -120,11 +162,62 @@ export function AdminSettings({ token }: { token: string }) {
               أمان الحساب
             </h3>
             <p className="text-xs leading-relaxed text-ink-300">
-              بريد الإدارة: <b className="text-cream" dir="ltr">vipservicesyemen@gmail.com</b> — يمكنك
-              تغيير كلمة المرور في أي وقت من صفحة تسجيل الدخول (نسيت كلمة المرور).
-              يُنصح بتغيير كلمة المرور الافتراضية فور أول دخول.
+              بريد الإدارة: <b className="text-cream" dir="ltr">vipservicesyemen@gmail.com</b>
             </p>
-            <a href="/auth" className="btn-ghost mt-3 !py-2 text-xs">إدارة كلمة المرور</a>
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-200">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>
+                غيّر كلمة المرور الافتراضية فوراً بعد أول دخول. في حال نسيان
+                كلمة المرور استخدم استعادة كلمة المرور من صفحة تسجيل الدخول.
+              </p>
+            </div>
+            <form onSubmit={handleChangePassword} className="mt-4 space-y-3">
+              <div>
+                <Label>كلمة المرور الحالية</Label>
+                <Input
+                  type="password"
+                  value={pwCurrent}
+                  onChange={(e) => setPwCurrent(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <div>
+                <Label>كلمة المرور الجديدة</Label>
+                <Input
+                  type="password"
+                  value={pwNew}
+                  onChange={(e) => setPwNew(e.target.value)}
+                  placeholder="8 أحرف على الأقل"
+                  required
+                />
+              </div>
+              <div>
+                <Label>تأكيد كلمة المرور الجديدة</Label>
+                <Input
+                  type="password"
+                  value={pwConfirm}
+                  onChange={(e) => setPwConfirm(e.target.value)}
+                  placeholder="أعد كتابة كلمة المرور"
+                  required
+                />
+              </div>
+              {pwError && (
+                <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs font-bold text-rose-300">
+                  {pwError}
+                </p>
+              )}
+              {pwDone && (
+                <p className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs font-bold text-emerald-300">
+                  <CheckCircle2 className="h-4 w-4" />
+                  تم تغيير كلمة المرور بنجاح
+                </p>
+              )}
+              <Button type="submit" variant="ghost" loading={pwBusy} className="!py-2 text-xs">
+                <KeyRound className="h-4 w-4 text-gold-400" />
+                تغيير كلمة المرور
+              </Button>
+            </form>
           </Card>
         </div>
       </div>

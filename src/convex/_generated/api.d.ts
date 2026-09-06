@@ -10,6 +10,8 @@
 
 import type * as ads from "../ads.js";
 import type * as auth from "../auth.js";
+import type * as automation from "../automation.js";
+import type * as crons from "../crons.js";
 import type * as email from "../email.js";
 import type * as finance from "../finance.js";
 import type * as internal_ from "../internal.js";
@@ -31,6 +33,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   ads: typeof ads;
   auth: typeof auth;
+  automation: typeof automation;
+  crons: typeof crons;
   email: typeof email;
   finance: typeof finance;
   internal: typeof internal_;

@@ -2,7 +2,7 @@
 
 ## 📋 نظرة عامة
 
-هذا الدليل يشرح كيفية إنشاء إصدار جديد من تطبيق ViP Yemen ورفعه إلى GitHub Releases.
+هذا الدليل يشرح كيفية إنشاء إصدار جديد من منصة ViP Yemen ورفعه إلى GitHub Releases تلقائياً.
 
 ## 🎯 معلومات التطبيق
 
@@ -10,126 +10,107 @@
 |--------|--------|
 | **اسم الحزمة** | `com.vip.yemen` |
 | **اسم التطبيق** | ViP Yemen |
-| **إصدار التطوير الحالي** | 1.1.0 |
-| **最低 Android** | 7.0 (API 24) |
+| **التقنيات** | Vite + React + TypeScript + Convex + PWA |
 
 ## 🚀 خطوات الإصدار
 
-### 1. تحديث الإصدار
+### 1. تحديث رقم الإصدار
 
 ```bash
-# تحديث إصدار Android
-node scripts/set-android-version.mjs 1.2.0
-
-# تحديث إصدار capacitor-app
-cd capacitor-app
-npm version 1.2.0 --no-git-tag-version
+# عدّل رقم الإصدار في package.json
+# مثال: "version": "5.1.0"
 ```
 
-### 2. الالتزام بالتغييرات
+### 2. بناء وفحص محلياً
+
+```bash
+bun install
+bun convex dev --once      # توليد أنواع Convex والتحقق من الباك إند
+bun run typecheck          # فحص الأنواع
+bun run build              # بناء PWA في dist/
+```
+
+### 3. الالتزام وإنشاء وسم (Tag)
 
 ```bash
 git add .
-git commit -m "chore: update version to 1.2.0"
-```
-
-### 3. إنشاء وسم (Tag)
-
-```bash
-git tag v1.2.0
+git commit -m "release: v5.1.0"
+git tag v5.1.0
 ```
 
 ### 4. رفع التغييرات
 
 ```bash
 git push origin main
-git push origin v1.2.0
+git push origin v5.1.0
 ```
 
-### 5. انتظار بناء CI/CD
+### 5. البناء التلقائي
 
-سيقوم GitHub Actions تلقائياً بـ:
-1. بناء تطبيق الويب
-2. مزامنة Capacitor Android
-3. بناء APKDebug و AABRelease
-4. إنشاء إصدار GitHub مع الملفات
+عند دفع وسم يبدأ بـ `v`، يعمل سير العمل `.github/workflows/release.yml` تلقائياً:
 
-## 📱 الملفات الناتجة
+1. تثبيت الاعتماديات (Bun)
+2. توليد الأيقونات
+3. فحص الأنواع
+4. بناء تطبيق الويب (PWA) — `dist/`
+5. إنشاء GitHub Release يحتوي:
+   - حزمة الويب الجاهزة للاستضافة (PWA — يعمل بدون إنترنت)
+   - الكود المصدري الكامل (الواجهة + الباك إند Convex + قاعدة البيانات)
+   - وثائق النشر وسياسة الخصوصية
 
-### APK (Debug)
-- **الاستخدام**: للتثبيت المباشر على الأجهزة
-- **الملف**: `ViP-Yemen-X.X.X-debug.apk`
-- **لا يحتاج توقيع**
+## 📱 إصدارات الهاتف المحمول
 
-### AAB (Release)
-- **الاستخدام**: لرفعه إلى Google Play Store
-- **الملف**: `ViP-Yemen-X.X.X-release.aab`
-- **يحتاج توقيع**
+- **APK (Debug)**: تثبيت مباشر على الأجهزة
+- **AAB (Release)**: للرفع إلى Google Play Store
+- **iOS**: عبر App Store (نفس الحزمة `com.vip.yemen`)
 
-## 📥 تثبيت APK مباشرة
+تُبنى إصدارات Android عبر مشروع `android-native/` (راجع `PUBLISHING-GUIDE.md` و`codemagic.yaml`)،
+ويمكن تشغيلها محلياً:
 
-1. حمّل ملف `.apk` من صفحة الإصدارات
-2. فعّل "تثبيت من مصادر غير معروفة" في إعدادات Android
-3. افتح الملف المحمل وتثبّت
+```bash
+sh ./build-apk.sh android
+```
+
+## 📥 تثبيت تطبيق الويب (PWA)
+
+1. افتح المنصة في Chrome / Safari على هاتفك
+2. اضغط «تثبيت / Install» أو «مشاركة ← إضافة إلى الشاشة الرئيسية»
+3. يعمل التطبيق كتطبيق مستقل وبدون إنترنت
 
 ## 🔄 التحديث التلقائي
 
 - ✅ نفس الحزمة `com.vip.yemen`
 - ✅ لا يحتاج المستخدم لحذف النسخة القديمة
 - ✅ `versionCode` متزايد
-- ✅ التطبيق الجديد يحل محل القديم تلقائياً
-
-## 📊 هيكل أرقام الإصدار
-
-```
-versionCode = Major × 1,000,000 + Minor × 1,000 + Patch
-
-مثال:
-1.0.0 → 1000000
-1.1.0 → 1010000
-1.2.0 → 1020000
-2.0.0 → 2000000
-```
-
-## 🔐 التوقيع
-
-### توقيع Debug
-- يتم تلقائياً بواسطة Gradle
-- لا يحتاج ملفات توقيع
-
-### توقيع Release
-- يحتاج `keystore.properties`
-- راجع `capacitor-app/SIGNING-GUIDE.md`
+- ✅ PWA يتحدث تلقائياً عبر service worker
 
 ## 📝 سجل التغييرات
 
-### الإصدار 1.1.0
-- ✅ تغيير الحزمة إلى `com.vip.yemen`
-- ✅ نظام الترجمة الشامل (عربي/إنجليزي)
-- ✅ نظام الإشعارات المتقدم
-- ✅ نظام الأتمتة الشامل
-- ✅ قسم العروض الترويجية
-- ✅ الحسابات المالية في التذييل
+### الإصدار 5.0.0
+- ✅ بناء المنصة كاملة: توظيف، عقارات، تسويق إلكتروني، برمجيات
+- ✅ لوحة تحكم متكاملة بمراجعة ونشر وأرشفة الطلبات
+- ✅ الشريط الإعلاني (إعلانات مُدارة من لوحة التحكم)
+- ✅ صالة العروض الترويجية (صور وفيديوهات)
+- ✅ نظام الأتمتة: نشر مجدول وانتهاء صلاحية وأرشفة تلقائية
+- ✅ المساعد الذكي بمحرك بحث معرفي شامل
+- ✅ النظام المالي (إيرادات/مصروفات)
+- ✅ PWA يعمل بدون إنترنت + سير عمل بناء تلقائي للإصدارات
 
 ## 🛠️ أوامر مفيدة
 
 ```bash
-# تحديث الإصدار
-node scripts/set-android-version.mjs X.Y.Z
+# البناء الكامل وتجهيز ملفات الإصدار
+sh ./build-apk.sh
 
-# بناء محلي
-cd capacitor-app
-npm run build
-npx cap sync android
-cd android && ./gradlew assembleDebug
+# البناء مع Android (يتطلب android-native/)
+sh ./build-apk.sh android
 
-# التحقق من التوقيع
-$ANDROID_HOME/build-tools/*/apksigner verify --verbose app-debug.apk
+# فحص سريع
+bun run typecheck
 ```
 
 ## 📞 الدعم
 
-لأي استفسارات:
 - البريد: ViPservicesYemen@gmail.com
 - واتساب: 00967711780999
 

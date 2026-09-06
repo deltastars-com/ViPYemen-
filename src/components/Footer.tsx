@@ -49,7 +49,7 @@ export function Footer() {
                 key={s.label}
                 href={s.href}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 aria-label={s.label}
                 title={s.label}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
@@ -60,7 +60,7 @@ export function Footer() {
             <a
               href={TIKTOK_URL}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               aria-label="تيك توك"
               title="تيك توك"
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
@@ -76,7 +76,7 @@ export function Footer() {
                 key={l.label}
                 href={l.href}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="chip !text-gold-300/90 transition-colors hover:!border-gold-500/60 hover:!text-gold-200"
               >
                 {l.label}
@@ -122,7 +122,7 @@ export function Footer() {
               اليمن · صنعاء · حي شميلة
             </li>
           </ul>
-          <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btn-gold mt-5 !py-2.5 text-xs">
+          <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn-gold mt-5 !py-2.5 text-xs">
             <MessageCircle className="h-4 w-4" />
             تواصل عبر واتساب
           </a>

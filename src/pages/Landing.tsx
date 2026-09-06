@@ -254,7 +254,7 @@ export function Landing() {
                   <p className="text-xs text-ink-300" dir="ltr">{PLATFORM_WHATSAPP_DISPLAY}</p>
                 </div>
               </div>
-              <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btn-gold mt-4 w-full !py-2.5 text-xs">
+              <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn-gold mt-4 w-full !py-2.5 text-xs">
                 <MessageCircle className="h-4 w-4" />
                 راسلنا الآن
               </a>

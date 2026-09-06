@@ -118,7 +118,7 @@ export function OffersPage() {
                           `مرحباً، أريد الاستفادة من العرض المميز "${featured.title}" في منصة ViP Yemen`
                         )}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="btn-gold"
                       >
                         <MessageCircle className="h-4 w-4" />
@@ -128,7 +128,7 @@ export function OffersPage() {
                         <a
                           href={featured.videoUrl}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="btn-ghost"
                         >
                           <PlayCircle className="h-4 w-4 text-gold-400" />
@@ -173,7 +173,7 @@ export function OffersPage() {
                 إدارة المنصة — ننشر عروضك بالصور والفيديوهات على واجهة المنصة
                 وقنوات التواصل.
               </p>
-              <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btn-gold">
+              <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn-gold">
                 <MessageCircle className="h-4 w-4" />
                 واتساب المنصة: {PLATFORM_WHATSAPP_DISPLAY}
               </a>

@@ -262,7 +262,7 @@ export function AssistantPage() {
                         key={i}
                         href={r.url}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="card-surface card-surface-hover block p-4"
                       >
                         <p className="text-sm font-extrabold text-gold-300">{r.title}</p>
@@ -294,7 +294,7 @@ export function AssistantPage() {
             لم تجد ما تبحث عنه؟ تواصل مع فريق المنصة مباشرة — يسعدنا مساعدتك
             في أي استفسار.
           </p>
-          <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btn-gold">
+          <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn-gold">
             <MessageCircle className="h-4 w-4" />
             تواصل معنا عبر واتساب
           </a>

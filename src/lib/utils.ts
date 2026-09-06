@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 export function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
@@ -54,3 +56,44 @@ export function whatsappLink(phone: string, text: string): string {
 
 export const PLATFORM_WHATSAPP_DISPLAY = "00967711780999";
 export const PLATFORM_WHATSAPP_LINK = "https://wa.me/967711780999";
+
+/**
+ * Opens an external URL in a new tab (web) or the system browser (mobile app)
+ * with noopener isolation — the app shell is never navigated away from.
+ */
+export function openExternal(url: string): void {
+  const win = window.open(url, "_blank", "noopener,noreferrer");
+  if (win) win.opener = null;
+}
+
+/**
+ * Global guard: any click on an external http(s) link without target="_blank"
+ * is redirected to the system browser / a new tab, so the user is never ejected
+ * from the app. Same-origin links (SPA routes) keep their default behavior.
+ */
+export function useExternalLinkGuard(): void {
+  useEffect(() => {
+    function onClick(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const el = event.target as Element | null;
+      const anchor = el?.closest?.("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href || !/^https?:\/\//i.test(href)) return;
+      let url: URL;
+      try {
+        url = new URL(href, window.location.href);
+      } catch {
+        return;
+      }
+      if (url.origin === window.location.origin) return;
+      // target="_blank" links already open in a new context (tab / system browser).
+      if (anchor.target === "_blank") return;
+      event.preventDefault();
+      openExternal(url.href);
+    }
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+}

@@ -233,7 +233,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
                   `رمز التحقق الخاص بي: ${otpState.code}\nالاسم: ${fullName}\nالرقم: ${phone}`
                 )}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 font-bold text-emerald-300 underline underline-offset-4"
               >
                 <MessageCircle className="h-3.5 w-3.5" />

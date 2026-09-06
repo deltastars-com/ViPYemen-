@@ -91,7 +91,7 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
         <div className="mt-3 flex flex-wrap gap-2">
           {item.attachments.map((a, i) =>
             a.kind === "image" && a.url ? (
-              <a key={i} href={a.url} target="_blank" rel="noreferrer">
+              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer">
                 <img
                   src={a.url}
                   alt={a.name}
@@ -104,7 +104,7 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
                 key={i}
                 href={a.url ?? "#"}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="flex items-center gap-1.5 rounded-lg border border-ink-600/50 bg-ink-800/60 px-2.5 py-1.5 text-[11px] font-bold text-ink-200 transition-colors hover:border-gold-500/50"
               >
                 {a.kind === "image" ? <ImageIcon className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
@@ -137,7 +137,7 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
             `مرحباً، أنا مهتم بـ "${item.title}" المنشور على منصة ViP Yemen`
           )}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#25d366]/15 px-3 py-1.5 text-[11px] font-black text-[#4ade80] transition-colors hover:bg-[#25d366]/25"
         >
           <MessageCircle className="h-3.5 w-3.5" />

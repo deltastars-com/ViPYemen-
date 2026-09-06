@@ -1,4 +1,5 @@
 import { useQuery } from "convex/react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Download,
@@ -79,7 +80,7 @@ export function ReleasesPage() {
                         <a
                           href={r.fileUrl}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="btn-gold shrink-0 !px-4 !py-2 text-xs"
                         >
                           <Download className="h-4 w-4" />
@@ -126,12 +127,12 @@ function InstallGuide() {
           <li>• تطبيق Android: يُرفع بصيغتي APK وAAB للحزمة com.vip.yemen</li>
           <li>• تطبيق iOS: عبر App Store بنفس الحزمة com.vip.yemen</li>
           <li>• الكود المصدري الكامل والوثائق متاحة في مستودع المشروع وقسم الإصدارات</li>
-          <li>• سياسة الخصوصية: <a className="text-gold-400 underline underline-offset-4" href="/privacy-policy">من هنا</a></li>
+          <li>• سياسة الخصوصية: <Link className="text-gold-400 underline underline-offset-4" to="/privacy-policy">من هنا</Link></li>
         </ul>
         <a
           href="https://wa.me/967711780999?text=مرحباً، أريد الحصول على نسخة من تطبيق ViP Yemen"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="btn-ghost mt-4 !py-2 text-xs"
         >
           <MessageCircle className="h-4 w-4 text-[#4ade80]" />

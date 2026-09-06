@@ -161,7 +161,7 @@ export function AdminSubmissions({
                     <a
                       href={whatsappLink(row.phone, `مرحباً ${row.fullName}، بخصوص طلبك "${row.title}" في منصة ViP Yemen`)}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 rounded-lg bg-[#25d366]/15 px-2.5 py-1.5 text-[11px] font-black text-[#4ade80] hover:bg-[#25d366]/25"
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
@@ -237,7 +237,7 @@ export function AdminSubmissions({
                   <div className="flex flex-wrap gap-2 border-t border-ink-700/50 px-4 py-2.5">
                     {row.attachments.map((a: any, i: number) =>
                       a.kind === "image" && a.url ? (
-                        <a key={i} href={a.url} target="_blank" rel="noreferrer" title={a.name}>
+                        <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" title={a.name}>
                           <img
                             src={a.url}
                             alt={a.name}
@@ -249,7 +249,7 @@ export function AdminSubmissions({
                           key={i}
                           href={a.url ?? "#"}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="rounded-lg border border-ink-600/50 bg-ink-800/60 px-2.5 py-1.5 text-[10px] font-bold text-ink-200 hover:border-gold-500/50"
                         >
                           {a.name}
@@ -398,7 +398,7 @@ function EditModal({
                   key={i}
                   href={a.url ?? "#"}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="flex items-center gap-1.5 rounded-lg border border-ink-600/50 bg-ink-800/60 px-3 py-1.5 text-[11px] font-bold text-ink-200 hover:border-gold-500/50"
                 >
                   <Eye className="h-3.5 w-3.5" />

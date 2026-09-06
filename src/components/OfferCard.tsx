@@ -23,7 +23,7 @@ export function OfferCard({ offer }: { offer: PublicOffer }) {
       }`}
     >
       {offer.imageUrl && (
-        <a href={offer.imageUrl} target="_blank" rel="noreferrer">
+        <a href={offer.imageUrl} target="_blank" rel="noopener noreferrer">
           <img
             src={offer.imageUrl}
             alt={offer.title}
@@ -70,7 +70,7 @@ export function OfferCard({ offer }: { offer: PublicOffer }) {
             <a
               href={offer.videoUrl}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600/60 px-3 py-1.5 text-[11px] font-black text-ink-200 transition-colors hover:border-gold-500/50 hover:text-gold-300"
             >
               <PlayCircle className="h-3.5 w-3.5" />
@@ -80,7 +80,7 @@ export function OfferCard({ offer }: { offer: PublicOffer }) {
           <a
             href={whatsappLink("00967711780999", `مرحباً، أنا مهتم بالعرض "${offer.title}" على منصة ViP Yemen`)}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#25d366]/15 px-3 py-1.5 text-[11px] font-black text-[#4ade80] transition-colors hover:bg-[#25d366]/25"
           >
             <MessageCircle className="h-3.5 w-3.5" />

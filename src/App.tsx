@@ -1,7 +1,8 @@
 import { Component, Suspense, lazy, useEffect, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import { LogoMark } from "./components/Logo";
+import { useExternalLinkGuard } from "./lib/utils";
 
 const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
 const JobsPage = lazy(() => import("./pages/JobsPage").then((m) => ({ default: m.JobsPage })));
@@ -56,9 +57,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
             <button onClick={() => window.location.reload()} className="btn-gold">
               تحديث الصفحة
             </button>
-            <a href="/" className="btn-ghost">
+            <Link to="/" className="btn-ghost">
               الرئيسية
-            </a>
+            </Link>
           </div>
         </div>
       );
@@ -75,11 +76,17 @@ function ScrollToTop() {
   return null;
 }
 
+function ExternalLinkGuard() {
+  useExternalLinkGuard();
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
         <ScrollToTop />
+        <ExternalLinkGuard />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route element={<AppLayout />}>

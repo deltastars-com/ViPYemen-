@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -18,6 +18,8 @@ jobs:
   build:
     name: Build PWA
     runs-on: ubuntu-latest
+    outputs:
+      pages_api: ${{ steps.pages.outcome }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,18 +44,34 @@ jobs:
           VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
 
       - name: Configure Pages
+        id: pages
         uses: actions/configure-pages@v5
+        continue-on-error: true
         with:
           enablement: true
 
       - name: Upload artifact
+        if: steps.pages.outcome == 'success'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
+      # Fallback: publish to the gh-pages branch when the Pages API is not
+      # accessible to the workflow token. The site serves from that branch
+      # once Pages is enabled with "Deploy from a branch" source.
+      - name: Publish to gh-pages branch (fallback)
+        if: steps.pages.outcome != 'success'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true
+          commit_message: "Pages deploy: ${{ github.sha }}"
+
   deploy:
     name: Deploy to Pages
     needs: build
+    if: needs.build.outputs.pages_api == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

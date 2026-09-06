@@ -1,8 +1,9 @@
 import { Component, Suspense, lazy, useEffect, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import { LogoMark } from "./components/Logo";
 import { useExternalLinkGuard } from "./lib/utils";
+import { initNativeShell } from "./lib/native";
 
 const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
 const JobsPage = lazy(() => import("./pages/JobsPage").then((m) => ({ default: m.JobsPage })));
@@ -84,12 +85,21 @@ function ExternalLinkGuard() {
   return null;
 }
 
+function NativeShell() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    initNativeShell({ navigate }).catch(() => {});
+  }, [navigate]);
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
         <ScrollToTop />
         <ExternalLinkGuard />
+        <NativeShell />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route element={<AppLayout />}>

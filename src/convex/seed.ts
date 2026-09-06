@@ -255,6 +255,58 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 5.4 — تطبيق حقيقي: عمل دون إنترنت، إصلاح الخادم، أيقونة سليمة
+    const v540 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "5.4.0"))
+      .first();
+    if (!v540) {
+      await ctx.db.insert("releases", {
+        version: "5.4.0",
+        title: "تطبيق Android 5.4 — حقيقي يعمل بدون إنترنت (APK)",
+        description:
+          "الإصدار 5.4 يحوّل التطبيق إلى تطبيق حقيقي متكامل: يعمل بكامل واجهته بدون إنترنت وبذلك يبقى عاملاً حتى لو تعذّر الوصول للموقع، إصلاح كامل لخطأ رابط الخادم، أيقونة رسمية سليمة غير مشوهة على كل الشاشات، زر الرجوع الفعلي للهاتف يعمل داخل الأقسام، وشريط حالة بلون الهوية.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.4.0/vip-yemen-android-v5.4.0.apk",
+        notes: "ألغِ تثبيت النسخة السابقة ثم ثبّت هذا الملف — الحزمة com.vip.yemen",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.4.0",
+        title: "حزمة Google Play — AAB 5.4",
+        description:
+          "حزمة AAB محدثة بكل إصلاحات 5.4: العمل دون اتصال، الأيقونة الرسمية السليمة، وسلوك التطبيق الأصلي.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.4.0/vip-yemen-android-v5.4.0.aab",
+        notes: "استخدم store-listing.json و PUBLISHING-GUIDE.md لإكمال القائمة",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.4.0",
+        title: "تطبيق الويب المتقدم 5.4 (PWA) — دون اتصال",
+        description:
+          "نسخة الويب بالوضع دون اتصال الكامل: تخزين مؤقت ذكي لكل ملفات التطبيق، تحديث تلقائي، وشريط حالة يوضح وضع الاتصال.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.4.0/vip-yemen-web-pwa-v5.4.0.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.4.0",
+        title: "الكود المصدري الكامل + الوثائق 5.4",
+        description:
+          "جميع ملفات المشروع المحدثة: الواجهة، الباك إند (Convex)، مشروعا Android/iOS بالأيقونة الرسمية، ملفات التوثيق والتوقيع والملكية، سياسة الخصوصية، ودليل الإدارة والتشغيل.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.4.0/vip-yemen-source-v5.4.0.zip",
+        notes: "يشمل PRIVACY-POLICY-APP.md و OPERATIONS-GUIDE.md و store-listing.json",
+        createdAt: now,
+      });
+    }
+
     // الإصدار 5.1 — الشعار الرسمي، قنوات رقمية، وأزرار تواصل مباشر
     const v510 = await ctx.db
       .query("releases")

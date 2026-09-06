@@ -1,16 +1,17 @@
 import { ConvexReactClient } from "convex/react";
 
-const CONVEX_URL = import.meta.env.VITE_CONVEX_URL as string | undefined;
+/**
+ * The backend URL is baked in at build time from VITE_CONVEX_URL.
+ * The app is OFFLINE-FIRST: if the URL is missing (or the backend is
+ * unreachable) the platform still boots fully from its cached copy —
+ * published content loads whenever a connection is available, and the
+ * app NEVER blocks on the backend at startup.
+ */
+export const CONVEX_URL = (import.meta.env.VITE_CONVEX_URL as string | undefined)?.trim() || "";
 
-// If a production build was produced without the backend URL baked in,
-// show the visible boot-error overlay instead of a frozen blank screen.
-if (!CONVEX_URL && typeof window !== "undefined") {
-  const bootError = (window as unknown as { __vipBootError?: (msg: string) => void })
-    .__vipBootError;
-  bootError?.("لم يتم ضبط رابط الخادم (VITE_CONVEX_URL) في هذه النسخة — أعد التنزيل من قسم الإصدارات.");
-}
-
-export const convex = new ConvexReactClient(CONVEX_URL ?? "http://127.0.0.1:3210");
+export const convex = new ConvexReactClient(
+  CONVEX_URL || "http://127.0.0.1:3210"
+);
 
 export const ADMIN_TOKEN_KEY = "vip_admin_token";
 

@@ -496,11 +496,17 @@ function hitGlyphs(x, y, run) {
   return null;
 }
 
-function colorAt(x, y, maskable) {
-  // Maskable: full-bleed navy behind a scaled badge (safe zone)
-  const s = maskable ? 0.78 : 1;
+function colorAt(x, y, maskable, fgScale) {
+  // Maskable/foreground layers: badge scaled down, transparent outside.
+  // Default maskable scale 0.78 (PWA safe zone); fgScale overrides for the
+  // 108dp adaptive foreground (badge must fit the 72dp visible window).
+  const s = fgScale ?? (maskable ? 0.78 : 1);
   const d0 = Math.hypot(x - CX, y - CY);
-  if (maskable && d0 > R_OUTER * s) return [13, 17, 30, 255];
+  if (d0 > R_OUTER * s) {
+    // Adaptive foreground layer: transparent (launcher draws its own bg).
+    // PWA maskable: solid navy so the badge never sits on a white tile.
+    return fgScale != null ? [0, 0, 0, 0] : [13, 17, 30, 255];
+  }
   const mx = CX + (x - CX) / s;
   const my = CY + (y - CY) / s;
 
@@ -564,7 +570,7 @@ function colorAt(x, y, maskable) {
 }
 
 // ---------------- Render ----------------
-function render(size, { maskable = false } = {}) {
+function render(size, { maskable = false, fgScale } = {}) {
   const SS = 4;
   const canvas = new Uint8Array(size * size * 4);
   const scale = size / 512;
@@ -575,7 +581,7 @@ function render(size, { maskable = false } = {}) {
         for (let sx = 0; sx < SS; sx++) {
           const x = (px + (sx + 0.5) / SS) / scale;
           const y = (py + (sy + 0.5) / SS) / scale;
-          const c = colorAt(x, y, maskable);
+          const c = colorAt(x, y, maskable, fgScale);
           r += c[0]; g += c[1]; b += c[2]; a += c[3];
         }
       }
@@ -603,23 +609,28 @@ writeIcon("icon-maskable-512.png", 512, { maskable: true });
 writeIcon("apple-touch-icon.png", 180, { maskable: true });
 
 // ---------------- Android app icons + splash ----------------
+// Adaptive icons (API 26+): 108x108dp canvas, only the center 72x72dp is
+// guaranteed visible -> the badge must sit small inside the foreground.
+// Legacy launchers (API <26) use the full-bleed ic_launcher.png directly.
 const ANDROID_RES = path.resolve("android/app/src/main/res");
 if (fs.existsSync(ANDROID_RES)) {
   const mipmapSizes = {
-    "mipmap-mdpi": 48,
-    "mipmap-hdpi": 72,
-    "mipmap-xhdpi": 96,
-    "mipmap-xxhdpi": 144,
-    "mipmap-xxxhdpi": 192,
+    "mipmap-mdpi": { launcher: 48, foreground: 108 },
+    "mipmap-hdpi": { launcher: 72, foreground: 162 },
+    "mipmap-xhdpi": { launcher: 96, foreground: 216 },
+    "mipmap-xxhdpi": { launcher: 144, foreground: 324 },
+    "mipmap-xxxhdpi": { launcher: 192, foreground: 432 },
   };
-  for (const [dir, size] of Object.entries(mipmapSizes)) {
+  for (const [dir, { launcher, foreground }] of Object.entries(mipmapSizes)) {
     const out = path.join(ANDROID_RES, dir);
     fs.mkdirSync(out, { recursive: true });
-    fs.writeFileSync(path.join(out, "ic_launcher.png"), encodePNG(size, size, render(size, {})));
-    fs.writeFileSync(path.join(out, "ic_launcher_foreground.png"), encodePNG(size, size, render(size, { maskable: true })));
-    fs.writeFileSync(path.join(out, "ic_launcher_round.png"), encodePNG(size, size, render(size, {})));
+    fs.writeFileSync(path.join(out, "ic_launcher.png"), encodePNG(launcher, launcher, render(launcher, {})));
+    fs.writeFileSync(path.join(out, "ic_launcher_round.png"), encodePNG(launcher, launcher, render(launcher, {})));
+    // Foreground layer: badge scaled to ~56% of the canvas (safe zone), transparent margin
+    const fg = render(foreground, { maskable: true, fgScale: 0.56 });
+    fs.writeFileSync(path.join(out, "ic_launcher_foreground.png"), encodePNG(foreground, foreground, fg));
   }
-  console.log("✔ Android mipmap icons (mdpi→xxxhdpi)");
+  console.log("✔ Android adaptive + legacy icons (mdpi→xxxhdpi, 108dp foreground)");
   const splashOut = path.join(ANDROID_RES, "drawable");
   fs.mkdirSync(splashOut, { recursive: true });
   fs.writeFileSync(path.join(splashOut, "splash.png"), encodePNG(512, 512, render(512, { maskable: true })));

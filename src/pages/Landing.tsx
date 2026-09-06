@@ -25,6 +25,7 @@ import { api } from "../convex/_generated/api";
 import { CATEGORIES } from "@/lib/categories";
 import { SubmissionCard, type PublicSubmission } from "@/components/SubmissionCard";
 import { OfferCard } from "@/components/OfferCard";
+import { ChannelsSection } from "@/components/ChannelsSection";
 import { Spinner } from "@/components/ui";
 import { PLATFORM_WHATSAPP_DISPLAY, PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
 
@@ -274,6 +275,31 @@ export function Landing() {
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ============ Digital channels ============ */}
+      <section className="border-y border-ink-700/40 bg-ink-900/30 py-16">
+        <div className="container-app">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="section-title text-cream">
+                قنواتنا <span className="gold-text">الرقمية</span>
+              </h2>
+              <p className="mt-2 max-w-xl text-sm text-ink-300">
+                كل منشور معتمد يُنشر تلقائياً على قنوات المنصة الرسمية — انضم
+                لتصل إليك الفرص والعروض أولاً بأول.
+              </p>
+            </div>
+            <Link
+              to="/channels"
+              className="flex shrink-0 items-center gap-1.5 text-sm font-black text-gold-400 hover:text-gold-300"
+            >
+              صفحة القنوات
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </div>
+          <ChannelsSection />
         </div>
       </section>
 

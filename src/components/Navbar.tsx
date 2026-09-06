@@ -11,6 +11,7 @@ const LINKS = [
   { to: "/emarket", label: "التسويق الإلكتروني" },
   { to: "/software", label: "البرمجيات" },
   { to: "/offers", label: "العروض" },
+  { to: "/channels", label: "قنواتنا" },
   { to: "/releases", label: "الإصدارات" },
 ];
 

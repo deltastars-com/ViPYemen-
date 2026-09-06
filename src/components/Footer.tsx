@@ -14,14 +14,16 @@ import {
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
+import { TelegramIcon, WhatsAppIcon } from "./ChannelIcons";
 
 const SOCIALS = [
+  { icon: WhatsAppIcon, href: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x", label: "قناة واتساب" },
+  { icon: TelegramIcon, href: "https://t.me/VIPservices2", label: "قناة تيليجرام" },
   { icon: Facebook, href: "https://www.facebook.com/ViPservicesYemen/", label: "فيسبوك" },
   { icon: Instagram, href: "https://www.instagram.com/vipservicesyemen", label: "إنستغرام" },
   { icon: Twitter, href: "https://twitter.com/ViPservicesYeme", label: "تويتر / X" },
   { icon: Youtube, href: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw", label: "يوتيوب" },
   { icon: Linkedin, href: "https://www.linkedin.com/in/ali-aldahan-57b5a2231", label: "لينكدإن" },
-  { icon: MessageCircle, href: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x", label: "قناة واتساب" },
 ];
 
 const LINKTREES = [
@@ -93,6 +95,7 @@ export function Footer() {
             <li><Link className="transition-colors hover:text-gold-300" to="/emarket">قسم التسويق الإلكتروني</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/software">قسم البرمجيات وتطوير التطبيقات</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/offers">قسم العروض الترويجية</Link></li>
+            <li><Link className="transition-colors hover:text-gold-300" to="/channels">قنواتنا الرقمية</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/assistant">المساعد الذكي</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/releases">الإصدارات والتطبيقات</Link></li>
           </ul>

@@ -14,6 +14,9 @@ const SoftwarePage = lazy(() =>
   import("./pages/SoftwarePage").then((m) => ({ default: m.SoftwarePage }))
 );
 const OffersPage = lazy(() => import("./pages/OffersPage").then((m) => ({ default: m.OffersPage })));
+const ChannelsPage = lazy(() =>
+  import("./pages/ChannelsPage").then((m) => ({ default: m.ChannelsPage }))
+);
 const AssistantPage = lazy(() =>
   import("./pages/AssistantPage").then((m) => ({ default: m.AssistantPage }))
 );
@@ -96,6 +99,7 @@ export default function App() {
               <Route path="/emarket" element={<EMarketPage />} />
               <Route path="/software" element={<SoftwarePage />} />
               <Route path="/offers" element={<OffersPage />} />
+              <Route path="/channels" element={<ChannelsPage />} />
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/releases" element={<ReleasesPage />} />

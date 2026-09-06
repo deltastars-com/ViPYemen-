@@ -1,9 +1,14 @@
 // =============================================================================
 // ViP Yemen — Official app icon generator (zero native deps)
 // -----------------------------------------------------------------------------
-// Renders the official badge: metallic gold ring, black field with dot
-// texture, arched "VIPSERVICESYEMEN" (top), black Arabic tagline (bottom),
-// circular English tagline ring, and the eagle emblem in the center.
+// Matches the official badge 1:1:
+//   • metallic gold ring with dark engraved "VIPSERVICESYEMEN" arc (top, wide tracking)
+//   • black field with dot texture + two black crescent accents (upper sides)
+//   • middle tagline ring "For Employment, E-Marketing & General Services"
+//     with upright "★ ( ViP ) ★" at the bottom
+//   • bright gold ribbon banner across the bottom carrying the black Arabic
+//     tagline "للتوفيق والثقة الإلكتروني والخدمات العامة"
+//   • brown eagle emblem with white head/chest/tail and gold beak/talons
 //
 // Text is converted to outlines from the bundled @fontsource/cairo fonts
 // (WOFF -> TTF via zlib, outlines via opentype.js, Arabic shaped via
@@ -137,14 +142,13 @@ function shapeArabic(text) {
   hbjs.shape(hbFont, buf);
   const infos = buf.getGlyphInfos();
   const positions = buf.getGlyphPositions();
-  const out = infos.map((info, i) => ({
+  return infos.map((info, i) => ({
     gid: info.codepoint,
     xAdvance: positions[i].xAdvance,
     yAdvance: positions[i].yAdvance,
     xOffset: positions[i].xOffset,
     yOffset: positions[i].yOffset,
   }));
-  return out;
 }
 
 // ---------------- Glyph outline flattening ----------------
@@ -231,28 +235,50 @@ function lerpColor(c1, c2, t) {
 function clamp01(v) {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
+const DEG = Math.PI / 180;
 
 // ---------------- Badge layout (512 design space, center 256,256) ----------------
 const CX = 256, CY = 256;
-const R_OUTER = 250, R_INNER = 224; // ring band
-const R_FIELD = 221;                 // black field
-const R_TEXT_LATIN = 240;            // baseline radius, top arc
-const R_TEXT_ARABIC = 242;           // baseline radius, bottom arc
-const R_MID_TOP = 191, R_MID_BOT = 145; // middle thin rings
-const R_MID_TEXT = 168;              // middle tagline text radius
-const R_EMBLEM = 136;                // emblem thin ring
+const R_OUTER = 250, R_INNER = 224;      // gold ring band
+const R_FIELD = 221;                     // black field
+const R_TEXT_LATIN = 227;                // Latin baseline ON the band (caps reach ~248)
+const RIBBON_A1 = 42 * DEG, RIBBON_A2 = 138 * DEG; // ribbon angular span (bottom)
+const RIBBON_OUTER = 251;
+// Ribbon inner edge: arc of the circle centered (256,236) r=216 -> d(a) closed form
+const RIB_C2_DY = 20, RIB_R2 = 216;
+function ribbonInnerD(a) {
+  const s = Math.sin(a);
+  return -RIB_C2_DY * s + Math.sqrt(RIB_C2_DY * RIB_C2_DY * s * s + RIB_R2 * RIB_R2 - RIB_C2_DY * RIB_C2_DY + 400 + 46256 - 46256 + 0) // keep simple below
+}
+// (clean implementation)
+function ribbonInner(a) {
+  const s = Math.sin(a);
+  // |P - C2|^2 = R2^2 with P = C + d*u, C-C2 = (0, +20):
+  // d^2 + 2*d*(20*sin a) + 400 - R2^2 = 0
+  const b = 2 * 20 * s;
+  const c = 400 - RIB_R2 * RIB_R2;
+  return (-b + Math.sqrt(b * b - 4 * c)) / 2;
+}
+const R_TEXT_ARABIC = 233;               // Arabic baseline on the ribbon (tops point inward)
+const R_MID_TOP = 191, R_MID_BOT = 145;  // middle thin rings
+const R_MID_TEXT = 168;                  // tagline + ( ViP ) radius
+const R_EMBLEM = 136;                    // emblem thin ring
 
 const GOLD_LIGHT = [245, 227, 162];
 const GOLD_MID = [212, 175, 55];
 const GOLD_DARK = [143, 107, 34];
-const GOLD_TEXT = [255, 236, 176];
-const GOLD_TEXT_SHADOW = [94, 70, 12];
+const LATIN_DARK = [62, 44, 11];         // engraved dark bronze (official)
+const RIBBON_TOP = [252, 224, 108];      // bright banner gold
+const RIBBON_BOT = [216, 166, 44];
 const FIELD = [11, 11, 18];
 const DOT = [32, 39, 56];
+const CRESCENT = [5, 5, 9];
 const BROWN_TOP = [154, 100, 49];
 const BROWN_BOT = [104, 63, 24];
 const WHITE_FEATHER = [242, 239, 228];
 const GOLD_ACCENT = [233, 185, 60];
+const TAG_GOLD = [226, 196, 92];
+const VIP_GOLD = [240, 214, 120];
 const BLACK = [4, 4, 6];
 
 // Eagle emblem (facing left) — scaled to fit inside the emblem ring
@@ -282,7 +308,7 @@ const EAGLE_RAW = {
 };
 function scaleEagle(es) {
   const sp = (p) => [CX + (p[0] - CX) * es, CY + (p[1] - CY) * es];
-  const EAGLE = {
+  return {
     wings: EAGLE_RAW.wings.map((w) => w.map(sp)),
     body: EAGLE_RAW.body.map(sp),
     head: { cx: CX + (EAGLE_RAW.head.cx - CX) * es, cy: CY + (EAGLE_RAW.head.cy - CY) * es, r: EAGLE_RAW.head.r * es },
@@ -292,24 +318,23 @@ function scaleEagle(es) {
     tail: EAGLE_RAW.tail.map(sp),
     talons: EAGLE_RAW.talons.map((t) => t.map(sp)),
   };
-  return EAGLE;
 }
-const EAGLE = scaleEagle(0.66);
+const EAGLE = scaleEagle(0.78);
 
 // ---------------- Text runs ----------------
 const TEXT_LATIN = "VIPSERVICESYEMEN";
-const TEXT_ARABIC = "للتوفير والتسويق الإلكتروني والخدمات العامة";
-const TEXT_MIDDLE = "* FOR EMPLOYMENT, E-MARKETING & GENERAL SERVICES * ( ViP )";
+const TEXT_ARABIC = "للتوفيق والثقة الإلكتروني والخدمات العامة";
+const TEXT_TAGLINE = "For Employment, E-Marketing & General Services";
+const TEXT_VIP = "* ( ViP ) *";
 
 function latinRun(text, sizePx) {
   const chars = [...text];
   const scale = sizePx / UPEM;
-  const glyphs = chars.map((ch) => {
+  return chars.map((ch) => {
     const gid = latinFont.charToGlyphIndex(ch);
     const adv = latinFont.glyphs.get(gid).advanceWidth * scale;
     return { gid, adv, contours: outlinesFor(latinFont, gid, sizePx), path: pathDataFor(latinFont, gid, sizePx) };
   });
-  return glyphs;
 }
 
 function arabicRun(text, sizePx) {
@@ -324,75 +349,71 @@ function arabicRun(text, sizePx) {
   }));
 }
 
-// Build runs once (design-space sizes)
-const SIZE_LATIN = 30;
-const SIZE_ARABIC = 24;
-const SIZE_MIDDLE = 19.5;
-let runLatin = latinRun(TEXT_LATIN, SIZE_LATIN);
-let runArabic = arabicRun(TEXT_ARABIC, SIZE_ARABIC);
-let runMiddle = latinRun(TEXT_MIDDLE, SIZE_MIDDLE);
-
 function totalAdvance(run) {
   return run.reduce((s, g) => s + g.adv, 0);
 }
 
-// Auto-fit middle tagline to a full loop
-let MIDDLE_ROT = 0;
+// --- Top Latin: size 32, wide-tracked to span ~223° like the official badge
+let runLatin = latinRun(TEXT_LATIN, 32);
 {
-  const targetAngle = Math.PI * 2 - 0.4;
-  let angle = totalAdvance(runMiddle) / R_MID_TEXT;
-  const ratio = targetAngle / angle;
-  if (Math.abs(ratio - 1) > 0.03) {
-    const size = Math.min(SIZE_MIDDLE * ratio, 38);
-    runMiddle = latinRun(TEXT_MIDDLE, size);
-    angle = totalAdvance(runMiddle) / R_MID_TEXT;
+  const target = 223 * DEG;
+  let angle = totalAdvance(runLatin) / R_TEXT_LATIN;
+  if (angle > target) {
+    const size = Math.max(24, 32 * (target / angle));
+    runLatin = latinRun(TEXT_LATIN, size);
+    angle = totalAdvance(runLatin) / R_TEXT_LATIN;
   }
-  // Rotate the run so the "( ViP )" cluster sits centered at the bottom
-  const idx = TEXT_MIDDLE.indexOf("( ViP )");
-  const advBefore = runMiddle.slice(0, idx).reduce((s, g) => s + g.adv, 0);
-  const clusterAdv = runMiddle.slice(idx, idx + "( ViP )".length).reduce((s, g) => s + g.adv, 0);
-  const thetaStart = (3 * Math.PI) / 2 - angle / 2;
-  const clusterMid = thetaStart + (advBefore + clusterAdv / 2) / R_MID_TEXT;
-  MIDDLE_ROT = Math.PI / 2 - clusterMid;
+  const extra = (target * R_TEXT_LATIN - totalAdvance(runLatin)) / (runLatin.length - 1);
+  if (extra > 0) for (const g of runLatin) g.adv += extra;
 }
 
-// Auto-fit arcs
+// --- Ribbon Arabic: fit to fill ~82° of the ribbon
+let runArabic = arabicRun(TEXT_ARABIC, 27);
 {
-  const maxArc = Math.PI * 0.92;
-  const maxArcAr = Math.PI * 0.78;
-  let a = totalAdvance(runLatin) / R_TEXT_LATIN;
-  if (a > maxArc) runLatin = latinRun(TEXT_LATIN, SIZE_LATIN * (maxArc / a));
-  a = totalAdvance(runArabic) / R_TEXT_ARABIC;
-  if (a > maxArcAr) runArabic = arabicRun(TEXT_ARABIC, SIZE_ARABIC * (maxArcAr / a));
+  const target = 82 * DEG;
+  const angle = totalAdvance(runArabic) / R_TEXT_ARABIC;
+  const size = Math.min(30, Math.max(19, 27 * (target / angle)));
+  if (Math.abs(size - 27) > 0.4) runArabic = arabicRun(TEXT_ARABIC, size);
 }
 
-// Glyph placement along an arc: theta increases along the arc, glyph local
-// x-axis = tangent, y-axis (down) points toward the circle center (tops
-// outward). Rotation alpha = theta + PI/2.
-function placeRun(run, R, theta0) {
+// --- Middle tagline: fit to span ~238° (stops above the ribbon)
+let runTag = latinRun(TEXT_TAGLINE, 19.5);
+{
+  const target = 238 * DEG;
+  const angle = totalAdvance(runTag) / R_MID_TEXT;
+  const size = Math.min(27, Math.max(14, 19.5 * (target / angle)));
+  runTag = latinRun(TEXT_TAGLINE, size);
+}
+
+// --- ( ViP ) upright at the bottom of the middle ring
+const runVip = latinRun(TEXT_VIP, 24);
+
+// Glyph placement along an arc.
+// outward (default): tops point away from center, theta increases (top text)
+// inward:  tops point toward center, theta decreases (bottom text, upright)
+function placeRun(run, R, theta0, inward = false) {
   let theta = theta0;
   const placed = [];
   for (const g of run) {
     placed.push({ ...g, theta });
-    theta += g.adv / R;
+    theta += (inward ? -1 : 1) * (g.adv / R);
   }
   return placed;
 }
 
-const placedLatin = placeRun(runLatin, R_TEXT_LATIN, (3 * Math.PI) / 2 - totalAdvance(runLatin) / R_TEXT_LATIN / 2);
-const placedArabic = placeRun(runArabic, R_TEXT_ARABIC, Math.PI / 2 - totalAdvance(runArabic) / R_TEXT_ARABIC / 2);
-const placedMiddle = placeRun(runMiddle, R_MID_TEXT, (3 * Math.PI) / 2 - totalAdvance(runMiddle) / R_MID_TEXT / 2 + MIDDLE_ROT);
-
-// Precompute transformed outlines per placed glyph (design space)
-function bakeRun(placed, R) {
+function bakeRun(placed, R, inward = false) {
   for (const pl of placed) {
     pl.R = R;
-    const ca = Math.cos(pl.theta + Math.PI / 2);
-    const sa = Math.sin(pl.theta + Math.PI / 2);
+    const alpha = inward ? pl.theta - Math.PI / 2 : pl.theta + Math.PI / 2;
+    const ca = Math.cos(alpha);
+    const sa = Math.sin(alpha);
     const bx = CX + R * Math.cos(pl.theta);
     const by = CY + R * Math.sin(pl.theta);
-    const ox = (pl.xOff ?? 0);
-    const oy = (pl.yOff ?? 0);
+    const ox = pl.xOff ?? 0;
+    const oy = pl.yOff ?? 0;
+    pl.alpha = alpha;
+    pl.bx = bx;
+    pl.by = by;
     pl.baked = pl.contours.map((contour) =>
       contour.map(([px, py]) => {
         const lx = px + ox;
@@ -400,7 +421,6 @@ function bakeRun(placed, R) {
         return [lx * ca - ly * sa + bx, lx * sa + ly * ca + by];
       })
     );
-    // bbox
     let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
     for (const c of pl.baked) for (const [x, y] of c) {
       if (x < minX) minX = x; if (x > maxX) maxX = x;
@@ -411,17 +431,55 @@ function bakeRun(placed, R) {
   return placed;
 }
 
-bakeRun(placedLatin, R_TEXT_LATIN);
-bakeRun(placedArabic, R_TEXT_ARABIC);
-bakeRun(placedMiddle, R_MID_TEXT);
+// Top Latin: centered on the top (270°)
+const placedLatin = bakeRun(
+  placeRun(runLatin, R_TEXT_LATIN, (3 * Math.PI) / 2 - (totalAdvance(runLatin) / R_TEXT_LATIN) / 2),
+  R_TEXT_LATIN
+);
+// Ribbon Arabic: centered at the bottom (90°), upright (tops inward)
+const placedArabic = bakeRun(
+  placeRun(runArabic, R_TEXT_ARABIC, Math.PI / 2 + (totalAdvance(runArabic) / R_TEXT_ARABIC) / 2, true),
+  R_TEXT_ARABIC,
+  true
+);
+// Tagline: starts lower-left (151°), wraps clockwise over the top
+const TAG_SPAN = 238 * DEG;
+const placedTag = bakeRun(
+  placeRun(runTag, R_MID_TEXT, (3 * Math.PI) / 2 - TAG_SPAN / 2),
+  R_MID_TEXT
+);
+// ( ViP ): centered at the bottom, upright
+const placedVip = bakeRun(
+  placeRun(runVip, R_MID_TEXT, Math.PI / 2 + (totalAdvance(runVip) / R_MID_TEXT) / 2, true),
+  R_MID_TEXT,
+  true
+);
+
+// ---------------- Crescent accents (upper sides, hugging the ring's inner edge) ----------------
+function crescentPoly(a1, a2) {
+  const pts = [];
+  const N = 30;
+  for (let i = 0; i <= N; i++) {
+    const a = lerp(a1, a2, i / N);
+    pts.push([CX + 219.5 * Math.cos(a), CY + 219.5 * Math.sin(a)]);
+  }
+  for (let i = N; i >= 0; i--) {
+    const t = i / N;
+    const a = lerp(a1, a2, t);
+    const d = 219.5 - 20 * Math.sin(Math.PI * t);
+    pts.push([CX + d * Math.cos(a), CY + d * Math.sin(a)]);
+  }
+  return pts;
+}
+const CRESCENT_L = crescentPoly(205 * DEG, 245 * DEG);
+const CRESCENT_R = crescentPoly(295 * DEG, 335 * DEG);
 
 // ---------------- Per-pixel coloring ----------------
 function goldRingColor(x, y) {
   const d = Math.hypot(x - CX, y - CY);
   const a = Math.atan2(y - CY, x - CX);
-  const f = clamp01((Math.cos(a - (-(3 * Math.PI) / 4)) + 1) / 2);
+  const f = clamp01((Math.cos(a - -(3 * Math.PI) / 4) + 1) / 2);
   let c = lerpColor(GOLD_DARK, GOLD_LIGHT, 0.35 + 0.65 * f);
-  // edge shading
   const edge = Math.min(R_OUTER - d, d - R_INNER);
   if (edge < 2.5) c = lerpColor(c, [70, 52, 14], (2.5 - edge) / 2.5);
   return c;
@@ -438,10 +496,6 @@ function hitGlyphs(x, y, run) {
   return null;
 }
 
-// The shadow underlay for the top Latin text (glyphs 2.5px larger, dark)
-const runLatinShadow = latinRun(TEXT_LATIN, SIZE_LATIN + 2.5);
-const placedLatinShadow = bakeRun(placeRun(runLatinShadow, R_TEXT_LATIN, (3 * Math.PI) / 2 - totalAdvance(runLatinShadow) / R_TEXT_LATIN / 2), R_TEXT_LATIN);
-
 function colorAt(x, y, maskable) {
   // Maskable: full-bleed navy behind a scaled badge (safe zone)
   const s = maskable ? 0.78 : 1;
@@ -451,20 +505,28 @@ function colorAt(x, y, maskable) {
   const my = CY + (y - CY) / s;
 
   const d = Math.hypot(mx - CX, my - CY);
+  const a = Math.atan2(my - CY, mx - CX);
 
-  // Ring text is checked first (glyphs may spill across band/field edges)
-  const latBright = hitGlyphs(mx, my, placedLatin);
-  if (latBright) return [...GOLD_TEXT, 255];
-  if (hitGlyphs(mx, my, placedLatinShadow)) return [...GOLD_TEXT_SHADOW, 255];
-  if (hitGlyphs(mx, my, placedArabic)) return [23, 18, 7, 255];
+  // 1) Bottom gold ribbon banner (overrides ring + field)
+  if (d <= RIBBON_OUTER && a >= RIBBON_A1 && a <= RIBBON_A2 && d >= ribbonInner(a)) {
+    if (hitGlyphs(mx, my, placedArabic)) return [23, 18, 7, 255];
+    const t = clamp01((d - 196) / 55);
+    return [...lerpColor(RIBBON_TOP, RIBBON_BOT, t), 255];
+  }
 
-  // Ring band
+  // 2) Dark engraved Latin on the gold band
+  if (hitGlyphs(mx, my, placedLatin)) return [...LATIN_DARK, 255];
+
+  // 3) Gold ring band
   if (d <= R_OUTER && d >= R_INNER) {
     return [...goldRingColor(mx, my), 255];
   }
 
-  // Black field (extends to the ring's inner edge)
+  // 4) Black field
   if (d <= R_INNER) {
+    // black crescent accents
+    if (pointInPoly(mx, my, CRESCENT_L) || pointInPoly(mx, my, CRESCENT_R)) return [...CRESCENT, 255];
+
     // thin gold rings
     for (const [rr, w] of [[R_MID_TOP, 1.7], [R_MID_BOT, 1.6], [R_EMBLEM, 2.1]]) {
       if (Math.abs(d - rr) < w) return [...GOLD_MID, 255];
@@ -486,16 +548,15 @@ function colorAt(x, y, maskable) {
     if (pointInPoly(mx, my, EAGLE.beak)) return [...GOLD_ACCENT, 255];
     if (Math.hypot(mx - EAGLE.eye.cx, my - EAGLE.eye.cy) <= EAGLE.eye.r) return [...BLACK, 255];
 
-    // middle tagline text
-    const mid = hitGlyphs(mx, my, placedMiddle);
-    if (mid) return [...lerpColor(GOLD_MID, [230, 201, 92], 0.55), 255];
+    // middle tagline + upright ( ViP )
+    if (hitGlyphs(mx, my, placedTag)) return [...TAG_GOLD, 255];
+    if (hitGlyphs(mx, my, placedVip)) return [...VIP_GOLD, 255];
 
     // subtle dot texture
     const gx = Math.floor(mx / 15) * 15;
     const gy = Math.floor(my / 15) * 15;
     if (Math.hypot(mx - gx, my - gy) < 1.35 && d < R_FIELD - 2) return [...DOT, 255];
 
-    // black field base
     return [...FIELD, 255];
   }
 
@@ -579,36 +640,30 @@ if (fs.existsSync(IOS_ICON_DIR)) {
 function polygonPath(poly) {
   return poly.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ") + " Z";
 }
-function glyphGroup(pl) {
-  const ca = Math.cos(pl.theta + Math.PI / 2);
-  const sa = Math.sin(pl.theta + Math.PI / 2);
-  const bx = CX + pl.R * Math.cos(pl.theta);
-  const by = CY + pl.R * Math.sin(pl.theta);
-  const deg = ((pl.theta + Math.PI / 2) * 180) / Math.PI;
-  const path = `<g transform="translate(${bx.toFixed(1)} ${by.toFixed(1)}) rotate(${deg.toFixed(1)})"><path d="${pl.path}" fill="#ffe9a8"/></g>`;
-  void ca; void sa;
-  return path;
-}
-const shadowLatinGroup = placedLatinShadow.map((pl) => {
-  const deg = ((pl.theta + Math.PI / 2) * 180) / Math.PI;
-  const bx = CX + pl.R * Math.cos(pl.theta);
-  const by = CY + pl.R * Math.sin(pl.theta);
-  return `<g transform="translate(${bx.toFixed(1)} ${by.toFixed(1)}) rotate(${deg.toFixed(1)})"><path d="${pl.path}" fill="#6b500f"/></g>`;
-}).join("");
-const arabicGroup = placedArabic.map((pl) => {
-  const deg = ((pl.theta + Math.PI / 2) * 180) / Math.PI;
-  const bx = CX + pl.R * Math.cos(pl.theta);
-  const by = CY + pl.R * Math.sin(pl.theta);
+function glyphGroup(pl, fill) {
+  const deg = ((pl.alpha ?? pl.theta + Math.PI / 2) * 180) / Math.PI;
+  const bx = pl.bx ?? CX + pl.R * Math.cos(pl.theta);
+  const by = pl.by ?? CY + pl.R * Math.sin(pl.theta);
   const ox = pl.xOff ?? 0, oy = pl.yOff ?? 0;
-  return `<g transform="translate(${(bx + ox).toFixed(1)} ${(by + oy).toFixed(1)}) rotate(${deg.toFixed(1)})"><path d="${pl.path}" fill="#171207"/></g>`;
-}).join("");
-const middleGroup = placedMiddle.map((pl) => {
-  const deg = ((pl.theta + Math.PI / 2) * 180) / Math.PI;
-  const bx = CX + pl.R * Math.cos(pl.theta);
-  const by = CY + pl.R * Math.sin(pl.theta);
-  return `<g transform="translate(${bx.toFixed(1)} ${by.toFixed(1)}) rotate(${deg.toFixed(1)})"><path d="${pl.path}" fill="#e6c95c"/></g>`;
-}).join("");
-const latinGroup = placedLatin.map(glyphGroup).join("");
+  return `<g transform="translate(${(bx + ox).toFixed(1)} ${(by + oy).toFixed(1)}) rotate(${deg.toFixed(1)})"><path d="${pl.path}" fill="${fill}"/></g>`;
+}
+// ribbon path: outer arc + inner arc (closed form)
+const ribPts = [];
+for (let i = 0; i <= 60; i++) {
+  const a = lerp(RIBBON_A1, RIBBON_A2, i / 60);
+  ribPts.push([CX + RIBBON_OUTER * Math.cos(a), CY + RIBBON_OUTER * Math.sin(a)]);
+}
+for (let i = 60; i >= 0; i--) {
+  const a = lerp(RIBBON_A1, RIBBON_A2, i / 60);
+  const di = ribbonInner(a);
+  ribPts.push([CX + di * Math.cos(a), CY + di * Math.sin(a)]);
+}
+const ribbonPath = polygonPath(ribPts);
+
+const svgLatin = placedLatin.map((pl) => glyphGroup(pl, "#3e2c0b")).join("");
+const svgArabic = placedArabic.map((pl) => glyphGroup(pl, "#171207")).join("");
+const svgTag = placedTag.map((pl) => glyphGroup(pl, "#e2c45c")).join("");
+const svgVip = placedVip.map((pl) => glyphGroup(pl, "#f0d678")).join("");
 
 const eagleSvg = [
   ...EAGLE.wings.map((w) => `<path d="${polygonPath(w)}" fill="url(#brown)"/>`),
@@ -632,17 +687,24 @@ const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
       <stop offset="0%" stop-color="#9a6431"/>
       <stop offset="100%" stop-color="#683f18"/>
     </linearGradient>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fce06c"/>
+      <stop offset="100%" stop-color="#d8a62c"/>
+    </linearGradient>
   </defs>
   <circle cx="256" cy="256" r="${(R_OUTER + R_INNER) / 2}" fill="none" stroke="url(#gold)" stroke-width="${R_OUTER - R_INNER}"/>
   <circle cx="256" cy="256" r="${R_FIELD}" fill="#0b0b12"/>
+  <path d="${ribbonPath}" fill="url(#ribbon)"/>
+  <path d="${polygonPath(CRESCENT_L)}" fill="#050509"/>
+  <path d="${polygonPath(CRESCENT_R)}" fill="#050509"/>
   <circle cx="256" cy="256" r="${R_MID_TOP}" fill="none" stroke="#d4af37" stroke-width="1.7"/>
   <circle cx="256" cy="256" r="${R_MID_BOT}" fill="none" stroke="#d4af37" stroke-width="1.6"/>
   <circle cx="256" cy="256" r="${R_EMBLEM}" fill="none" stroke="#d4af37" stroke-width="2.1"/>
   ${eagleSvg}
-  ${middleGroup}
-  ${shadowLatinGroup}
-  ${latinGroup}
-  ${arabicGroup}
+  ${svgTag}
+  ${svgVip}
+  ${svgLatin}
+  ${svgArabic}
 </svg>`;
 fs.writeFileSync(path.join(OUT_DIR, "favicon.svg"), favicon);
 console.log("✔ favicon.svg");
@@ -657,5 +719,21 @@ console.log("✔ favicon.svg");
   }
   const top = Object.entries(hist).sort((a, b) => b[1] - a[1]).slice(0, 6);
   console.log("Color histogram (5-bit buckets):", top.map(([k, v]) => `${k}=${v}`).join(" "));
+
+  // pixel probes for the new elements
+  let darkLatin = 0, ribbonPx = 0, arabicPx = 0, crescentPx = 0;
+  for (let i = 0; i < canvas.length; i += 4) {
+    const r = canvas[i], g = canvas[i + 1], b = canvas[i + 2];
+    if (r > 40 && r < 90 && g > 28 && g < 70 && b < 40) darkLatin++;
+    if (r > 200 && g > 150 && b < 140) ribbonPx++;
+    if (r < 45 && g < 40 && b < 30) {
+      const px = ((i / 4) % 512) | 0, py = (i / 4 / 512) | 0;
+      const dd = Math.hypot(px - 256, py - 256);
+      const aa = Math.atan2(py - 256, px - 256);
+      if (dd > 205 && dd < 248 && aa > 0.8 && aa < 2.3) arabicPx++;
+      if (dd > 200 && dd < 220 && ((aa > 3.55 && aa < 4.3) || (aa < -2.0 && aa > -2.75))) crescentPx++;
+    }
+  }
+  console.log(`Probes: engravedLatin=${darkLatin} ribbonGold=${ribbonPx} ribbonArabic=${arabicPx} crescents=${crescentPx}`);
 }
 console.log("All official badge icons generated.");

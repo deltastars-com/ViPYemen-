@@ -203,6 +203,58 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 5.3.1 — الشعار الرسمي الأصلي الدائم
+    const v531 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "5.3.1"))
+      .first();
+    if (!v531) {
+      await ctx.db.insert("releases", {
+        version: "5.3.1",
+        title: "الشعار الرسمي الأصلي — تطبيق Android 5.3.1 (APK)",
+        description:
+          "الإصدار 5.3.1 يعتمد الشعار الرسمي الأصلي للمنصة بشكل دائم في كل مكان: أيقونة التطبيق على الهاتف، شعار الواجهات، أيقونة المتصفح، وشاشة البداية — مع إصلاح شاشة التطبيق الفارغة وتوافق كامل مع الأجهزة الأقدم.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.3.1/vip-yemen-android-v5.3.1.apk",
+        notes: "ألغِ تثبيت النسخة السابقة ثم ثبّت هذا الملف — الحزمة com.vip.yemen",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.3.1",
+        title: "حزمة Google Play — AAB 5.3.1",
+        description:
+          "حزمة AAB بالشعار الرسمي الأصلي، جاهزة للرفع إلى Google Play Console للحزمة com.vip.yemen.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.3.1/vip-yemen-android-v5.3.1.aab",
+        notes: "استخدم store-listing.json و PUBLISHING-GUIDE.md لإكمال القائمة",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.3.1",
+        title: "تطبيق الويب المتقدم 5.3.1 (PWA) — الشعار الرسمي",
+        description:
+          "نسخة الويب بالشعار الرسمي الأصلي الدائم: أيقونة التثبيت، أيقونة المتصفح، وشعار الواجهة — مع كل تحسينات الإصدار 5.3.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.3.1/vip-yemen-web-pwa-v5.3.1.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.3.1",
+        title: "الكود المصدري الكامل + الوثائق 5.3.1",
+        description:
+          "جميع ملفات المشروع المحدثة: الواجهة، الباك إند (Convex)، مشروعا Android/iOS بالشعار الرسمي، ملفات التوثيق والتوقيع والملكية، سياسة الخصوصية ورابطها، ودليل الإدارة والتشغيل.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.3.1/vip-yemen-source-v5.3.1.zip",
+        notes: "يشمل PRIVACY-POLICY-APP.md و OPERATIONS-GUIDE.md و store-listing.json",
+        createdAt: now,
+      });
+    }
+
     // الإصدار 5.1 — الشعار الرسمي، قنوات رقمية، وأزرار تواصل مباشر
     const v510 = await ctx.db
       .query("releases")

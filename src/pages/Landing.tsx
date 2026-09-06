@@ -26,6 +26,7 @@ import { CATEGORIES } from "@/lib/categories";
 import { SubmissionCard, type PublicSubmission } from "@/components/SubmissionCard";
 import { OfferCard } from "@/components/OfferCard";
 import { ChannelsSection } from "@/components/ChannelsSection";
+import { HeroIllustration, VerifiedSeal } from "@/components/Illustrations";
 import { Spinner } from "@/components/ui";
 import { PLATFORM_WHATSAPP_DISPLAY, PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
 
@@ -88,6 +89,21 @@ export function Landing() {
                 <ShoppingBag className="h-4 w-4" />
                 اعرض منتجك أو ابحث عن طلب
               </Link>
+            </div>
+            <div className="mx-auto mt-12 flex max-w-4xl items-end justify-center gap-4">
+              <HeroIllustration
+                className="hidden h-40 w-auto shrink-0 opacity-95 sm:block lg:h-48"
+                variant="survey"
+              />
+              <HeroIllustration className="h-44 w-auto lg:h-56" variant="store" />
+              <HeroIllustration
+                className="hidden h-40 w-auto shrink-0 opacity-95 sm:block lg:h-48"
+                variant="search"
+              />
+            </div>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] font-black text-gold-300/90">
+              <VerifiedSeal className="h-5 w-5" />
+              مراجعة إدارية وتدقيق لكل طلب قبل النشر
             </div>
           </motion.div>
 

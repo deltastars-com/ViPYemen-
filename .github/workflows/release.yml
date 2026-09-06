@@ -42,7 +42,7 @@ jobs:
           cp -r dist release/web-pwa
           zip -r release/vip-yemen-web-pwa-${{ github.ref_name }}.zip release/web-pwa
           zip -r release/vip-yemen-source-${{ github.ref_name }}.zip src index.html package.json bun.lock vite.config.ts capacitor.config.ts convex.json public scripts android ios .github
-          cp PRIVACY-POLICY.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md README.md release/
+          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md README.md store-listing.json release/
 
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
@@ -55,7 +55,7 @@ jobs:
             - **تطبيق الويب (PWA)**: مجلد `web-pwa` جاهز للاستضافة — يعمل بدون إنترنت
             - **الكود المصدري الكامل**: الواجهة + الباك إند (Convex) + مشروعي Android/iOS (Capacitor)
             - **وثائق النشر**: دليل Google Play وApp Store وسياسة الخصوصية
-            - **APK/AAB**: تُرفق تلقائياً من وظيفة Android أدناه عند توفر التوقيع
+            - **APK/AAB**: تُرفق تلقائياً أدناه — موقّعة بشهادة الإصدار عند توفر التوقيع، وإلا نسخة مثبّتة موقّعة تشغيلياً
           files: |
             release/*.zip
             release/*.md
@@ -83,52 +83,54 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Check signing secrets
-        id: signing
-        run: |
-          if [[ -n "${{ secrets.ANDROID_KEYSTORE_B64 }}" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Install dependencies
-        if: steps.signing.outputs.available == 'true'
         run: bun install --frozen-lockfile
 
       - name: Generate icons
-        if: steps.signing.outputs.available == 'true'
         run: bun run icons
 
       - name: Build web
-        if: steps.signing.outputs.available == 'true'
         run: bun run build
         env:
           VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
 
       - name: Sync Capacitor
-        if: steps.signing.outputs.available == 'true'
         run: npx cap sync android
 
-      - name: Configure keystore
-        if: steps.signing.outputs.available == 'true'
+      - name: Configure release keystore (if available)
+        id: keystore
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > android/keystore.jks
-          cat > android/keystore.properties <<EOF
-          storeFile=keystore.jks
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          EOF
+          if [[ -n "$KS_B64" ]]; then
+            echo "$KS_B64" | base64 -d > android/keystore.jks
+            printf 'storeFile=keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > android/keystore.properties
+            echo "mode=signed" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=debug" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Build APK + AAB
-        if: steps.signing.outputs.available == 'true'
+      - name: Build signed APK + AAB
+        if: steps.keystore.outputs.mode == 'signed'
         run: |
           cd android
+          chmod +x gradlew
           ./gradlew assembleRelease bundleRelease --no-daemon
 
+      - name: Build installable APK + AAB (debug-signed)
+        if: steps.keystore.outputs.mode == 'debug'
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug bundleDebug --no-daemon
+          mkdir -p app/build/outputs/apk/release app/build/outputs/bundle/release
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk
+          cp app/build/outputs/bundle/debug/app-debug.aab app/build/outputs/bundle/release/vip-yemen-android-${{ github.ref_name }}.aab
+
       - name: Upload APK/AAB to release
-        if: steps.signing.outputs.available == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: |

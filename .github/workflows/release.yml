@@ -41,10 +41,10 @@ jobs:
           mkdir -p release
           cp -r dist release/web-pwa
           zip -r release/vip-yemen-web-pwa-${{ github.ref_name }}.zip release/web-pwa
-          zip -r release/vip-yemen-source-${{ github.ref_name }}.zip src index.html package.json vite.config.ts convex.json public scripts .github
+          zip -r release/vip-yemen-source-${{ github.ref_name }}.zip src index.html package.json bun.lock vite.config.ts capacitor.config.ts convex.json public scripts android ios .github
           cp PRIVACY-POLICY.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md README.md release/
 
-      - name: Create GitHub Release
+      - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
         with:
           name: ViP Yemen ${{ github.ref_name }}
@@ -52,13 +52,73 @@ jobs:
             ## ViP Yemen — الإصدار ${{ github.ref_name }}
 
             ### المحتويات
-            - **تطبيق الويب (PWA)**: مجلد `web-pwa` جاهز للرفع لأي استضافة ثابتة — يعمل بدون إنترنت.
-            - **الكود المصدري الكامل**: الواجهة والباك إند وقاعدة البيانات (Convex).
-            - **وثائق النشر**: دليل النشر في Google Play وApp Store وسياسة الخصوصية.
-
-            > ملاحظة: إصدارات APK/AAB وiOS تُبنى عبر مشروع android-native (راجع PUBLISHING-GUIDE.md).
+            - **تطبيق الويب (PWA)**: مجلد `web-pwa` جاهز للاستضافة — يعمل بدون إنترنت
+            - **الكود المصدري الكامل**: الواجهة + الباك إند (Convex) + مشروعي Android/iOS (Capacitor)
+            - **وثائق النشر**: دليل Google Play وApp Store وسياسة الخصوصية
+            - **APK/AAB**: تُرفق تلقائياً من وظيفة Android أدناه عند توفر التوقيع
           files: |
             release/*.zip
             release/*.md
           draft: false
           prerelease: false
+
+  build-android:
+    name: Build signed APK + AAB
+    runs-on: ubuntu-latest
+    if: ${{ secrets.ANDROID_KEYSTORE_B64 != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate icons
+        run: bun run icons
+
+      - name: Build web
+        run: bun run build
+        env:
+          VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Configure keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > android/keystore.jks
+          cat > android/keystore.properties <<EOF
+          storeFile=keystore.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+
+      - name: Build APK + AAB
+        run: |
+          cd android
+          ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - name: Upload APK/AAB to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+          append_body: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -38,6 +38,19 @@ capacitor-app/keystore.properties
 capacitor-app/*.jks
 capacitor-app/*.keystore
 
+# Capacitor native build artifacts
+android/.gradle/
+android/local.properties
+android/app/build/
+android/build/
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
+ios/App/App.xcworkspace/xcuserdata/
+*.ipa
+*.apk
+*.aab
+
 # Credentials files (keep local only)
 CREDENTIALS-AND-SIGNING.md
 release-build/

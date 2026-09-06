@@ -1,4 +1,4 @@
-import { action, mutation, query } from "./_generated/server";
+import { action, mutation, query, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import {
@@ -45,20 +45,76 @@ export const seedAdmin = mutation({
   },
 });
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+async function recordFailedLogin(ctx: MutationCtx, email: string) {
+  const existing = await ctx.db
+    .query("loginAttempts")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .first();
+  const now = Date.now();
+  if (!existing) {
+    await ctx.db.insert("loginAttempts", {
+      email,
+      count: 1,
+      updatedAt: now,
+    });
+    return;
+  }
+  const count = existing.lockedUntil && existing.lockedUntil > now ? existing.count + 1 : 1;
+  const lockedUntil =
+    count >= MAX_LOGIN_ATTEMPTS ? now + LOCKOUT_MS : existing.lockedUntil && existing.lockedUntil > now ? existing.lockedUntil : undefined;
+  await ctx.db.patch(existing._id, { count, lockedUntil, updatedAt: now });
+}
+
+async function clearLoginAttempts(ctx: MutationCtx, email: string) {
+  const existing = await ctx.db
+    .query("loginAttempts")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .first();
+  if (existing) await ctx.db.delete(existing._id);
+}
+
+function getAttemptLockMinutes(attempt: { count: number; lockedUntil?: number }): number {
+  if (!attempt.lockedUntil) return 0;
+  return Math.max(1, Math.ceil((attempt.lockedUntil - Date.now()) / 60000));
+}
+
 export const login = mutation({
   args: { email: v.string(), password: v.string() },
   handler: async (ctx, { email, password }) => {
+    const normalized = email.trim().toLowerCase();
+    const now = Date.now();
+
+    // Rate limiting: lock after 5 failed attempts for 15 minutes
+    const attempt = await ctx.db
+      .query("loginAttempts")
+      .withIndex("by_email", (q) => q.eq("email", normalized))
+      .first();
+    if (attempt && attempt.lockedUntil && attempt.lockedUntil > now) {
+      const minutes = getAttemptLockMinutes(attempt);
+      throw new ConvexError(
+        `تم تأمين الحساب مؤقتاً بسبب محاولات متكررة — حاول بعد ${minutes} دقيقة`
+      );
+    }
+
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email.trim().toLowerCase()))
+      .withIndex("by_email", (q) => q.eq("email", normalized))
       .first();
-    if (!user) throw new ConvexError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
-    const hash = await hashPassword(password, user.passwordSalt);
-    if (hash !== user.passwordHash) {
+    if (!user) {
+      await recordFailedLogin(ctx, normalized);
       throw new ConvexError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
     }
+    const hash = await hashPassword(password, user.passwordSalt);
+    if (hash !== user.passwordHash) {
+      await recordFailedLogin(ctx, normalized);
+      throw new ConvexError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+    }
+    await clearLoginAttempts(ctx, normalized);
     const { token } = await createSession(ctx, user._id);
-    await ctx.db.patch(user._id, { lastLoginAt: Date.now() });
+    await ctx.db.patch(user._id, { lastLoginAt: now });
     return {
       token,
       name: user.name,

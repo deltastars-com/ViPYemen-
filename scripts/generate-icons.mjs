@@ -167,6 +167,58 @@ writeIcon("icon-512.png", 512, {});
 writeIcon("icon-maskable-512.png", 512, { maskable: true, radius: 0, border: 0 });
 writeIcon("apple-touch-icon.png", 180, { maskable: true, radius: 0, border: 0 });
 
+// ---------- Android app icons (mipmaps) + splash ----------
+const ANDROID_RES = path.resolve("android/app/src/main/res");
+if (fs.existsSync(ANDROID_RES)) {
+  const mipmapSizes = {
+    "mipmap-mdpi": 48,
+    "mipmap-hdpi": 72,
+    "mipmap-xhdpi": 96,
+    "mipmap-xxhdpi": 144,
+    "mipmap-xxxhdpi": 192,
+  };
+  for (const [dir, size] of Object.entries(mipmapSizes)) {
+    const out = path.join(ANDROID_RES, dir);
+    fs.mkdirSync(out, { recursive: true });
+    // Launcher: rounded-rect gold-bordered mark
+    fs.writeFileSync(
+      path.join(out, "ic_launcher.png"),
+      encodePNG(size, size, render(size, {}))
+    );
+    // Adaptive foreground: full-bleed navy with centered mark (safe zone)
+    fs.writeFileSync(
+      path.join(out, "ic_launcher_foreground.png"),
+      encodePNG(size, size, render(size, { maskable: true, radius: 0, border: 0 }))
+    );
+    fs.writeFileSync(
+      path.join(out, "ic_launcher_round.png"),
+      encodePNG(size, size, render(size, {}))
+    );
+  }
+  console.log("✔ Android mipmap icons (mdpi→xxxhdpi)");
+
+  // Splash: navy background with gold mark
+  const splashOut = path.join(ANDROID_RES, "drawable");
+  fs.mkdirSync(splashOut, { recursive: true });
+  fs.writeFileSync(
+    path.join(splashOut, "splash.png"),
+    encodePNG(512, 512, render(512, { maskable: true, radius: 0, border: 0 }))
+  );
+  console.log("✔ Android splash.png");
+}
+
+// ---------- iOS app icon (1024) ----------
+const IOS_ICON_DIR = path.resolve(
+  "ios/App/App/Assets.xcassets/AppIcon.appiconset"
+);
+if (fs.existsSync(IOS_ICON_DIR)) {
+  fs.writeFileSync(
+    path.join(IOS_ICON_DIR, "AppIcon-512@2x.png"),
+    encodePNG(1024, 1024, render(1024, { maskable: true, radius: 0, border: 0 }))
+  );
+  console.log("✔ iOS AppIcon 1024");
+}
+
 const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">

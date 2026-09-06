@@ -18,11 +18,20 @@ import { PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
 const SOCIALS = [
   { icon: Facebook, href: "https://www.facebook.com/ViPservicesYemen/", label: "فيسبوك" },
   { icon: Instagram, href: "https://www.instagram.com/vipservicesyemen", label: "إنستغرام" },
-  { icon: Twitter, href: "https://twitter.com/ViPservicesYeme", label: "تويتر" },
+  { icon: Twitter, href: "https://twitter.com/ViPservicesYeme", label: "تويتر / X" },
   { icon: Youtube, href: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw", label: "يوتيوب" },
   { icon: Linkedin, href: "https://www.linkedin.com/in/ali-aldahan-57b5a2231", label: "لينكدإن" },
   { icon: MessageCircle, href: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x", label: "قناة واتساب" },
 ];
+
+const LINKTREES = [
+  { label: "Beacons", href: "https://beacons.ai/vipservicesyemen" },
+  { label: "Linkfly", href: "https://linkfly.to/vipservicesyemen" },
+  { label: "Taplink", href: "https://taplink.cc/vipservicesyemen" },
+  { label: "AllMyLinks", href: "https://allmylinks.com/vipservicesyemen" },
+];
+
+const TIKTOK_URL = "https://www.tiktok.com/@vipservicesyemen1";
 
 export function Footer() {
   return (
@@ -42,9 +51,35 @@ export function Footer() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label={s.label}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-all hover:border-gold-500/60 hover:text-gold-300"
+                title={s.label}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
               >
                 <s.icon className="h-4 w-4" />
+              </a>
+            ))}
+            <a
+              href={TIKTOK_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="تيك توك"
+              title="تيك توك"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+              </svg>
+            </a>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {LINKTREES.map((l) => (
+              <a
+                key={l.label}
+                href={l.href}
+                target="_blank"
+                rel="noreferrer"
+                className="chip !text-gold-300/90 transition-colors hover:!border-gold-500/60 hover:!text-gold-200"
+              >
+                {l.label}
               </a>
             ))}
           </div>
@@ -68,11 +103,19 @@ export function Footer() {
           <ul className="space-y-3 text-sm text-ink-300">
             <li className="flex items-center gap-2.5">
               <Phone className="h-4 w-4 shrink-0 text-gold-400" />
-              <span dir="ltr">00967711780999 / 773597404</span>
+              <a href="tel:00967711780999" className="transition-colors hover:text-gold-300" dir="ltr">
+                00967711780999 / 773597404
+              </a>
             </li>
             <li className="flex items-center gap-2.5">
               <Mail className="h-4 w-4 shrink-0 text-gold-400" />
-              vipservicesyemen@gmail.com
+              <a
+                href="mailto:vipservicesyemen@gmail.com"
+                className="transition-colors hover:text-gold-300"
+                dir="ltr"
+              >
+                vipservicesyemen@gmail.com
+              </a>
             </li>
             <li className="flex items-center gap-2.5">
               <MapPin className="h-4 w-4 shrink-0 text-gold-400" />

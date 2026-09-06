@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "convex/react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -49,11 +50,13 @@ const FAQS = [
 ];
 
 export function AssistantPage() {
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [wikiResults, setWikiResults] = useState<{ title: string; snippet: string; url: string }[] | null>(null);
   const [wikiLoading, setWikiLoading] = useState(false);
   const [wikiSearched, setWikiSearched] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const runWikiSearchRef = useRef(runWikiSearch);
 
   const jobs = useQuery(api.submissions.listPublished, { category: "jobs" });
   const realEstate = useQuery(api.submissions.listPublished, { category: "real_estate" });
@@ -97,6 +100,13 @@ export function AssistantPage() {
       (a) => a.title.toLowerCase().includes(q) || a.message.toLowerCase().includes(q)
     );
   }, [ads, q]);
+
+  useEffect(() => {
+    // Pre-fill from ?q= (structured-data SearchAction) and auto-search
+    const initial = searchParams.get("q");
+    if (initial) runWikiSearchRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function runWikiSearch() {
     if (!q) return;

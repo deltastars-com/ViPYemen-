@@ -13,6 +13,10 @@
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/ios": "^8.5.1",
     "@fontsource/cairo": "^5.2.5",
     "convex": "^1.24.0",
     "framer-motion": "^12.23.0",

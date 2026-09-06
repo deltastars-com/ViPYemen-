@@ -11,6 +11,12 @@ export default defineConfig({
       "@": path.resolve(path.dirname(fileURLToPath(import.meta.url)), "src"),
     },
   },
+  build: {
+    // Android System WebView on many devices is older than Chrome 107 —
+    // target it explicitly so the APK never ships unparseable JS.
+    target: "chrome87",
+    cssTarget: "chrome87",
+  },
   plugins: [
     react(),
     tailwindcss(),

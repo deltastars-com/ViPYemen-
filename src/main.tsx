@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexProvider } from "convex/react";
 import { convex } from "./lib/convex";
+import { registerServiceWorker } from "./registerSW";
 import "./index.css";
 import "@fontsource/cairo/400.css";
 import "@fontsource/cairo/600.css";
@@ -17,3 +18,7 @@ createRoot(document.getElementById("root")!).render(
     </ConvexProvider>
   </StrictMode>
 );
+
+registerServiceWorker().catch(() => {
+  /* never let SW registration break the app */
+});

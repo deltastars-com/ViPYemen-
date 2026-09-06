@@ -151,6 +151,58 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 5.3 — إصلاح شاشة التطبيق الفارغة وتوافق الأجهزة الأقدم
+    const v530 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "5.3.0"))
+      .first();
+    if (!v530) {
+      await ctx.db.insert("releases", {
+        version: "5.3.0",
+        title: "تطبيق Android 5.3 — إصلاح الشاشة الفارغة (APK)",
+        description:
+          "الإصدار 5.3 يعالج مشكلة الشاشة الفارغة عند التثبيت: توافق كامل مع متصفحات أندرويد الأقدم (Legacy chunks)، منع تعارض خدمة الويب داخل التطبيق، وشاشة خطأ ظاهرة بدل الشاشة البيضاء. يُنصح بإلغاء تثبيت النسخة السابقة ثم تثبيت هذه النسخة.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.3.0/vip-yemen-android-v5.3.0.apk",
+        notes: "ألغِ تثبيت 5.2.2 أولاً ثم ثبّت هذا الملف — الحزمة com.vip.yemen",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.3.0",
+        title: "حزمة Google Play — AAB 5.3",
+        description:
+          "حزمة AAB محدثة بنفس إصلاحات التوافق، جاهزة للرفع إلى Google Play Console للحزمة com.vip.yemen.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.3.0/vip-yemen-android-v5.3.0.aab",
+        notes: "استخدم store-listing.json و PUBLISHING-GUIDE.md لإكمال القائمة",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.3.0",
+        title: "تطبيق الويب المتقدم 5.3 (PWA)",
+        description:
+          "نسخة الويب المحسّنة: توافق أوسع مع المتصفحات، تحديث تلقائي لخدمة العمل دون إنترنت، وشاشة خطأ ظاهرة بدل الشاشة الفارغة.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.3.0/vip-yemen-web-pwa-v5.3.0.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.3.0",
+        title: "الكود المصدري الكامل + الوثائق 5.3",
+        description:
+          "جميع ملفات المشروع المحدثة: الواجهة، الباك إند (Convex)، مشروعا Android/iOS، ملفات التوثيق والتوقيع والملكية، سياسة الخصوصية ورابطها، ودليل الإدارة والتشغيل.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.3.0/vip-yemen-source-v5.3.0.zip",
+        notes: "يشمل PRIVACY-POLICY-APP.md و OPERATIONS-GUIDE.md و store-listing.json",
+        createdAt: now,
+      });
+    }
+
     // الإصدار 5.1 — الشعار الرسمي، قنوات رقمية، وأزرار تواصل مباشر
     const v510 = await ctx.db
       .query("releases")

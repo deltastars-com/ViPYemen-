@@ -102,6 +102,90 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="direction:rtl;font-family:sans-serif;padding:40px;text-align:center;color:#fff;background:#0a0e1a;min-height:100vh">
+        <h1>ViP Yemen</h1>
+        <p>يتطلب تشغيل المنصة تمكين JavaScript في المتصفح.</p>
+      </div>
+    </noscript>
+    <div id="boot-error" dir="rtl" style="display:none;position:fixed;inset:0;z-index:99999;background:#0a0e1a;color:#f5efe0;font-family:sans-serif;padding:32px;text-align:center">
+      <div style="max-width:420px;margin:18vh auto 0">
+        <div style="font-size:44px">⚠️</div>
+        <h2 style="color:#c9a227;margin:12px 0">تعذّر تشغيل المنصة</h2>
+        <p id="boot-error-msg" style="opacity:.8;font-size:14px;line-height:1.7"></p>
+        <button onclick="location.reload()" style="margin-top:20px;padding:10px 26px;border-radius:10px;border:0;background:#c9a227;color:#0a0e1a;font-weight:bold;font-size:15px">إعادة المحاولة</button>
+      </div>
+    </div>
+    <script>
+      // Polyfills for older Android System WebViews (Chrome <97, Safari <15.4):
+      // some dependency code uses these APIs; without them the app dies silently.
+      (function () {
+        if (!String.prototype.replaceAll) {
+          String.prototype.replaceAll = function (s, r) {
+            return this.split(s).join(typeof r === "string" ? r : r);
+          };
+        }
+        if (!Array.prototype.findLast) {
+          Array.prototype.findLast = function (fn, th) {
+            for (var i = this.length - 1; i >= 0; i--) {
+              if (fn.call(th, this[i], i, this)) return this[i];
+            }
+          };
+        }
+        if (!Object.hasOwn) {
+          Object.hasOwn = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
+        }
+        if (!window.structuredClone) {
+          window.structuredClone = function (v) { return JSON.parse(JSON.stringify(v)); };
+        }
+        if (!window.crypto.randomUUID) {
+          if (window.crypto && window.crypto.getRandomValues) {
+            window.crypto.randomUUID = function () {
+              var b = window.crypto.getRandomValues(new Uint8Array(16));
+              b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+              var h = [].map.call(b, function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+              return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+            };
+          }
+        }
+      })();
+      // Show a visible error (never a blank screen) if the app fails to boot
+      (function () {
+        var shown = false;
+        function showBootError(msg) {
+          if (shown) return;
+          shown = true;
+          var el = document.getElementById("boot-error");
+          var m = document.getElementById("boot-error-msg");
+          if (m) m.textContent = String(msg || "").slice(0, 300);
+          if (el) el.style.display = "block";
+        }
+        window.__vipBootError = showBootError;
+        window.addEventListener("error", function (e) {
+          if (!shown && e && e.message) showBootError("خطأ تحميل: " + e.message);
+        });
+        // 12s without app root = failure (backend issues surface inside the app, not here)
+        setTimeout(function () {
+          var r = document.getElementById("root");
+          if (r && r.childElementCount === 0) showBootError("انتهت مهلة التشغيل — تحقق من اتصال الإنترنت ثم أعد المحاولة.");
+        }, 12000);
+      })();
+      // Inside the native Android/iOS app the PWA service worker must never run:
+      // it can freeze the WebView with stale caches. Purge and unregister there.
+      (function () {
+        var isNative = !!window.Capacitor && !!(window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+        if (isNative && navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+          if (window.caches && caches.keys) {
+            caches.keys().then(function (keys) {
+              keys.forEach(function (k) { caches.delete(k); });
+            }).catch(function () {});
+          }
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,0 +1,64 @@
+name: Build & Release ViP Yemen
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-web:
+    name: Build PWA and publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate icons
+        run: bun run icons
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build PWA
+        run: bun run build
+        env:
+          VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
+
+      - name: Package release artifacts
+        run: |
+          mkdir -p release
+          cp -r dist release/web-pwa
+          zip -r release/vip-yemen-web-pwa-${{ github.ref_name }}.zip release/web-pwa
+          zip -r release/vip-yemen-source-${{ github.ref_name }}.zip src index.html package.json vite.config.ts convex.json public scripts .github
+          cp PRIVACY-POLICY.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md README.md release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ViP Yemen ${{ github.ref_name }}
+          body: |
+            ## ViP Yemen — الإصدار ${{ github.ref_name }}
+
+            ### المحتويات
+            - **تطبيق الويب (PWA)**: مجلد `web-pwa` جاهز للرفع لأي استضافة ثابتة — يعمل بدون إنترنت.
+            - **الكود المصدري الكامل**: الواجهة والباك إند وقاعدة البيانات (Convex).
+            - **وثائق النشر**: دليل النشر في Google Play وApp Store وسياسة الخصوصية.
+
+            > ملاحظة: إصدارات APK/AAB وiOS تُبنى عبر مشروع android-native (راجع PUBLISHING-GUIDE.md).
+          files: |
+            release/*.zip
+            release/*.md
+          draft: false
+          prerelease: false

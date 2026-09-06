@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Cairo", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --color-gold-50: #fbf7e9;
+  --color-gold-100: #f6ecc8;
+  --color-gold-200: #eeda95;
+  --color-gold-300: #e5c55f;
+  --color-gold-400: #ddb43d;
+  --color-gold-500: #d4af37;
+  --color-gold-600: #b8922a;
+  --color-gold-700: #947222;
+  --color-gold-800: #755a1f;
+  --color-gold-900: #5c471c;
+
+  --color-ink-50: #f6f7fb;
+  --color-ink-100: #e9ebf4;
+  --color-ink-200: #d3d8ea;
+  --color-ink-300: #adb6d4;
+  --color-ink-400: #828fba;
+  --color-ink-500: #626fa1;
+  --color-ink-600: #4d5886;
+  --color-ink-700: #3f486c;
+  --color-ink-800: #262c47;
+  --color-ink-900: #141a2e;
+  --color-ink-950: #0a0e1a;
+
+  --color-cream: #f5f0e1;
+
+  --animate-marquee: marquee 45s linear infinite;
+  --animate-fade-up: fade-up 0.7s ease-out both;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-ink-950 text-cream font-sans antialiased;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212, 175, 55, 0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(38, 44, 71, 0.5), transparent);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-gold-500 text-ink-950;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-ink-950;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-ink-700;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gold-600;
+  }
+}
+
+@layer components {
+  .container-app {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .card-surface {
+    @apply rounded-2xl border border-ink-700/60 bg-ink-900/70 backdrop-blur;
+  }
+
+  .card-surface-hover {
+    @apply transition-all duration-300 hover:border-gold-500/50 hover:shadow-[0_8px_40px_-12px_rgba(212,175,55,0.25)] hover:-translate-y-0.5;
+  }
+
+  .gold-text {
+    @apply bg-gradient-to-b from-gold-200 via-gold-400 to-gold-600 bg-clip-text text-transparent;
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-gold-400 to-gold-600 px-6 py-3 text-sm font-bold text-ink-950 shadow-[0_10px_30px_-10px_rgba(212,175,55,0.6)] transition-all hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-ink-600/70 px-6 py-3 text-sm font-semibold text-cream transition-all hover:border-gold-500/60 hover:text-gold-300 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .input-app {
+    @apply w-full rounded-xl border border-ink-600/70 bg-ink-950/60 px-4 py-2.5 text-sm text-cream placeholder:text-ink-400 outline-none transition-all focus:border-gold-500 focus:ring-2 focus:ring-gold-500/20;
+  }
+
+  .label-app {
+    @apply mb-1.5 block text-xs font-semibold text-ink-200;
+  }
+
+  .section-title {
+    @apply text-2xl font-extrabold sm:text-3xl;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-ink-600/60 bg-ink-800/60 px-2.5 py-0.5 text-[11px] font-semibold text-ink-200;
+  }
+}
+
+.marquee-track {
+  direction: ltr;
+  display: flex;
+  width: max-content;
+  animation: var(--animate-marquee);
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}

@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.expo/
+release/
+
+# Secrets and signing material
+.env
+.env.*
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+
+# Tooling
+coverage/
+.manus-logs/
+__manus__/
+.DS_Store
+
+# =============================================================================
+# 🔐 ملفات حساسة - لا ترفعها إلى GitHub
+# =============================================================================
+
+# Android Keystore files
+*.jks
+*.keystore
+keystore.properties
+
+# Capacitor keystore
+capacitor-app/keystore.properties
+capacitor-app/*.jks
+capacitor-app/*.keystore
+
+# Credentials files (keep local only)
+CREDENTIALS-AND-SIGNING.md
+release-build/

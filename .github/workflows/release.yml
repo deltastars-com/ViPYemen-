@@ -1,4 +1,4 @@
-name: Build & Release ViP Yemen
+name: "Build & Release ViP Yemen"
 
 on:
   push:
@@ -65,7 +65,6 @@ jobs:
   build-android:
     name: Build signed APK + AAB
     runs-on: ubuntu-latest
-    if: ${{ secrets.ANDROID_KEYSTORE_B64 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -84,21 +83,35 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Check signing secrets
+        id: signing
+        run: |
+          if [[ -n "${{ secrets.ANDROID_KEYSTORE_B64 }}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
+        if: steps.signing.outputs.available == 'true'
         run: bun install --frozen-lockfile
 
       - name: Generate icons
+        if: steps.signing.outputs.available == 'true'
         run: bun run icons
 
       - name: Build web
+        if: steps.signing.outputs.available == 'true'
         run: bun run build
         env:
           VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
 
       - name: Sync Capacitor
+        if: steps.signing.outputs.available == 'true'
         run: npx cap sync android
 
       - name: Configure keystore
+        if: steps.signing.outputs.available == 'true'
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > android/keystore.jks
           cat > android/keystore.properties <<EOF
@@ -109,11 +122,13 @@ jobs:
           EOF
 
       - name: Build APK + AAB
+        if: steps.signing.outputs.available == 'true'
         run: |
           cd android
           ./gradlew assembleRelease bundleRelease --no-daemon
 
       - name: Upload APK/AAB to release
+        if: steps.signing.outputs.available == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: |

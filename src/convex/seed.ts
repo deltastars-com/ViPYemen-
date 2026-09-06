@@ -92,44 +92,44 @@ export const ensureSeedData = mutation({
     // الإصدار 5.2 — تحسينات الواجهات والرسومات وملفات المتاجر والتطبيقات الجاهزة
     const v520 = await ctx.db
       .query("releases")
-      .filter((q) => q.eq(q.field("version"), "5.2.0"))
+      .filter((q) => q.eq(q.field("version"), "5.2.1"))
       .first();
     if (!v520) {
       await ctx.db.insert("releases", {
-        version: "5.2.0",
+        version: "5.2.1",
         title: "تطبيق الويب المتقدم 5.2 (PWA)",
         description:
           "الإصدار 5.2: تحسينات شاملة على تصاميم الواجهات برسومات تعريفية بالهوية الذهبية، بطاقات الأقسام المحسّنة، تحسينات الأداء، وملفات المتاجر والوثائق الكاملة.",
         platform: "web",
         fileUrl:
-          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.2.0/vip-yemen-web-pwa-v5.2.0.zip",
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.2.1/vip-yemen-web-pwa-v5.2.1.zip",
         notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت — أو استضافة مجلد web-pwa",
         createdAt: now,
       });
       await ctx.db.insert("releases", {
-        version: "5.2.0",
+        version: "5.2.1",
         title: "تطبيق Android — APK جاهز للتثبيت المباشر",
         description:
           "ملف APK للحزمة com.vip.yemen — جاهز للتنزيل والتثبيت المباشر على أي جهاز أندرويد. يُرفق تلقائياً في كل إصدار.",
         platform: "android",
         fileUrl:
-          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.2.0/vip-yemen-android-v5.2.0.apk",
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.2.1/vip-yemen-android-v5.2.1.apk",
         notes: "موقّع بشهادة الإصدار عند توفر التوقيع — وإلا نسخة تثبيت موقّعة تشغيلياً",
         createdAt: now,
       });
       await ctx.db.insert("releases", {
-        version: "5.2.0",
+        version: "5.2.1",
         title: "حزمة Google Play — AAB",
         description:
           "ملف AAB جاهز للرفع إلى Google Play Console للحزمة com.vip.yemen مع ملفات القائمة والتوثيق.",
         platform: "android",
         fileUrl:
-          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.2.0/vip-yemen-android-v5.2.0.aab",
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.2.1/vip-yemen-android-v5.2.1.aab",
         notes: "استخدم store-listing.json و PUBLISHING-GUIDE.md لإكمال القائمة",
         createdAt: now,
       });
       await ctx.db.insert("releases", {
-        version: "5.2.0",
+        version: "5.2.1",
         title: "تطبيق iOS — IPA وApp Store",
         description:
           "مشروع iOS جاهز بالأيقونة الرسمية والإعدادات للحزمة com.vip.yemen — البناء والتوقيع عبر Codemagic أو Xcode ورفعها إلى App Store Connect.",
@@ -139,13 +139,13 @@ export const ensureSeedData = mutation({
         createdAt: now,
       });
       await ctx.db.insert("releases", {
-        version: "5.2.0",
+        version: "5.2.1",
         title: "الكود المصدري الكامل + الوثائق والتوثيق",
         description:
           "جميع ملفات المشروع: الواجهة، الباك إند (Convex)، مشروعا Android/iOS، ملفات التوثيق والتوقيع والملكية، سياسة الخصوصية ورابطها، دليل الإدارة والتشغيل، وملفات المتاجر.",
         platform: "docs",
         fileUrl:
-          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.2.0/vip-yemen-source-v5.2.0.zip",
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.2.1/vip-yemen-source-v5.2.1.zip",
         notes: "يشمل PRIVACY-POLICY-APP.md و OPERATIONS-GUIDE.md و store-listing.json",
         createdAt: now,
       });

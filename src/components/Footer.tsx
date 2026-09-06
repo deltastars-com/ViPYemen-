@@ -136,9 +136,37 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-ink-700/50 py-5">
-        <div className="container-app flex flex-col items-center justify-between gap-3 text-xs text-ink-400 sm:flex-row">
-          <p>© 2026 ViP Yemen — جميع الحقوق محفوظة. المهندس علي درهم الدحان</p>
+      <div className="border-t border-ink-700/50 py-4">
+        <div className="container-app flex flex-col items-center justify-between gap-4 text-xs text-ink-400 lg:flex-row">
+          <p className="text-center lg:text-left">
+            © 2026 ViP Yemen — جميع الحقوق محفوظة. المهندس علي درهم الدحان
+          </p>
+
+          {/* Quick direct contact — call + WhatsApp */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <a
+              href="tel:+967773597404"
+              dir="ltr"
+              aria-label="اتصال مباشر: 967773597404"
+              title="اتصال مباشر"
+              className="flex items-center gap-2 rounded-full border border-ink-600/60 bg-ink-900/60 px-3.5 py-2 font-bold text-ink-100 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
+            >
+              <Phone className="h-3.5 w-3.5 text-gold-400" />
+              <span>اتصال: +967 773 597 404</span>
+            </a>
+            <a
+              href="https://wa.me/967711780999?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D8%AA%D9%88%D8%A7%D8%B5%D9%84%20%D9%85%D8%B9%20%D9%85%D9%86%D8%B5%D8%A9%20ViP%20Yemen"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="واتساب: 967711780999"
+              title="تواصل عبر واتساب"
+              className="flex items-center gap-2 rounded-full border border-[#25d366]/40 bg-[#25d366]/10 px-3.5 py-2 font-bold text-ink-100 transition-all hover:-translate-y-0.5 hover:border-[#25d366]/80 hover:text-[#4ade80]"
+            >
+              <WhatsAppIcon className="h-3.5 w-3.5 text-[#4ade80]" />
+              <span dir="ltr">واتساب: +967 711 780 999</span>
+            </a>
+          </div>
+
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-gold-400" />

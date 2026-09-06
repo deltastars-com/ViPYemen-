@@ -89,6 +89,46 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 5.1 — الشعار الرسمي، قنوات رقمية، وأزرار تواصل مباشر
+    const v510 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "5.1.0"))
+      .first();
+    if (!v510) {
+      await ctx.db.insert("releases", {
+        version: "5.1.0",
+        title: "تطبيق الويب المتقدم 5.1 (PWA)",
+        description:
+          "الإصدار 5.1: الشعار الرسمي الذهبي الجديد، قسم قنواتنا الرقمية (واتساب/تيليجرام/يوتيوب)، أزرار الاتصال المباشر والواتساب في التذييل، وتحسينات الأداء والأمان.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.1.0/vip-yemen-web-pwa-v5.1.0.zip",
+        notes: "تطبيق ويب تقدمي ثابت — تثبيت مباشر على الجهاز أو استضافة كاملة",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.1.0",
+        title: "الكود المصدري الكامل 5.1",
+        description:
+          "جميع ملفات المشروع: الواجهة، الباك إند (Convex)، قاعدة البيانات، مشروعا Android/iOS (Capacitor)، سير عمل البناء التلقائي، وأدلة النشر في المتاجر.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.1.0/vip-yemen-source-v5.1.0.zip",
+        notes: "متوفر في قسم الإصدارات بمستودع المشروع",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.1.0",
+        title: "تطبيقات Android و iOS",
+        description:
+          "تطبيقات الهاتف للحزمة com.vip.yemen: APK و AAB لنظام Android وتطبيق iOS — تُبنى آلياً وبشكل تلقائي عبر سير العمل عند توفير ملف التوقيع.",
+        platform: "android",
+        fileUrl: "https://github.com/deltastars-com/ViPYemen-/releases/latest",
+        notes: "APK/AAB/IPA تُرفق تلقائياً في قسم الإصدارات",
+        createdAt: now,
+      });
+    }
+
     return { ok: true };
   },
 });

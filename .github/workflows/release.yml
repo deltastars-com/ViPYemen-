@@ -125,6 +125,20 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease bundleRelease --no-daemon
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk
+          mv app/build/outputs/bundle/release/app-release.aab app/build/outputs/bundle/release/vip-yemen-android-${{ github.ref_name }}.aab
+
+      - name: Assert APK is signed with the official key
+        run: |
+          cd android
+          FP=$(keytool -printcert -jarfile app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk 2>/dev/null | grep -i "SHA256:" | head -1 | sed 's/.*SHA256: *//; s/://g; s/ //g' | tr 'a-f' 'A-F')
+          echo "APK SHA-256: $FP"
+          EXPECT="FDAE0D2593F79646DD077C2352D1682CBE9FCC3D27172A6D8EF9153EA765F48B"
+          if [[ "$FP" != "$EXPECT" ]]; then
+            echo "::error::APK signature does not match the official keystore!"
+            exit 1
+          fi
+          echo "official signature verified"
 
       - name: Upload APK/AAB to draft release
         uses: softprops/action-gh-release@v2
@@ -133,7 +147,7 @@ jobs:
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/bundle/release/*.aab
             android/keystore.properties
-            android/keystore/README.md
+            android/keystore/KEYSTORE-README.md
           append_body: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -255,6 +255,56 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 5.8.1 — تحسين إصدار الملفات الموقّعة والتسمية الرسمية
+    const v581 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "5.8.1"))
+      .first();
+    if (!v581) {
+      await ctx.db.insert("releases", {
+        version: "5.8.1",
+        title: "تطبيق Android 5.8.1 — تحديث مباشر بدون حذف (APK)",
+        description:
+          "الإصدار 5.8.1 موقّع بالمفتاح الرسمي الثابت مع تحقق آلي من التوقيع أثناء البناء: ثبّت النسخة الجديدة مباشرة فوق السابقة بدون حذف، مع كل مميزات 5.7 و5.8.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.8.1/vip-yemen-android-v5.8.1.apk",
+        notes: "التحديث يُثبَّت فوق الإصدارات الموقّعة السابقة مباشرة — لا حاجة للحذف",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.8.1",
+        title: "حزمة Google Play — AAB 5.8.1",
+        description: "حزمة AAB موقّعة بالمفتاح الثابت، جاهزة للرفع إلى Google Play مع ملفات المتاجر والتوقيع المرفقة.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.8.1/vip-yemen-android-v5.8.1.aab",
+        notes: "استخدم store-listing.json و SIGNING-AND-OWNERSHIP.md لإكمال القائمة",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.8.1",
+        title: "تطبيق الويب المتقدم 5.8.1 (PWA) — تحديث تلقائي",
+        description: "نسخة الويب تحدّث نفسها تلقائياً كل 30 دقيقة وعند فتح التطبيق — بدون أي إجراء من المستخدم.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.8.1/vip-yemen-web-pwa-v5.8.1.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.8.1",
+        title: "الكود المصدري + ملفات التوقيع والملكية والمتاجر",
+        description:
+          "الكود المصدري الكامل، ملف التوقيع (PKCS12) وبيانات الشهادة والملكية، صور المتاجر (أيقونة 512 وصورة العرض 1024×500)، سياسة الخصوصية، ودليل الإدارة والتشغيل.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.8.1/vip-yemen-source-v5.8.1.zip",
+        notes: "جميع ملفات الرفع لمتجر Google Play و App Store",
+        createdAt: now,
+      });
+    }
+
     // الإصدار 5.8 — توقيع ثابت (تحديث بدون حذف)، ملفات متاجر كاملة
     const v580 = await ctx.db
       .query("releases")

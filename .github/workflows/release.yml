@@ -131,7 +131,8 @@ jobs:
       - name: Assert APK is signed with the official key
         run: |
           cd android
-          FP=$(keytool -printcert -jarfile app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk 2>/dev/null | grep -i "SHA256:" | head -1 | sed 's/.*SHA256: *//; s/://g; s/ //g' | tr 'a-f' 'A-F')
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
+          FP=$("$APKSIGNER" verify --print-certs app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk | grep -i "SHA-256 digest" | head -1 | awk '{print $NF}' | tr 'a-f' 'A-F')
           echo "APK SHA-256: $FP"
           EXPECT="FDAE0D2593F79646DD077C2352D1682CBE9FCC3D27172A6D8EF9153EA765F48B"
           if [[ "$FP" != "$EXPECT" ]]; then

@@ -40,6 +40,8 @@ export interface SubmissionTypeConfig {
 }
 
 export interface CategoryConfig {
+  /** section-specific hero glow colors (rgba) matching its identity */
+  glow: [string, string];
   key: string;
   label: string;
   shortLabel: string;
@@ -57,6 +59,7 @@ export const CATEGORIES: CategoryConfig[] = [
     shortLabel: "توظيف",
     icon: Briefcase,
     accent: "sky",
+    glow: ["rgba(56,132,255,0.30)", "rgba(30,64,120,0.45)"],
     hero: "فرص عمل موثوقة وكوادر مؤهلة",
     description:
       "سجّل بياناتك كباحث عن عمل أو أعلن عن وظيفة في منشأتك — تُراجع الطلبات من إدارة المنصة قبل النشر لضمان الحقوق والجودة.",
@@ -175,6 +178,7 @@ export const CATEGORIES: CategoryConfig[] = [
     shortLabel: "عقارات",
     icon: Home,
     accent: "emerald",
+    glow: ["rgba(16,185,129,0.28)", "rgba(20,90,70,0.45)"],
     hero: "عقارات موثوقة وبائعون ومشترون حقيقيون",
     description:
       "اعرض أرضك أو منزلك أو عمارتك أو فيلتك، أو سجّل طلبك كباحث عن عقار — كل الطلبات تمر بمراجعة إدارة المنصة قبل النشر.",
@@ -263,6 +267,7 @@ export const CATEGORIES: CategoryConfig[] = [
     shortLabel: "تسويق إلكتروني",
     icon: ShoppingBag,
     accent: "amber",
+    glow: ["rgba(212,175,55,0.32)", "rgba(120,84,20,0.40)"],
     hero: "اعرض منتجك أو ابحث عن طلبك — مع تحقق من رقم الهاتف",
     description:
       "سوق إلكتروني شامل: أجهزة، سيارات، آلات، سلع متنوعة. يتحقق النظام من رقم هاتفك ويربطك مباشرة بواتساب المنصة.",
@@ -331,6 +336,7 @@ export const CATEGORIES: CategoryConfig[] = [
     shortLabel: "برمجيات",
     icon: Code2,
     accent: "violet",
+    glow: ["rgba(139,92,246,0.28)", "rgba(76,45,150,0.45)"],
     hero: "مواقع وتطبيقات وأنظمة برمجية بمعايير عالمية",
     description:
       "اطلب مشروعك البرمجي: مواقع ويب، تطبيقات جوال Android وiOS، لوحات تحكم، أنظمة متكاملة — تُراجع طلباتك من الإدارة وتُتواصل معك مباشرة.",

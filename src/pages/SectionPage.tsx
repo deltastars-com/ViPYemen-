@@ -26,9 +26,9 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-ink-700/50">
         <div
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-25"
           style={{
-            backgroundImage: `radial-gradient(circle at 20% 20%, rgba(212,175,55,0.35), transparent 40%), radial-gradient(circle at 80% 80%, rgba(38,44,71,0.6), transparent 50%)`,
+            backgroundImage: `radial-gradient(circle at 20% 20%, ${category.glow[0]}, transparent 40%), radial-gradient(circle at 80% 80%, ${category.glow[1]}, transparent 50%)`,
           }}
         />
         <div className="container-app relative py-14 sm:py-20">

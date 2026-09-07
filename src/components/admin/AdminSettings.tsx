@@ -8,7 +8,14 @@ import {
   CheckCircle2,
   KeyRound,
   AlertTriangle,
+  Fingerprint,
 } from "lucide-react";
+import {
+  enrollBiometric,
+  disableBiometric,
+  isBiometricSupported,
+  isBiometricEnrolled,
+} from "@/lib/biometric";
 import { api } from "../../convex/_generated/api";
 import { Button, Card, Input, Label, Spinner } from "@/components/ui";
 
@@ -222,6 +229,8 @@ export function AdminSettings({ token }: { token: string }) {
         </div>
       </div>
 
+      <BiometricCard accountName={values.brandName || "admin"} />
+
       <div className="flex items-center gap-3">
         <Button onClick={handleSave} loading={busy}>
           <Save className="h-4 w-4" />
@@ -235,5 +244,76 @@ export function AdminSettings({ token }: { token: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+function BiometricCard({ accountName }: { accountName: string }) {
+  const [supported, setSupported] = useState<boolean | null>(null);
+  const [enrolled, setEnrolled] = useState(isBiometricEnrolled());
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    isBiometricSupported().then(setSupported);
+  }, []);
+
+  async function handleEnroll() {
+    setBusy(true);
+    setMsg("");
+    const ok = await enrollBiometric(accountName);
+    setBusy(false);
+    if (ok) {
+      setEnrolled(true);
+      setMsg("تم التفعيل — ستُطلب البصمة أو الوجه عند كل دخول للوحة التحكم");
+    } else {
+      setMsg("تعذّر التفعيل — تأكد من تسجيل بصمتك/وجهك في إعدادات الجهاز");
+    }
+  }
+
+  function handleDisable() {
+    disableBiometric();
+    setEnrolled(false);
+    setMsg("تم إلغاء التأمين بالبصمة");
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-gold-500/30 bg-gold-500/10 text-gold-300">
+          <Fingerprint className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-base font-extrabold text-cream">التأمين بالبصمة والوجه</h3>
+          <p className="text-xs text-ink-400">
+            حماية حيوية حقيقية عبر مستشعر الجهاز (بصمة / بصمة الوجه) لفتح لوحة التحكم
+          </p>
+        </div>
+      </div>
+      {supported === false ? (
+        <p className="rounded-lg border border-ink-600/50 bg-ink-800/60 p-3 text-xs leading-relaxed text-ink-300">
+          هذا الجهاز لا يدعم التحقق الحيوي — افتح لوحة التحكم من هاتف يدعم البصمة (WebAuthn على الويب، BiometricPrompt داخل التطبيق).
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          {enrolled ? (
+            <>
+              <span className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-300">
+                <CheckCircle2 className="h-4 w-4" />
+                مُفعّل على هذا الجهاز
+              </span>
+              <Button variant="ghost" onClick={handleDisable} className="!py-2 text-xs">
+                إلغاء التفعيل
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleEnroll} loading={busy} className="!py-2 text-xs">
+              <Fingerprint className="h-4 w-4" />
+              تفعيل التأمين بالبصمة
+            </Button>
+          )}
+        </div>
+      )}
+      {msg && <p className="mt-3 text-xs leading-relaxed text-gold-300">{msg}</p>}
+    </Card>
   );
 }

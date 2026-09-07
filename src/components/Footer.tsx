@@ -10,7 +10,6 @@ import {
   Phone,
   MapPin,
   MessageCircle,
-  Sparkles,
   ArrowUp,
 } from "lucide-react";
 import { Logo } from "./Logo";

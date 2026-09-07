@@ -20,7 +20,9 @@ import {
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { getAdminToken, clearAdminToken, CONVEX_URL } from "@/lib/convex";
-import { Logo } from "@/components/Logo";
+import { isBiometricEnrolled, verifyBiometric } from "@/lib/biometric";
+import { Fingerprint } from "lucide-react";
+import { Logo, LogoMark } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { AdminOverview } from "@/components/admin/AdminOverview";
 import { AdminSubmissions } from "@/components/admin/AdminSubmissions";
@@ -66,6 +68,10 @@ export function AdminPage() {
   const [tab, setTab] = useState<AdminTab>("overview");
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+  // Biometric gate state (hooks must run unconditionally — early returns follow)
+  const [biometricUnlocked, setBiometricUnlocked] = useState(!isBiometricEnrolled());
+  const [bioBusy, setBioBusy] = useState(false);
+  const [bioError, setBioError] = useState("");
 
   if (!CONVEX_URL) {
     return (
@@ -106,6 +112,39 @@ export function AdminPage() {
   }
   if (session.mustChangePassword) {
     return <Navigate to={`/auth?returnTo=/admin`} replace />;
+  }
+
+  // Biometric gate: when enrolled on this device, the dashboard unlocks
+  // only after a successful fingerprint/face verification.
+  async function unlockWithBiometric() {
+    setBioBusy(true);
+    setBioError("");
+    const ok = await verifyBiometric("فتح لوحة التحكم");
+    setBioBusy(false);
+    if (ok) setBiometricUnlocked(true);
+    else setBioError("لم يتم التحقق — حاول مجدداً");
+  }
+
+  if (isBiometricEnrolled() && !biometricUnlocked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="card-surface w-full max-w-sm p-8 text-center">
+          <LogoMark className="mx-auto h-16 w-16" />
+          <h1 className="mt-4 text-lg font-black text-cream">حماية بالبصمة</h1>
+          <p className="mt-2 text-sm leading-relaxed text-ink-300">
+            لوحة التحكم محمية بالتحقق الحيوي — ثبّت بصمتك أو أظهر وجهك للمتابعة.
+          </p>
+          <Fingerprint className="mx-auto mt-5 h-10 w-10 text-gold-400" />
+          {bioError && <p className="mt-3 text-xs font-bold text-rose-400">{bioError}</p>}
+          <button onClick={unlockWithBiometric} disabled={bioBusy} className="btn-gold mt-5 w-full disabled:opacity-60">
+            {bioBusy ? "جارٍ التحقق..." : "تحقق بالبصمة / الوجه"}
+          </button>
+          <button onClick={handleLogout} className="btn-ghost mt-3 w-full text-xs">
+            تسجيل خروج
+          </button>
+        </div>
+      </div>
+    );
   }
 
   function handleLogout() {

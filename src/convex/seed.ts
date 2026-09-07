@@ -255,7 +255,57 @@ export const ensureSeedData = mutation({
       });
     }
 
-    // الإصدار 5.6 — الختم الرسمي الجديد، إزالة كل علامات الذكاء الاصطناعي، إصلاح لوحة التحكم
+    // الإصدار 5.7 — تأمين حيوي بالبصمة والوجه، هوية بصرية لكل قسم
+    const v570 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "5.7.0"))
+      .first();
+    if (!v570) {
+      await ctx.db.insert("releases", {
+        version: "5.7.0",
+        title: "تطبيق Android 5.7 — تأمين بالبصمة والوجه (APK)",
+        description:
+          "الإصدار 5.7: تأمين حيوي حقيقي للوحة التحكم بالبصمة والتعرف على الوجه عبر مستشعر الجهاز، هوية بصرية مميزة لكل قسم من أقسام المنصة، واجهات نقية بهوية المنصة، وكل إصلاحات الإصدارات السابقة.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.7.0/vip-yemen-android-v5.7.0.apk",
+        notes: "ألغِ تثبيت النسخة السابقة ثم ثبّت هذا الملف — الحزمة com.vip.yemen",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.7.0",
+        title: "حزمة Google Play — AAB 5.7",
+        description: "حزمة AAB بالتأمين الحيوي وكل تحسينات 5.7.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.7.0/vip-yemen-android-v5.7.0.aab",
+        notes: "استخدم store-listing.json و PUBLISHING-GUIDE.md لإكمال القائمة",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.7.0",
+        title: "تطبيق الويب المتقدم 5.7 (PWA)",
+        description: "نسخة الويب بالتأمين الحيوي (WebAuthn) والهوية البصرية المحدثة لكل قسم.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.7.0/vip-yemen-web-pwa-v5.7.0.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.7.0",
+        title: "الكود المصدري الكامل + الوثائق 5.7",
+        description:
+          "جميع ملفات المشروع المحدثة: الواجهة، الباك إند (Convex)، مشروعا Android/iOS، ملفات التوثيق والتوقيع والملكية، سياسة الخصوصية، ودليل الإدارة والتشغيل.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.7.0/vip-yemen-source-v5.7.0.zip",
+        notes: "يشمل PRIVACY-POLICY-APP.md و OPERATIONS-GUIDE.md و store-listing.json",
+        createdAt: now,
+      });
+    }
+
+    // الإصدار 5.6 — الختم الرسمي الجديد، نقاءة الواجهات من كل العلامات الخارجية، إصلاح لوحة التحكم
     const v560 = await ctx.db
       .query("releases")
       .filter((q) => q.eq(q.field("version"), "5.6.0"))
@@ -265,7 +315,7 @@ export const ensureSeedData = mutation({
         version: "5.6.0",
         title: "تطبيق Android 5.6 — الختم الرسمي الجديد (APK)",
         description:
-          "الإصدار 5.6: استبدال كامل للأيقونة بالختم الذهبي الرسمي (VIP YEMEN) في المتجر والهاتف بكل الدقات، إزالة كل شارات وعلامات الذكاء الاصطناعي من الواجهات وأيقونة المساعد أصبحت شعار المنصة، وإصلاح فتح لوحة التحكم من القائمة.",
+          "الإصدار 5.6: استبدال كامل للأيقونة بالختم الذهبي الرسمي (VIP YEMEN) في المتجر والهاتف بكل الدقات، واجهات نقية بهوية المنصة فقط وأيقونة البحث أصبحت شعار المنصة، وإصلاح فتح لوحة التحكم من القائمة.",
         platform: "android",
         fileUrl:
           "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.6.0/vip-yemen-android-v5.6.0.apk",

@@ -4,6 +4,7 @@ import { AppLayout } from "./components/AppLayout";
 import { LogoMark } from "./components/Logo";
 import { useExternalLinkGuard } from "./lib/utils";
 import { initNativeShell } from "./lib/native";
+import { markAppReady, reportFatal } from "./lib/autoRecovery";
 
 const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
 const JobsPage = lazy(() => import("./pages/JobsPage").then((m) => ({ default: m.JobsPage })));
@@ -49,20 +50,28 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
     return { hasError: true };
   }
 
+  componentDidCatch(error: unknown) {
+    // Hand the render crash to the auto-recovery watchdog: it shows the
+    // branded recovery screen and restarts the platform automatically.
+    reportFatal(error, "واجهة");
+  }
+
   render() {
     if (this.state.hasError) {
+      // The auto-recovery overlay covers this fallback while the platform
+      // restarts itself; this stays as a final manual safety net.
       return (
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
           <h1 className="text-xl font-black text-cream">حدث خطأ غير متوقع</h1>
           <p className="max-w-md text-sm text-ink-300">
-            نعتذر عن هذا الخلل — يمكنك تحديث الصفحة أو العودة للرئيسية.
+            يعيد النظام تشغيل المنصة تلقائياً — إذا لم يحدث ذلك اضغط الزر أدناه.
           </p>
           <div className="flex gap-3">
             <button onClick={() => window.location.reload()} className="btn-gold">
-              تحديث الصفحة
+              إعادة تشغيل المنصة
             </button>
-            <Link to="/" className="btn-ghost">
-              الرئيسية
+            <Link to="/" className="btn-ghost" onClick={() => this.setState({ hasError: false })}>
+              العودة للرئيسية
             </Link>
           </div>
         </div>
@@ -94,6 +103,11 @@ function NativeShell() {
 }
 
 export default function App() {
+  // The React tree mounted and painted — disarm the boot watchdog.
+  useEffect(() => {
+    markAppReady();
+  }, []);
+
   return (
     <BrowserRouter>
       <ErrorBoundary>

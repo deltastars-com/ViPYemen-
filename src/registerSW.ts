@@ -10,10 +10,27 @@
 //   and old caches are purged on activate.
 // - Backend data (Convex) is network-only: when offline, published pages
 //   simply show cached shell + content that was already rendered.
-const CACHE_VERSION = "vip-yemen-v5.8.1";
+const CACHE_VERSION = "vip-yemen-v5.9.0";
 
 export async function registerServiceWorker(): Promise<void> {
   if (!("serviceWorker" in navigator)) return;
+
+  // True upgrade reload: when a NEWER version of the app takes control
+  // (skipWaiting) while this page was already running an older service
+  // worker, reload exactly once so the user instantly gets the fresh build
+  // instead of a stale shell. First-ever installs are left untouched.
+  const hadController = !!navigator.serviceWorker.controller;
+  let takeoverReloaded = false;
+  try {
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadController && !takeoverReloaded) {
+        takeoverReloaded = true;
+        window.location.reload();
+      }
+    });
+  } catch {
+    // best-effort
+  }
 
   try {
     const { registerSW } = await import("virtual:pwa-register");

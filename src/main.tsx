@@ -1,3 +1,6 @@
+// Self error-detector + auto-restart watchdog. MUST be the first import so its
+// listeners are live before any app module evaluates (catches boot crashes too).
+import "./lib/autoRecovery";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexProvider } from "convex/react";

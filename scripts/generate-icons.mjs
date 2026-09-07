@@ -242,6 +242,20 @@ function bakeH(run, baselineY, tracking = 0) {
 bakeH(runVip, 318, 4);
 bakeH(runYemen, 380, 3);
 
+// bake a run centered at a given centerX (used by the store feature graphic)
+function bakeHAt(run, baselineY, centerX, tracking = 0) {
+  const total = totalAdvance(run) + tracking * (run.length - 1);
+  let x = centerX - total / 2;
+  for (const g of run) { g._ox = x; g._oy = baselineY; x += g.adv + tracking; }
+  return run;
+}
+function glyphHit(x, y, run) {
+  for (const pl of run)
+    for (const contour of pl.contours)
+      if (pointInPoly(x, y, contour.map(([gx, gy]) => [gx + pl._ox, gy + pl._oy]))) return true;
+  return false;
+}
+
 function colorAt(x, y, maskable, fgScale) {
   const s = fgScale ?? (maskable ? 0.8 : 1);
   const d0 = Math.hypot(x - CX, y - CY);
@@ -327,6 +341,8 @@ function writeIcon(file, size, opts) {
   console.log(`✔ ${file} (${size}x${size}, ${(png.length / 1024).toFixed(1)} KB)`);
 }
 
+const STORE_ONLY = process.argv.includes("--store");
+if (!STORE_ONLY) {
 writeIcon("icon-192.png", 192, {});
 writeIcon("icon-512.png", 512, {});
 writeIcon("icon-maskable-512.png", 512, { maskable: true });
@@ -426,4 +442,61 @@ console.log("✔ favicon.svg");
     else if (r < 140 && g < 110) dark++;
   }
   console.log(`Probes: goldPx=${gold} engravedPx=${dark} bgPx=${black}`);
+}
+
+} // end if (!STORE_ONLY)
+
+// ---------------- Store graphics (Google Play feature graphic 1024x500) ----------------
+if (STORE_ONLY) {
+  const GR = path.resolve("store-graphics");
+  fs.mkdirSync(GR, { recursive: true });
+  const FW = 1024, FH = 500;
+  const sealSrc = render(512, {});
+  const sealBox = 400, sx0 = 90, sy0 = 50; // pasted seal square
+  const nameRun = bakeHAt(latinRun("VIP YEMEN", 88), 235, 800, 4);
+  const tagRun = bakeHAt(latinRun("EMPLOYMENT - REAL ESTATE - E-MARKETING - SOFTWARE", 27), 348, 800, 0);
+  const tagRun2 = bakeHAt(latinRun("YEMENI PLATFORM FOR JOBS, PROPERTY & DIGITAL SERVICES", 21), 392, 800, 0);
+  const runs = [
+    { run: nameRun, y0: 150, y1: 330, color: [233, 207, 122] },
+    { run: tagRun, y0: 320, y1: 375, color: [160, 176, 207] },
+    { run: tagRun2, y0: 365, y1: 415, color: [120, 133, 162] },
+  ];
+  const canvas = Buffer.alloc(FW * FH * 4);
+  for (let y = 0; y < FH; y++) {
+    const t = clamp01(y / FH);
+    const bgR = Math.round(lerp(13, 16, t));
+    const bgG = Math.round(lerp(17, 24, t));
+    const bgB = Math.round(lerp(30, 40, t));
+    const insideSeal = y >= sy0 && y < sy0 + sealBox;
+    for (let x = 0; x < FW; x++) {
+      let r = bgR, g = bgG, b = bgB;
+      const gx = x - 290, gy = y - 220;
+      const glow = clamp01(1 - Math.hypot(gx, gy) / 320);
+      if (glow > 0) {
+        r = Math.round(lerp(r, 212, glow * glow * 0.1));
+        g = Math.round(lerp(g, 175, glow * glow * 0.08));
+        b = Math.round(lerp(b, 55, glow * glow * 0.05));
+      }
+      if (insideSeal && x >= sx0 && x < sx0 + sealBox) {
+        const srcX = ((x - sx0) * 512) / sealBox;
+        const srcY = ((y - sy0) * 512) / sealBox;
+        const si = ((Math.floor(srcY) * 512 + Math.floor(srcX)) * 4 + 3) | 0;
+        if (sealSrc[si] > 40) {
+          r = sealSrc[si - 3]; g = sealSrc[si - 2]; b = sealSrc[si - 1];
+        }
+      }
+      for (const band of runs) {
+        if (y < band.y0 || y >= band.y1 || x < 560) continue;
+        if (glyphHit(x, y, band.run)) {
+          r = band.color[0]; g = band.color[1]; b = band.color[2];
+          break;
+        }
+      }
+      const i = (y * FW + x) * 4;
+      canvas[i] = r; canvas[i + 1] = g; canvas[i + 2] = b; canvas[i + 3] = 255;
+    }
+  }
+  fs.writeFileSync(path.join(GR, "feature-graphic-1024x500.png"), encodePNG(FW, FH, canvas));
+  fs.writeFileSync(path.join(GR, "icon-512.png"), encodePNG(512, 512, render(512, {})));
+  console.log("✔ store-graphics/feature-graphic-1024x500.png + icon-512.png");
 }

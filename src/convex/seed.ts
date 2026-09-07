@@ -255,6 +255,56 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 5.8 — توقيع ثابت (تحديث بدون حذف)، ملفات متاجر كاملة
+    const v580 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "5.8.0"))
+      .first();
+    if (!v580) {
+      await ctx.db.insert("releases", {
+        version: "5.8.0",
+        title: "تطبيق Android 5.8 — تحديث مباشر بدون حذف (APK)",
+        description:
+          "الإصدار 5.8 موقّع بمفتاح إصدار ثابت رسمي: ثبّت النسخة الجديدة مباشرة فوق السابقة بدون حذف وبدون فقدان البيانات، مع كل مميزات 5.7 (التأمين الحيوي بالبصمة والوجه، الأيقونة الرسمية، الوضع دون إنترنت).",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.8.0/vip-yemen-android-v5.8.0.apk",
+        notes: "التحديث يُثبَّت فوق الإصدارات الموقّعة السابقة مباشرة — لا حاجة للحذف",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.8.0",
+        title: "حزمة Google Play — AAB 5.8",
+        description: "حزمة AAB موقّعة بالمفتاح الثابت، جاهزة للرفع إلى Google Play مع ملفات المتاجر والتوقيع المرفقة.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.8.0/vip-yemen-android-v5.8.0.aab",
+        notes: "استخدم store-listing.json و SIGNING-AND-OWNERSHIP.md لإكمال القائمة",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.8.0",
+        title: "تطبيق الويب المتقدم 5.8 (PWA) — تحديث تلقائي",
+        description: "نسخة الويب تتحدث نفسها تلقائياً كل 30 دقيقة وعند فتح التطبيق — بدون أي إجراء من المستخدم.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.8.0/vip-yemen-web-pwa-v5.8.0.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.8.0",
+        title: "الكود المصدري + ملفات التوقيع والملكية والمتاجر",
+        description:
+          "الكود المصدري الكامل، ملف التوقيع (PKCS12) وبيانات الشهادة والملكية (SIGNING-AND-OWNERSHIP.md)، صور المتاجر (أيقونة 512 وصورة العرض 1024×500)، سياسة الخصوصية، ودليل الإدارة والتشغيل.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.8.0/vip-yemen-source-v5.8.0.zip",
+        notes: "جميع ملفات الرفع لمتجر Google Play و App Store",
+        createdAt: now,
+      });
+    }
+
     // الإصدار 5.7 — تأمين حيوي بالبصمة والوجه، هوية بصرية لكل قسم
     const v570 = await ctx.db
       .query("releases")

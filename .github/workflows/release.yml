@@ -41,8 +41,9 @@ jobs:
           mkdir -p release
           cp -r dist release/web-pwa
           zip -r release/vip-yemen-web-pwa-${{ github.ref_name }}.zip release/web-pwa
-          zip -r release/vip-yemen-source-${{ github.ref_name }}.zip src index.html package.json bun.lock vite.config.ts capacitor.config.ts convex.json public scripts android ios .github
-          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md README.md store-listing.json release/
+          zip -r release/vip-yemen-source-${{ github.ref_name }}.zip src index.html package.json bun.lock vite.config.ts capacitor.config.ts convex.json public scripts android ios .github store-graphics
+          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md README.md store-listing.json release/
+          cp store-graphics/*.png release/
 
       - name: Create draft release with web + docs artifacts
         uses: softprops/action-gh-release@v2
@@ -54,12 +55,15 @@ jobs:
             ### المحتويات
             - **تطبيق الويب (PWA)**: مجلد `web-pwa` جاهز للاستضافة — يعمل بدون إنترنت
             - **الكود المصدري الكامل**: الواجهة + الباك إند (Convex) + مشروعي Android/iOS (Capacitor)
-            - **وثائق النشر والتشغيل**: دليل Google Play وApp Store، دليل الإدارة والتشغيل، سياسة الخصوصية (المنصة والتطبيقات)، وملفات المتاجر
-            - **APK/AAB**: تُرفق أدناه — موقّعة بشهادة الإصدار عند توفر التوقيع، وإلا نسخة مثبّتة موقّعة تشغيلياً
+            - **APK/AAB**: موقّعة بمفتاح إصدار ثابت — تُثبَّت النسخ الجديدة مباشرة فوق السابقة بدون حذف
+            - **ملفات المتاجر**: أيقونة 512، صورة المتجر 1024×500، بيانات القائمة (AR/EN)، أدلة الرفع Google Play وApp Store
+            - **التوقيع والملكية**: ملف المفتاح (PKCS12)، بيانات الشهادة، بصمة SHA-256، وسجل الملكية في `SIGNING-AND-OWNERSHIP.md`
+            - **الوثائق**: سياسة الخصوصية (المنصة والتطبيقات)، دليل الإدارة والتشغيل، الكود المصدري الكامل
           files: |
             release/*.zip
             release/*.md
             release/*.json
+            release/*.png
           draft: true
           prerelease: false
 
@@ -98,7 +102,7 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Configure release keystore (if available)
+      - name: Configure release keystore (secrets override the committed one)
         id: keystore
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
@@ -106,30 +110,21 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          # The repo ships a stable keystore (android/keystore.properties +
+          # android/keystore/vipyemen-release.p12), so EVERY build is signed
+          # with the SAME key and new versions install over old ones without
+          # uninstalling. Repo secrets replace it when present.
           if [[ -n "$KS_B64" ]]; then
             echo "$KS_B64" | base64 -d > android/keystore.jks
             printf 'storeFile=keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > android/keystore.properties
-            echo "mode=signed" >> "$GITHUB_OUTPUT"
-          else
-            echo "mode=debug" >> "$GITHUB_OUTPUT"
           fi
+          test -f android/keystore.properties && echo "keystore configured"
 
       - name: Build signed APK + AAB
-        if: steps.keystore.outputs.mode == 'signed'
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease bundleRelease --no-daemon
-
-      - name: Build installable APK + AAB (debug-signed)
-        if: steps.keystore.outputs.mode == 'debug'
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug bundleDebug --no-daemon
-          mkdir -p app/build/outputs/apk/release app/build/outputs/bundle/release
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk
-          cp app/build/outputs/bundle/debug/app-debug.aab app/build/outputs/bundle/release/vip-yemen-android-${{ github.ref_name }}.aab
 
       - name: Upload APK/AAB to draft release
         uses: softprops/action-gh-release@v2
@@ -137,6 +132,8 @@ jobs:
           files: |
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/bundle/release/*.aab
+            android/keystore.properties
+            android/keystore/README.md
           append_body: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

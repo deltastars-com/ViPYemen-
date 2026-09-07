@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { LogoMark } from "@/components/Logo";
 import { useMutation, useQuery } from "convex/react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -16,7 +17,6 @@ import {
   Search,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   Users,
   Eye,
   Lock,
@@ -328,7 +328,7 @@ export function Landing() {
               backgroundImage: "radial-gradient(circle at 50% 0%, rgba(212,175,55,0.18), transparent 55%)",
             }}
           />
-          <Sparkles className="mx-auto mb-4 h-8 w-8 text-gold-400" />
+          <LogoMark className="mx-auto mb-4 h-10 w-10" />
           <h2 className="mx-auto max-w-2xl text-2xl font-black leading-relaxed text-cream sm:text-3xl">
             جاهز تبدأ؟ سجّل بياناتك الآن — وسنتولى الباقي
           </h2>

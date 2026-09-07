@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
+import { LogoMark } from "@/components/Logo";
 import { motion } from "framer-motion";
-import { Crown, MessageCircle, PlayCircle, BadgePercent, Sparkles, ShieldCheck } from "lucide-react";
+import { Crown, MessageCircle, PlayCircle, BadgePercent, ShieldCheck } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { OfferCard, type PublicOffer } from "@/components/OfferCard";
 import { Badge, EmptyState, Spinner } from "@/components/ui";
@@ -44,7 +45,7 @@ export function OffersPage() {
                 <ShieldCheck className="h-3.5 w-3.5" /> عروض مدققة من الإدارة
               </span>
               <span className="chip !border-sky-500/40 !bg-sky-500/10 !text-sky-300">
-                <Sparkles className="h-3.5 w-3.5" /> تُحدث لحظياً
+                <LogoMark className="h-4 w-4" /> تُحدث لحظياً
               </span>
             </div>
           </motion.div>

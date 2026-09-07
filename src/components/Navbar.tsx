@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X, LayoutDashboard, Sparkles } from "lucide-react";
+import { Menu, X, LayoutDashboard } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
 
@@ -64,8 +64,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           <Link to="/assistant" className="btn-ghost hidden !px-3.5 !py-2 text-xs md:inline-flex">
-            <Sparkles className="h-4 w-4 text-gold-400" />
-            المساعد الذكي
+            المساعد — البحث الشامل
           </Link>
           <Link to="/admin" className="btn-gold hidden !px-4 !py-2 text-xs md:inline-flex">
             <LayoutDashboard className="h-4 w-4" />
@@ -100,8 +99,7 @@ export function Navbar() {
             ))}
             <div className="mt-2 flex gap-2 border-t border-ink-700/50 pt-3">
               <Link to="/assistant" className="btn-ghost flex-1 text-xs">
-                <Sparkles className="h-4 w-4 text-gold-400" />
-                المساعد الذكي
+                المساعد — البحث الشامل
               </Link>
               <Link to="/admin" className="btn-gold flex-1 text-xs">
                 <LayoutDashboard className="h-4 w-4" />

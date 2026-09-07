@@ -255,6 +255,56 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 5.6 — الختم الرسمي الجديد، إزالة كل علامات الذكاء الاصطناعي، إصلاح لوحة التحكم
+    const v560 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "5.6.0"))
+      .first();
+    if (!v560) {
+      await ctx.db.insert("releases", {
+        version: "5.6.0",
+        title: "تطبيق Android 5.6 — الختم الرسمي الجديد (APK)",
+        description:
+          "الإصدار 5.6: استبدال كامل للأيقونة بالختم الذهبي الرسمي (VIP YEMEN) في المتجر والهاتف بكل الدقات، إزالة كل شارات وعلامات الذكاء الاصطناعي من الواجهات وأيقونة المساعد أصبحت شعار المنصة، وإصلاح فتح لوحة التحكم من القائمة.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.6.0/vip-yemen-android-v5.6.0.apk",
+        notes: "ألغِ تثبيت النسخة السابقة ثم ثبّت هذا الملف — الحزمة com.vip.yemen",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.6.0",
+        title: "حزمة Google Play — AAB 5.6",
+        description: "حزمة AAB بالختم الرسمي الجديد وكل إصلاحات 5.6.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.6.0/vip-yemen-android-v5.6.0.aab",
+        notes: "استخدم store-listing.json و PUBLISHING-GUIDE.md لإكمال القائمة",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.6.0",
+        title: "تطبيق الويب المتقدم 5.6 (PWA)",
+        description: "نسخة الويب بالختم الرسمي الجديد وكل التحسينات — تعمل دون إنترنت وتُحدَّث تلقائياً.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.6.0/vip-yemen-web-pwa-v5.6.0.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "5.6.0",
+        title: "الكود المصدري الكامل + الوثائق 5.6",
+        description:
+          "جميع ملفات المشروع المحدثة: الواجهة، الباك إند (Convex)، مشروعا Android/iOS بالختم الرسمي، ملفات التوثيق والتوقيع والملكية، سياسة الخصوصية، ودليل الإدارة والتشغيل.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v5.6.0/vip-yemen-source-v5.6.0.zip",
+        notes: "يشمل PRIVACY-POLICY-APP.md و OPERATIONS-GUIDE.md و store-listing.json",
+        createdAt: now,
+      });
+    }
+
     // الإصدار 5.4 — تطبيق حقيقي: عمل دون إنترنت، إصلاح الخادم، أيقونة سليمة
     const v540 = await ctx.db
       .query("releases")

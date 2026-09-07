@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { MessageCircle, Sparkles } from "lucide-react";
+import { MessageCircle } from "lucide-react";
+import { LogoMark } from "./Logo";
 import { PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
 
 export function WhatsAppButton() {
@@ -23,11 +24,11 @@ export function AssistantEntry() {
   return (
     <Link
       to="/assistant"
-      aria-label="المساعد الذكي"
-      title="المساعد الذكي — بحث معرفي شامل"
-      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-gold-500/50 bg-ink-900/95 text-gold-300 shadow-[0_10px_30px_-8px_rgba(212,175,55,0.5)] transition-transform hover:scale-110"
+      aria-label="المساعد — البحث الشامل"
+      title="المساعد — البحث الشامل"
+      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-gold-500/50 bg-ink-900/95 shadow-[0_10px_30px_-8px_rgba(212,175,55,0.5)] transition-transform hover:scale-110"
     >
-      <Sparkles className="h-6 w-6" />
+      <LogoMark className="h-9 w-9" />
     </Link>
   );
 }

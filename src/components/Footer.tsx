@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { LogoMark } from "@/components/Logo";
 import {
   Facebook,
   Instagram,
@@ -96,7 +97,7 @@ export function Footer() {
             <li><Link className="transition-colors hover:text-gold-300" to="/software">قسم البرمجيات وتطوير التطبيقات</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/offers">قسم العروض الترويجية</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/channels">قنواتنا الرقمية</Link></li>
-            <li><Link className="transition-colors hover:text-gold-300" to="/assistant">المساعد الذكي</Link></li>
+            <li><Link className="transition-colors hover:text-gold-300" to="/assistant">المساعد — البحث الشامل</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/releases">الإصدارات والتطبيقات</Link></li>
           </ul>
         </div>
@@ -169,7 +170,7 @@ export function Footer() {
 
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-gold-400" />
+              <LogoMark className="h-5 w-5" />
               تطبيق ويب تقدمي — يعمل بدون إنترنت
             </span>
             <button

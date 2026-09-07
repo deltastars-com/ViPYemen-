@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
-import { getAdminToken, clearAdminToken } from "@/lib/convex";
+import { getAdminToken, clearAdminToken, CONVEX_URL } from "@/lib/convex";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { AdminOverview } from "@/components/admin/AdminOverview";
@@ -66,6 +66,33 @@ export function AdminPage() {
   const [tab, setTab] = useState<AdminTab>("overview");
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+
+  if (!CONVEX_URL) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="card-surface max-w-md p-8 text-center">
+          <Logo compact className="justify-center" />
+          <h1 className="mt-4 text-lg font-black text-cream">لوحة التحكم</h1>
+          <p className="mt-3 text-sm leading-relaxed text-ink-300">
+            خدمات البيانات غير مُفعّلة في هذا الإصدار بعد — تُفعَّل لوحة
+            التحكم تلقائياً بمجرد ربط المنصة بخادم البيانات السحابي
+            (VITE_CONVEX_URL في إعدادات البناء).
+          </p>
+          <a
+            href="https://wa.me/967711780999"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-gold mt-6 w-full"
+          >
+            تواصل مع الإدارة عبر واتساب
+          </a>
+          <button onClick={() => navigate("/")} className="btn-ghost mt-3 w-full">
+            العودة للرئيسية
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (session === null) {
     return <Navigate to={`/auth?returnTo=/admin`} replace />;

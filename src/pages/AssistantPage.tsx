@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LogoMark } from "@/components/Logo";
 import { useQuery } from "convex/react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Sparkles,
   Search,
   Briefcase,
   Home,
@@ -146,8 +146,8 @@ export function AssistantPage() {
         <div className="container-app relative py-14 text-center sm:py-18">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <span className="chip mx-auto !border-gold-500/40 !bg-gold-500/10 !text-gold-300">
-              <Sparkles className="h-3.5 w-3.5" />
-              المساعد الذكي
+              <Search className="h-3.5 w-3.5" />
+              المساعد — البحث الشامل
             </span>
             <h1 className="section-title mt-4 text-cream">
               محرك بحث <span className="gold-text">معرفي شامل</span>

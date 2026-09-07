@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
+import { LogoMark } from "@/components/Logo";
 import { motion } from "framer-motion";
-import { BellRing, Megaphone, MessagesSquare, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { BellRing, Megaphone, MessagesSquare, ShieldCheck, Users } from "lucide-react";
 import { CHANNELS } from "@/lib/channels";
 import { ChannelsSection, ChannelIcon } from "@/components/ChannelsSection";
 import { PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
@@ -46,7 +47,7 @@ export function ChannelsPage() {
         />
         <div className="relative">
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-gold-500/40 bg-gold-500/10">
-            <Sparkles className="h-8 w-8 text-gold-400" />
+            <LogoMark className="h-9 w-9" />
           </div>
           <h1 className="text-2xl font-black text-cream sm:text-4xl">
             قنواتنا <span className="gold-text">الرقمية</span>

@@ -132,7 +132,9 @@ jobs:
         run: |
           cd android
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
-          FP=$("$APKSIGNER" verify --print-certs app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk | grep -i "SHA-256 digest" | head -1 | awk '{print $NF}' | tr 'a-f' 'A-F')
+          # apksigner prints the digest lowercase with colons (fd:ae:0d:…);
+          # strip separators and uppercase before comparing to the official value.
+          FP=$("$APKSIGNER" verify --print-certs app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk | grep -i "SHA-256 digest" | head -1 | awk '{print $NF}' | tr -d ':' | tr 'a-f' 'A-F')
           echo "APK SHA-256: $FP"
           EXPECT="FDAE0D2593F79646DD077C2352D1682CBE9FCC3D27172A6D8EF9153EA765F48B"
           if [[ "$FP" != "$EXPECT" ]]; then

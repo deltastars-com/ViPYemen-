@@ -10,7 +10,7 @@
 //   and old caches are purged on activate.
 // - Backend data (Convex) is network-only: when offline, published pages
 //   simply show cached shell + content that was already rendered.
-const CACHE_VERSION = "vip-yemen-v5.9.4";
+const CACHE_VERSION = "vip-yemen-v6.0.0";
 
 export async function registerServiceWorker(): Promise<void> {
   if (!("serviceWorker" in navigator)) return;

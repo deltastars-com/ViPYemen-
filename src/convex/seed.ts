@@ -547,6 +547,66 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 6.0.0 — الإصدار الشامل الكبير: تحسينات شاملة على كل الأقسام
+    const v600 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "6.0.0"))
+      .first();
+    if (!v600) {
+      await ctx.db.insert("releases", {
+        version: "6.0.0",
+        title: "تطبيق Android 6.0 — الإصدار الشامل الكبير (APK)",
+        description:
+          "الإصدار 6.0: تحسينات شاملة على كل أقسام المنصة — لوحة تحكم متكاملة ومحسّنة، نظام إشعارات متقدم، تأمين حيوي بالبصمة والوجه، شريط إعلاني تفاعلي، عروض ترويجية بالصور والفيديوهات، مساعد ذكي للبحث الشامل، نظام مالي متكامل، وأتمتة شاملة.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.0.0/vip-yemen-android-v6.0.0.apk",
+        notes: "الحزمة com.vip.yemen — تحديث مباشر فوق الإصدارات السابقة",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.0.0",
+        title: "حزمة Google Play — AAB 6.0",
+        description: "حزمة AAB موقّعة، جاهزة للرفع إلى Google Play Console مع ملفات المتاجر والتوثيق والتوقيع.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.0.0/vip-yemen-android-v6.0.0.aab",
+        notes: "استخدم store-listing.json و SIGNING-AND-OWNERSHIP.md",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.0.0",
+        title: "تطبيق الويب المتقدم 6.0 (PWA)",
+        description: "نسخة الويب الشاملة: تعمل بدون إنترنت، تحديث تلقائي، لوحة تحكم متكاملة، ونظام أتمتة شامل.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.0.0/vip-yemen-web-pwa-v6.0.0.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.0.0",
+        title: "تطبيق iOS — IPA 6.0",
+        description: "تطبيق iOS للحزمة com.vip.yemen — يُبنى عبر Codemagic ويرفع إلى App Store Connect.",
+        platform: "ios",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/latest",
+        notes: "انظر codemagic.yaml لخطوات البناء والتوقيع",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.0.0",
+        title: "الكود المصدري الكامل + ملفات التوقيع والتوثيق والمتاجر",
+        description:
+          "الكود المصدري الكامل، ملف التوقيع (PKCS12)، store-listing.json، PRIVACY-POLICY-APP.md، SIGNING-AND-OWNERSHIP.md، codemagic.yaml، سير عمل GitHub Actions، وجميع ملفات المتاجر.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.0.0/vip-yemen-source-v6.0.0.zip",
+        notes: "جميع ملفات الرفع لمتجر Google Play و App Store",
+        createdAt: now,
+      });
+    }
+
     return { ok: true };
   },
 });

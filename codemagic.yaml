@@ -1,105 +1,75 @@
-# =============================================================================
-# ViP Yemen — Codemagic CI/CD (Android APK/AAB + iOS IPA)
-# =============================================================================
-# 1. Connect this repository to Codemagic (codemagic.io → Add application →
-#    "Open in codemagic start" → GitHub).
-# 2. In Codemagic → Environment variables → create a group named
-#    `keystore_credentials` with:
-#      CM_KEYSTORE          — base64 of your release .jks keystore
-#      CM_KEYSTORE_PASSWORD — keystore password
-#      CM_KEY_ALIAS         — key alias
-#      CM_KEY_PASSWORD      — key password
-#    (iOS signing: Codemagic "iOS code signing" with Apple Developer account,
-#     bundle id com.vip.yemen)
-# 3. Every push (or manual build) now builds real signed apps automatically.
-# =============================================================================
+# Codemagic CI/CD — ViP Yemen iOS builds
+# Docs: https://docs.codemagic.io/getting-started/yaml
+#
+# Required environment variables in Codemagic → Team settings:
+#   APP_STORE_CONNECT_PRIVATE_KEY    — App Store Connect API key (.p8)
+#   APP_STORE_CONNECT_KEY_ID         — API key ID
+#   APP_STORE_CONNECT_ISSUER_ID      — Issuer ID
+#   CERTIFICATE_PRIVATE_KEY          — Apple Distribution cert (.p12, base64)
+#   CERTIFICATE_PASSWORD             — Certificate password
+#   PROVISIONING_PROFILE_DATA        — App Store provisioning profile (base64)
+#   VITE_CONVEX_URL                  — Convex project URL
+#   VITE_SUPABASE_URL                — Supabase project URL
+#   VITE_SUPABASE_ANON_KEY           — Supabase anon key
+#   VITE_GEMINI_KEY                  — Gemini API key
 
 workflows:
-  android-build:
-    name: Android APK + AAB (com.vip.yemen)
+  ios-release:
+    name: ViP Yemen iOS Release
     max_build_duration: 60
-    instance_type: mac_mini_m2
     environment:
       groups:
-        - keystore_credentials
-      vars:
-        PACKAGE_NAME: com.vip.yemen
-      node: latest
+        - app_store_credentials
+        - vite_env
+    triggering:
+      events:
+        - tag
+      branch_patterns:
+        - pattern: '*'
+          include: true
     scripts:
       - name: Install dependencies
         script: |
-          npm install -g bun
-          bun install --frozen-lockfile
-      - name: Generate icons
-        script: bun run icons
-      - name: Build web (PWA assets)
+          brew install bun
+          bun install
+      - name: Build web assets
         script: bun run build
-      - name: Sync Capacitor Android
-        script: npx cap sync android
-      - name: Configure release keystore
-        script: |
-          echo "$CM_KEYSTORE" | base64 --decode > android/keystore.jks
-          cat > android/keystore.properties <<EOF
-          storeFile=keystore.jks
-          storePassword=$CM_KEYSTORE_PASSWORD
-          keyAlias=$CM_KEY_ALIAS
-          keyPassword=$CM_KEY_PASSWORD
-          EOF
-      - name: Build release APK and AAB
-        script: |
-          cd android
-          ./gradlew assembleRelease bundleRelease --no-daemon
-    artifacts:
-      - android/app/build/outputs/apk/release/*.apk
-      - android/app/build/outputs/bundle/release/*.aab
-      - dist/**/*.js
-    publishing:
-      email:
-        recipients:
-          - vipservicesyemen@gmail.com
-        notify:
-          success: true
-          failure: true
-
-  ios-build:
-    name: iOS IPA (com.vip.yemen)
-    max_build_duration: 90
-    instance_type: mac_mini_m2
-    environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.vip.yemen
-      vars:
-        XCODE_WORKSPACE: ios/App/App.xcworkspace
-        XCODE_SCHEME: App
-      node: latest
-    scripts:
-      - name: Install dependencies
-        script: |
-          npm install -g bun
-          bun install --frozen-lockfile
-      - name: Generate icons
-        script: bun run icons
-      - name: Build web (PWA assets)
-        script: bun run build
-      - name: Sync Capacitor iOS
-        script: npx cap sync ios
-      - name: Archive and export IPA
+      - name: Install CocoaPods
+        script: cd ios/App && pod install
+      - name: Set up code signing
         script: |
           cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App \
-            -configuration Release -derivedDataPath build archive \
-            -archivePath build/App.xcarchive
-          xcodebuild -exportArchive \
-            -archivePath build/App.xcarchive \
-            -exportOptionsPlist /tmp/exportOptions.plist \
-            -exportPath build/ipa
+          # Decode certificate
+          echo "$CERTIFICATE_PRIVATE_KEY" | base64 --decode > cert.p12
+          # Import to keychain
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import cert.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          # Decode provisioning profile
+          echo "$PROVISIONING_PROFILE_DATA" | base64 --decode > ViP_Yemen.mobileprovision
+      - name: Build IPA
+        script: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $PWD/build/App.xcarchive \
+            archive
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Release \
+            -exportArchive \
+            -archivePath $PWD/build/App.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $PWD/build/output
     artifacts:
-      - ios/App/build/ipa/*.ipa
+      - ios/App/build/output/*.ipa
     publishing:
-      email:
-        recipients:
-          - vipservicesyemen@gmail.com
-        notify:
-          success: true
-          failure: true
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID

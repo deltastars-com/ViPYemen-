@@ -31,10 +31,38 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      # Deploy the Convex backend and derive the production URL from the
+      # deploy key. This guarantees VITE_CONVEX_URL is ALWAYS present in
+      # shipped builds — even when the repo variable is not configured —
+      # so the dashboard and every data-driven section are live.
+      - name: Resolve Convex production URL
+        id: convex
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          VITE_CONVEX_URL_VAR: ${{ vars.VITE_CONVEX_URL }}
+        run: |
+          if [[ -n "$VITE_CONVEX_URL_VAR" ]]; then
+            echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
+            echo "using repo variable VITE_CONVEX_URL"
+          elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
+            URL=$(npx convex deploy --dry-run 2>/dev/null | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
+            if [[ -z "$URL" ]]; then
+              # Fall back to parsing the deploy key itself (prod keys embed
+              # the deployment name: prod:...|<slug>|<token>).
+              SLUG=$(printf '%s' "$CONVEX_DEPLOY_KEY" | cut -d'|' -f2)
+              URL="https://${SLUG}.convex.site"
+            fi
+            echo "url=$URL" >> "$GITHUB_OUTPUT"
+            echo "resolved from CONVEX_DEPLOY_KEY: $URL"
+          else
+            echo "url=" >> "$GITHUB_OUTPUT"
+            echo "::warning::No VITE_CONVEX_URL variable and no CONVEX_DEPLOY_KEY secret — dashboard will show the offline notice."
+          fi
+
       - name: Build PWA
         run: bun run build
         env:
-          VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
+          VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_GEMINI_KEY: ${{ secrets.VITE_GEMINI_KEY }}
@@ -104,10 +132,31 @@ jobs:
       - name: Generate icons
         run: bun run icons
 
+      # Same Convex-URL resolution as the web job: deploy-key derived
+      # production URL so the APK/AAB always connect to the live backend.
+      - name: Resolve Convex production URL
+        id: convex
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          VITE_CONVEX_URL_VAR: ${{ vars.VITE_CONVEX_URL }}
+        run: |
+          if [[ -n "$VITE_CONVEX_URL_VAR" ]]; then
+            echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
+          elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
+            URL=$(npx convex deploy --dry-run 2>/dev/null | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
+            if [[ -z "$URL" ]]; then
+              SLUG=$(printf '%s' "$CONVEX_DEPLOY_KEY" | cut -d'|' -f2)
+              URL="https://${SLUG}.convex.site"
+            fi
+            echo "url=$URL" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build web
         run: bun run build
         env:
-          VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
+          VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_GEMINI_KEY: ${{ secrets.VITE_GEMINI_KEY }}

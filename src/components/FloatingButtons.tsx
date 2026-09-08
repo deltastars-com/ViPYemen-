@@ -26,9 +26,9 @@ export function AssistantEntry() {
       to="/assistant"
       aria-label="المساعد — البحث الشامل"
       title="المساعد — البحث الشامل"
-      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-gold-500/50 bg-ink-900/95 shadow-[0_10px_30px_-8px_rgba(212,175,55,0.5)] transition-transform hover:scale-110"
+      className="fixed bottom-6 right-6 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-gold-500/50 bg-ink-900/95 shadow-[0_8px_24px_-8px_rgba(212,175,55,0.5)] transition-transform hover:scale-110"
     >
-      <LogoMark className="h-9 w-9" />
+      <LogoMark className="h-6 w-6" />
     </Link>
   );
 }

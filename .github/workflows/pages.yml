@@ -38,6 +38,28 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      # Resolve the live Convex URL (repo variable first, then derive it
+      # from the deploy key) so the deployed PWA always talks to the real
+      # backend and the dashboard/sections are functional.
+      - name: Resolve Convex production URL
+        id: convex
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          VITE_CONVEX_URL_VAR: ${{ vars.VITE_CONVEX_URL }}
+        run: |
+          if [[ -n "$VITE_CONVEX_URL_VAR" ]]; then
+            echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
+          elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
+            URL=$(npx convex deploy --dry-run 2>/dev/null | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
+            if [[ -z "$URL" ]]; then
+              SLUG=$(printf '%s' "$CONVEX_DEPLOY_KEY" | cut -d'|' -f2)
+              URL="https://${SLUG}.convex.site"
+            fi
+            echo "url=$URL" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build
         run: bun run build
         env:
@@ -46,7 +68,7 @@ jobs:
           # VITE_GEMINI_KEY is NOT passed here — Gemini API keys belong on the
           # server, not in a client bundle that anyone can download. The assistant
           # page shows a friendly notice when VITE_GEMINI_KEY is absent.
-          VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
+          VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 

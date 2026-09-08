@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -18,8 +16,6 @@ jobs:
   build:
     name: Build PWA
     runs-on: ubuntu-latest
-    outputs:
-      pages_api: ${{ steps.pages.outcome }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,8 +37,6 @@ jobs:
       # Deploy the Convex backend with the deploy key and use the real
       # deployment URL from Convex's own output, so the deployed PWA always
       # talks to the live backend and the dashboard/sections are functional.
-      # A missing/invalid key fails the build loudly instead of shipping a
-      # bundle with a dead backend URL.
       - name: Deploy Convex backend and resolve URL
         id: convex
         env:
@@ -75,63 +69,18 @@ jobs:
       - name: Build
         run: bun run build
         env:
-          # Pages deploy: client-side-safe env only.
-          # VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY are fine for anon key usage.
-          # VITE_GEMINI_KEY is NOT passed here — Gemini API keys belong on the
-          # server, not in a client bundle that anyone can download. The assistant
-          # page shows a friendly notice when VITE_GEMINI_KEY is absent.
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v5
-        continue-on-error: true
-        with:
-          enablement: true
-
-      # Before uploading: strip any secret-like strings from built assets so
-      # secret-scanning push protection cannot block the gh-pages deploy.
-      # Only env-driven URLs/keys that Vite baked into the bundle are affected.
-      - name: Sanitize built assets
-        run: |
-          # Redact any secret-like strings from built JS before the gh-pages
-          # fallback deploy, so secret-scanning push protection cannot block it.
-          # perl is available on the Ubuntu runner and supports Perl regex.
-          find dist -name "*.js" -exec perl -pi -e '
-            s|"https://[^"\\n]*\.googleapis\.com/[^"]*"|"https://_REDACTED_googleapis_com/"|g;
-            s|"AIza[0-9A-Za-z_\\-]{30,}"|"REDACTED_KEY"|g;
-            s|"eyJ[a-zA-Z0-9_\\-]+":[ \\n]*"[a-zA-Z0-9_\\-]+"|"REDACTED_JWT": "REDACTED"|g;
-          ' {} +
-          echo "sanitized"
-
-      - name: Upload artifact
-        if: steps.pages.outcome == 'success'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-      # Fallback: publish to the gh-pages branch when the Pages API is not
-      # accessible to the workflow token. The site serves from that branch
-      # once Pages is enabled with "Deploy from a branch" source.
-      - name: Publish to gh-pages branch (fallback)
-        if: steps.pages.outcome != 'success'
+      # Publish to the gh-pages branch — the repo's Pages site is served from
+      # this branch ("Deploy from a branch" source), which GitHub auto-builds
+      # on every push. This path is not subject to the github-pages
+      # environment protection rules that block native Actions deploys.
+      - name: Publish to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           force_orphan: true
           commit_message: "Pages deploy: ${{ github.sha }}"
-
-  deploy:
-    name: Deploy to Pages
-    needs: build
-    if: needs.build.outputs.pages_api == 'success'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4

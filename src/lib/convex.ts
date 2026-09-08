@@ -2,12 +2,20 @@ import { ConvexReactClient } from "convex/react";
 
 /**
  * The backend URL is baked in at build time from VITE_CONVEX_URL.
- * The app is OFFLINE-FIRST: if the URL is missing (or the backend is
- * unreachable) the platform still boots fully from its cached copy —
- * published content loads whenever a connection is available, and the
- * app NEVER blocks on the backend at startup.
+ * If the variable is not set in a given build environment (for example
+ * Vercel before the env var is added), we fall back to the live production
+ * deployment that the release pipeline deploys to — so the dashboard and
+ * every section stay fully connected and the preview-mode banner never
+ * appears on a deployed build. The URL is public (it ships in the client
+ * bundle on every platform).
+ *
+ * The app is OFFLINE-FIRST: even if the backend is unreachable the platform
+ * still boots fully from its cached copy, and it NEVER blocks on the
+ * backend at startup.
  */
-export const CONVEX_URL = (import.meta.env.VITE_CONVEX_URL as string | undefined)?.trim() || "";
+export const CONVEX_URL =
+  (import.meta.env.VITE_CONVEX_URL as string | undefined)?.trim() ||
+  "https://notable-shepherd-367.convex.cloud";
 
 export const convex = new ConvexReactClient(
   CONVEX_URL || "http://127.0.0.1:3210"

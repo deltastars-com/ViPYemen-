@@ -34,31 +34,31 @@ workflows:
           bun install
       - name: Build web assets
         script: bun run build
-      - name: Install CocoaPods
-        script: cd ios/App && pod install
       - name: Set up code signing
         script: |
           cd ios/App
-          # Decode certificate
+          # Decode Apple Distribution certificate and import into a keychain
           echo "$CERTIFICATE_PRIVATE_KEY" | base64 --decode > cert.p12
-          # Import to keychain
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security import cert.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-          # Decode provisioning profile
+          # Decode and install the App Store provisioning profile where
+          # xcodebuild expects it
           echo "$PROVISIONING_PROFILE_DATA" | base64 --decode > ViP_Yemen.mobileprovision
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp ViP_Yemen.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/ViP_Yemen.mobileprovision"
       - name: Build IPA
         script: |
           cd ios/App
-          xcodebuild -workspace App.xcworkspace \
+          xcodebuild -project App.xcodeproj \
             -scheme App \
             -sdk iphoneos \
             -configuration Release \
             -archivePath $PWD/build/App.xcarchive \
             archive
-          xcodebuild -workspace App.xcworkspace \
+          xcodebuild -project App.xcodeproj \
             -scheme App \
             -sdk iphoneos \
             -configuration Release \

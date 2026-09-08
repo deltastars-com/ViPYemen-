@@ -6,6 +6,14 @@ on:
       - "v*"
   workflow_dispatch:
 
+# A tag push occasionally delivers duplicate webhook events. Two concurrent
+# runs of the same tag race on the same GitHub Release (one publishes it,
+# the other then cannot replace its assets). Cancel the stale duplicate so
+# exactly one run builds and publishes per tag.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 

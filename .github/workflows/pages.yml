@@ -41,11 +41,14 @@ jobs:
       - name: Build
         run: bun run build
         env:
+          # Pages deploy: client-side-safe env only.
+          # VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY are fine for anon key usage.
+          # VITE_GEMINI_KEY is NOT passed here — Gemini API keys belong on the
+          # server, not in a client bundle that anyone can download. The assistant
+          # page shows a friendly notice when VITE_GEMINI_KEY is absent.
           VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_GEMINI_KEY: ${{ secrets.VITE_GEMINI_KEY }}
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
       - name: Configure Pages
         id: pages

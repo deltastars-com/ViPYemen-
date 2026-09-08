@@ -59,11 +59,14 @@ jobs:
       # Only env-driven URLs/keys that Vite baked into the bundle are affected.
       - name: Sanitize built assets
         run: |
-          find dist -name "*.js" -exec sed -i \
-            -e 's|\"https://[^ ]*\.googleapis\.com/[^\"]*\"|\"https://_REDACTED_googleapis_com/\"|g' \
-            -e 's|\"AIza[0-9A-Za-z-_]{30,}\"|\"REDACTED_KEY\"|g' \
-            -e 's|eyJ[a-zA-Z0-9_-]+\":\"[a-zA-Z0-9_\\-]+|"redacted_jwt": "redacted|g' \
-            {} +
+          # Redact any secret-like strings from built JS before the gh-pages
+          # fallback deploy, so secret-scanning push protection cannot block it.
+          # perl is available on the Ubuntu runner and supports Perl regex.
+          find dist -name "*.js" -exec perl -pi -e '
+            s|"https://[^"\\n]*\.googleapis\.com/[^"]*"|"https://_REDACTED_googleapis_com/"|g;
+            s|"AIza[0-9A-Za-z_\\-]{30,}"|"REDACTED_KEY"|g;
+            s|"eyJ[a-zA-Z0-9_\\-]+":[ \\n]*"[a-zA-Z0-9_\\-]+"|"REDACTED_JWT": "REDACTED"|g;
+          ' {} +
           echo "sanitized"
 
       - name: Upload artifact

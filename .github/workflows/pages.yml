@@ -66,12 +66,23 @@ jobs:
             exit 1
           fi
 
-      - name: Build
-        run: bun run build
+      # GitHub Pages serves this repo under /ViPYemen-/, so the Pages build
+      # must use that base for assets to resolve. The main site (Vercel /
+      # vipyemen.com) keeps the default root base — only this build is
+      # re-based for the /ViPYemen-/ subpath.
+      - name: Build (Pages base)
+        run: bunx tsc -b && bunx vite build --base=/ViPYemen-/
         env:
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      # GitHub Pages SPA fallback: any deep link (/jobs, /privacy-policy, …)
+      # is served index.html through 404.html, so client-side routes work
+      # on direct navigation and the privacy-policy link in store listings
+      # resolves on the Pages mirror too.
+      - name: Add SPA fallback for Pages
+        run: cp dist/index.html dist/404.html
 
       # Publish to the gh-pages branch — the repo's Pages site is served from
       # this branch ("Deploy from a branch" source), which GitHub auto-builds

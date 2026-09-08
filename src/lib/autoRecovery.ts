@@ -213,7 +213,10 @@ function showOverlay(message: string) {
     margin: "4px auto 0",
     boxShadow: "0 0 0 1px rgba(212,175,55,0.5), 0 12px 28px -8px rgba(0,0,0,0.7)",
   });
-  logo.src = "/icons/icon-192.png";
+  // BASE_URL keeps the icon path valid on the main site (root) and the
+  // GitHub Pages mirror (/ViPYemen-/) alike.
+  const basePath = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  logo.src = `${basePath}/icons/icon-192.png`;
   logo.alt = "ViP Yemen";
   logo.onerror = () => {
     // If the icon itself is unavailable, keep the recovery screen clean.

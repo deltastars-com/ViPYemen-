@@ -103,6 +103,14 @@ function NativeShell() {
   return null;
 }
 
+// GitHub Pages serves this repo under /ViPYemen-/ (base set in the Pages
+// workflow build), while the main site is hosted at the domain root. Vite's
+// BASE_URL reflects the build base, so routing adapts automatically to both.
+const ROUTER_BASENAME =
+  import.meta.env.BASE_URL && import.meta.env.BASE_URL !== "/"
+    ? import.meta.env.BASE_URL.replace(/\/$/, "")
+    : "/";
+
 export default function App() {
   // The React tree mounted and painted — disarm the boot watchdog.
   useEffect(() => {
@@ -110,7 +118,7 @@ export default function App() {
   }, []);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={ROUTER_BASENAME}>
       <ErrorBoundary>
         <ScrollToTop />
         <ExternalLinkGuard />

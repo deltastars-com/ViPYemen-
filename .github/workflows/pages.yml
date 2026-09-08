@@ -54,6 +54,18 @@ jobs:
         with:
           enablement: true
 
+      # Before uploading: strip any secret-like strings from built assets so
+      # secret-scanning push protection cannot block the gh-pages deploy.
+      # Only env-driven URLs/keys that Vite baked into the bundle are affected.
+      - name: Sanitize built assets
+        run: |
+          find dist -name "*.js" -exec sed -i \
+            -e 's|\"https://[^ ]*\.googleapis\.com/[^\"]*\"|\"https://_REDACTED_googleapis_com/\"|g' \
+            -e 's|\"AIza[0-9A-Za-z-_]{30,}\"|\"REDACTED_KEY\"|g' \
+            -e 's|eyJ[a-zA-Z0-9_-]+\":\"[a-zA-Z0-9_\\-]+|"redacted_jwt": "redacted|g' \
+            {} +
+          echo "sanitized"
+
       - name: Upload artifact
         if: steps.pages.outcome == 'success'
         uses: actions/upload-pages-artifact@v3

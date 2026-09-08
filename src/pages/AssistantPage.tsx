@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
+import { gemini } from "@/lib/gemini";
 import { useQuery } from "convex/react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -57,6 +58,9 @@ export function AssistantPage() {
   const [wikiSearched, setWikiSearched] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const runWikiSearchRef = useRef(runWikiSearch);
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const jobs = useQuery(api.submissions.listPublished, { category: "jobs" });
   const realEstate = useQuery(api.submissions.listPublished, { category: "real_estate" });
@@ -133,6 +137,25 @@ export function AssistantPage() {
     }
   }
 
+  async function runAiAnswer() {
+    if (!q) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiAnswer(null);
+    try {
+      const result = await gemini.answer(query);
+      if ("error" in result) {
+        setAiError(result.error);
+      } else {
+        setAiAnswer(result.text ?? "");
+      }
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "حدث خطأ غير متوقع");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   return (
     <div className="animate-fade-up">
       <section className="relative overflow-hidden border-b border-ink-700/50">
@@ -160,6 +183,7 @@ export function AssistantPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 runWikiSearch();
+                runAiAnswer();
               }}
               className="mx-auto mt-8 flex max-w-2xl gap-2"
             >
@@ -246,6 +270,28 @@ export function AssistantPage() {
             </div>
 
             <div>
+              {aiLoading && (
+                <div className="flex justify-center py-6 text-gold-400">
+                  <Loader2 className="h-7 w-7 animate-spin" />
+                  <span className="ml-3 text-sm">جارٍ البحث في المعرفة الذكية...</span>
+                </div>
+              )}
+              {aiError && (
+                <div className="card-surface rounded-xl border border-rose-500/30 p-4">
+                  <p className="text-sm font-bold text-rose-300">{aiError}</p>
+                  <p className="mt-2 text-xs text-ink-300">يمكنك استخدام البحث الموسوعي العام أدناه كبديل.</p>
+                </div>
+              )}
+              {aiAnswer && (
+                <div className="card-surface rounded-xl border border-gold-500/25 p-5">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-gold-300">
+                    <Crown className="h-4 w-4" />
+                    إجابة المساعد الذكي
+                  </h3>
+                  <p className="text-sm leading-relaxed text-ink-200">{aiAnswer}</p>
+                </div>
+              )}
+
               <h2 className="mb-4 flex items-center gap-2 text-lg font-extrabold text-cream">
                 <Globe className="h-5 w-5 text-gold-400" />
                 البحث الموسوعي العام (Wikipedia)

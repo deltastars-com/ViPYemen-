@@ -13,6 +13,10 @@ export const convex = new ConvexReactClient(
   CONVEX_URL || "http://127.0.0.1:3210"
 );
 
+// Convex deploy key (server-side only — never exposed to the client).
+// Used when running `npx convex deploy` in CI or locally.
+export const CONVEX_DEPLOY_KEY = (import.meta.env.CONVEX_DEPLOY_KEY as string | undefined)?.trim() || "";
+
 export const ADMIN_TOKEN_KEY = "vip_admin_token";
 
 export function getAdminToken(): string {

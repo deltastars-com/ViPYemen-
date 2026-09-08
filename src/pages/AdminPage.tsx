@@ -19,7 +19,8 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
-import { getAdminToken, clearAdminToken, CONVEX_URL } from "@/lib/convex";
+import { getAdminToken, clearAdminToken, CONVEX_URL, CONVEX_DEPLOY_KEY } from "@/lib/convex";
+import { supabase } from "@/lib/supabase";
 import { isBiometricEnrolled, verifyBiometric } from "@/lib/biometric";
 import { Fingerprint } from "lucide-react";
 import { Logo, LogoMark } from "@/components/Logo";
@@ -150,6 +151,20 @@ export function AdminPage() {
   function handleLogout() {
     clearAdminToken();
     navigate("/");
+  }
+
+  // Supabase-powered admin operations (when env variables are available).
+  async function verifyPhoneViaSupabase(phone: string) {
+    const client = supabase.client;
+    if (!client) return { ok: false, error: "خدمة Supabase غير متاحة في هذا الإصدار." };
+    // Send verification code through Supabase Auth (if configured).
+    try {
+      const { error } = await client.auth.signInWithOtp({ phone, options: { channel: "sms" } });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "خطأ غير متوقع" };
+    }
   }
 
   const activeTab = TABS.find((t) => t.key === tab)!;

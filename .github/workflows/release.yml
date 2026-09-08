@@ -31,11 +31,14 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      # Deploy the Convex backend and derive the production URL from the
-      # deploy key. This guarantees VITE_CONVEX_URL is ALWAYS present in
-      # shipped builds — even when the repo variable is not configured —
-      # so the dashboard and every data-driven section are live.
-      - name: Resolve Convex production URL
+      # Deploy the Convex backend with the deploy key and derive the
+      # production URL from Convex's own output. This guarantees the live
+      # deployment always runs the latest backend functions and that
+      # VITE_CONVEX_URL baked into shipped builds is the REAL deployment URL
+      # — so the dashboard and every data-driven section work. A missing or
+      # invalid key FAILS the build loudly instead of silently shipping a
+      # broken bundle.
+      - name: Deploy Convex backend and resolve URL
         id: convex
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
@@ -45,18 +48,23 @@ jobs:
             echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
             echo "using repo variable VITE_CONVEX_URL"
           elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-            URL=$(npx convex deploy --dry-run 2>/dev/null | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
+            echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
+            DEPLOY_OUT=$(npx convex deploy 2>&1) || {
+              echo "$DEPLOY_OUT"
+              echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
+              exit 1
+            }
+            echo "$DEPLOY_OUT"
+            URL=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
             if [[ -z "$URL" ]]; then
-              # Fall back to parsing the deploy key itself (prod keys embed
-              # the deployment name: prod:...|<slug>|<token>).
-              SLUG=$(printf '%s' "$CONVEX_DEPLOY_KEY" | cut -d'|' -f2)
-              URL="https://${SLUG}.convex.site"
+              echo "::error::Convex deploy succeeded but no deployment URL was found in its output."
+              exit 1
             fi
             echo "url=$URL" >> "$GITHUB_OUTPUT"
-            echo "resolved from CONVEX_DEPLOY_KEY: $URL"
+            echo "deployed and resolved: $URL"
           else
-            echo "url=" >> "$GITHUB_OUTPUT"
-            echo "::warning::No VITE_CONVEX_URL variable and no CONVEX_DEPLOY_KEY secret — dashboard will show the offline notice."
+            echo "::error::Neither VITE_CONVEX_URL (repo variable) nor CONVEX_DEPLOY_KEY (secret) is set. The dashboard and sections cannot work without a backend URL. Set CONVEX_DEPLOY_KEY and re-run."
+            exit 1
           fi
 
       - name: Build PWA
@@ -132,9 +140,10 @@ jobs:
       - name: Generate icons
         run: bun run icons
 
-      # Same Convex-URL resolution as the web job: deploy-key derived
-      # production URL so the APK/AAB always connect to the live backend.
-      - name: Resolve Convex production URL
+      # Same Convex deployment as the web job: push the backend with the
+      # deploy key and use the deployment URL Convex prints, so the APK/AAB
+      # always connect to the live backend. Invalid/missing key fails loudly.
+      - name: Deploy Convex backend and resolve URL
         id: convex
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
@@ -142,15 +151,25 @@ jobs:
         run: |
           if [[ -n "$VITE_CONVEX_URL_VAR" ]]; then
             echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
+            echo "using repo variable VITE_CONVEX_URL"
           elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-            URL=$(npx convex deploy --dry-run 2>/dev/null | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
+            echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
+            DEPLOY_OUT=$(npx convex deploy 2>&1) || {
+              echo "$DEPLOY_OUT"
+              echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
+              exit 1
+            }
+            echo "$DEPLOY_OUT"
+            URL=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
             if [[ -z "$URL" ]]; then
-              SLUG=$(printf '%s' "$CONVEX_DEPLOY_KEY" | cut -d'|' -f2)
-              URL="https://${SLUG}.convex.site"
+              echo "::error::Convex deploy succeeded but no deployment URL was found in its output."
+              exit 1
             fi
             echo "url=$URL" >> "$GITHUB_OUTPUT"
+            echo "deployed and resolved: $URL"
           else
-            echo "url=" >> "$GITHUB_OUTPUT"
+            echo "::error::Neither VITE_CONVEX_URL (repo variable) nor CONVEX_DEPLOY_KEY (secret) is set. Set CONVEX_DEPLOY_KEY and re-run."
+            exit 1
           fi
 
       - name: Build web

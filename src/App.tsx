@@ -1,5 +1,6 @@
 import { Component, Suspense, lazy, useEffect, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { AppLayout } from "./components/AppLayout";
 import { LogoMark } from "./components/Logo";
 import { useExternalLinkGuard } from "./lib/utils";
@@ -133,6 +134,7 @@ export default function App() {
             </Route>
           </Routes>
         </Suspense>
+        <Analytics />
       </ErrorBoundary>
     </BrowserRouter>
   );

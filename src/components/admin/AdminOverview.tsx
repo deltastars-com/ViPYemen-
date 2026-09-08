@@ -13,6 +13,8 @@ import {
   Home,
   Briefcase,
   Code2,
+  Users2,
+  UserCheck,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { StatCard, Spinner } from "@/components/ui";
@@ -43,6 +45,8 @@ export function AdminOverview({ token, setTab }: { token: string; setTab: (t: Ad
         <StatCard label="أرقام موثقة" value={stats.phoneVerified} icon={<BadgeCheck className="h-5 w-5" />} accent="emerald" />
         <StatCard label="الإعلانات" value={stats.ads} icon={<Megaphone className="h-5 w-5" />} />
         <StatCard label="العروض" value={stats.offers} icon={<Crown className="h-5 w-5" />} />
+        <StatCard label="العملاء" value={stats.clientsTotal ?? 0} icon={<Users2 className="h-5 w-5" />} accent="violet" />
+        <StatCard label="متابعات مكتملة" value={stats.clientsResolved ?? 0} icon={<UserCheck className="h-5 w-5" />} accent="emerald" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -113,7 +117,21 @@ export function AdminOverview({ token, setTab }: { token: string; setTab: (t: Ad
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <button
+          onClick={() => setTab("clients")}
+          className="card-surface card-surface-hover flex items-center gap-3 p-4 text-right"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-300">
+            <Users2 className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-extrabold text-cream">بيانات العملاء</p>
+            <p className="text-xs text-ink-300">
+              {stats.clientsPending ?? 0} بانتظار المتابعة — كشوفات مفصلة وفلترة
+            </p>
+          </div>
+        </button>
         <button
           onClick={() => setTab("finance")}
           className="card-surface card-surface-hover flex items-center gap-3 p-4 text-right"

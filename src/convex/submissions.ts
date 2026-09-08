@@ -9,6 +9,7 @@ import {
   sha256Hex,
 } from "./auth";
 import { api } from "./_generated/api";
+import { touchFollowup } from "./followups";
 
 const CATEGORIES = ["jobs", "real_estate", "emarket", "software"];
 const TYPES = ["owner", "seeker", "buyer", "seller", "client", "employer"];
@@ -118,6 +119,13 @@ export const submit = mutation({
       phoneVerified,
       createdAt: now,
       updatedAt: now,
+    });
+    await touchFollowup(ctx, {
+      fullName: args.fullName.trim(),
+      phone: normalizePhone(args.phone),
+      address: args.address?.trim() || undefined,
+      category: args.category,
+      submissionTitle: args.title.trim(),
     });
     await ctx.db.insert("notifications", {
       title: "طلب جديد بانتظار المراجعة",
@@ -327,11 +335,15 @@ export const getAdminStats = query({
     const ads = await ctx.db.query("ads").collect();
     const offers = await ctx.db.query("offers").collect();
     const finance = await ctx.db.query("finance").collect();
+    const followups = await ctx.db.query("followups").collect();
     return {
       ...stats,
       ads: ads.length,
       offers: offers.length,
       financeTotal: finance.reduce((acc, f) => acc + (f.type === "income" ? f.amount : -f.amount), 0),
+      clientsTotal: followups.length,
+      clientsPending: followups.filter((f) => f.status === "pending").length,
+      clientsResolved: followups.filter((f) => f.status === "resolved").length,
     };
   },
 });

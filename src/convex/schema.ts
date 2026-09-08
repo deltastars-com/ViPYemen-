@@ -144,4 +144,27 @@ export default defineSchema({
     key: v.string(),
     value: v.any(),
   }).index("by_key", ["key"]),
+
+  /**
+   * سجل العملاء — كل عميل يظهر في كشف متكامل للجودة:
+   * أحدث نشاط، حالة المتابعة (تمت/لم تتم)، السبب، والملاحظات.
+   */
+  followups: defineTable({
+    fullName: v.string(),
+    phone: v.string(),
+    address: v.optional(v.string()),
+    category: v.optional(v.string()),
+    source: v.string(), // submission | manual | whatsapp
+    lastSubmissionTitle: v.optional(v.string()),
+    submissionCount: v.number(),
+    status: v.string(), // pending | contacted | resolved | unreachable
+    reason: v.optional(v.string()),
+    note: v.optional(v.string()),
+    history: v.optional(v.array(v.any())),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_phone", ["phone"])
+    .index("by_status", ["status"])
+    .index("by_updated", ["updatedAt"]),
 });

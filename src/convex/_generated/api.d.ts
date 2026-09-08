@@ -14,6 +14,7 @@ import type * as automation from "../automation.js";
 import type * as crons from "../crons.js";
 import type * as email from "../email.js";
 import type * as finance from "../finance.js";
+import type * as followups from "../followups.js";
 import type * as internal_ from "../internal.js";
 import type * as notifications from "../notifications.js";
 import type * as offers from "../offers.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   email: typeof email;
   finance: typeof finance;
+  followups: typeof followups;
   internal: typeof internal_;
   notifications: typeof notifications;
   offers: typeof offers;

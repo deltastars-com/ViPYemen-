@@ -17,6 +17,7 @@ import {
   LogOut,
   Menu,
   X,
+  Users2,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { getAdminToken, clearAdminToken, CONVEX_URL, CONVEX_DEPLOY_KEY } from "@/lib/convex";
@@ -33,6 +34,7 @@ import { AdminFinance } from "@/components/admin/AdminFinance";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { AdminReleases } from "@/components/admin/AdminReleases";
 import { AdminSettings } from "@/components/admin/AdminSettings";
+import { AdminClients } from "@/components/admin/AdminClients";
 
 export type AdminTab =
   | "overview"
@@ -45,6 +47,7 @@ export type AdminTab =
   | "offers"
   | "finance"
   | "notifications"
+  | "clients"
   | "releases"
   | "settings";
 
@@ -59,6 +62,7 @@ const TABS: { key: AdminTab; label: string; icon: any; category?: string }[] = [
   { key: "offers", label: "العروض", icon: Crown },
   { key: "finance", label: "النظام المالي", icon: Wallet },
   { key: "notifications", label: "الإشعارات", icon: Bell },
+  { key: "clients", label: "بيانات العملاء", icon: Users2 },
   { key: "releases", label: "الإصدارات", icon: PackageOpen },
   { key: "settings", label: "الإعدادات", icon: Settings },
 ];
@@ -241,6 +245,7 @@ export function AdminPage() {
           {tab === "offers" && <AdminOffers token={token} />}
           {tab === "finance" && <AdminFinance token={token} />}
           {tab === "notifications" && <AdminNotifications token={token} />}
+          {tab === "clients" && <AdminClients token={token} />}
           {tab === "releases" && <AdminReleases token={token} />}
           {tab === "settings" && <AdminSettings token={token} />}
         </main>

@@ -83,6 +83,8 @@ export default defineSchema({
     phoneVerified: v.boolean(),
     soldAt: v.optional(v.number()),
     publishedAt: v.optional(v.number()),
+    publishedTo: v.optional(v.array(v.string())),
+    lastChannelPush: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -98,6 +100,8 @@ export default defineSchema({
     link: v.optional(v.string()),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
+    publishedTo: v.optional(v.array(v.string())),
+    lastChannelPush: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_status", ["status"]),
 
@@ -111,6 +115,8 @@ export default defineSchema({
     discountPercent: v.optional(v.number()),
     isFeatured: v.boolean(),
     status: v.string(),
+    publishedTo: v.optional(v.array(v.string())),
+    lastChannelPush: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_status", ["status"]),
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Megaphone, Trash2, Pencil, Play, Pause } from "lucide-react";
+import { Megaphone, Trash2, Pencil, Play, Pause, Send } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Badge, Button, Card, EmptyState, Input, Label, Modal, Select, Spinner, Textarea } from "@/components/ui";
 import { formatDateTime, cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ export function AdminAds({ token }: { token: string }) {
   const createAd = useMutation(api.ads.createAd);
   const updateAd = useMutation(api.ads.updateAd);
   const deleteAd = useMutation(api.ads.deleteAd);
+  const repushMut = useMutation(api.channelPush.repush);
 
   const [form, setForm] = useState({
     title: "",
@@ -134,6 +135,43 @@ export function AdminAds({ token }: { token: string }) {
                       <p className="mt-1 text-[10px] font-bold text-ink-400">
                         {formatDateTime(ad.startsAt)} ← {formatDateTime(ad.endsAt)} · أُنشئ {formatDateTime(ad.createdAt)}
                       </p>
+                      {(ad.publishedTo?.length > 0 || ad.status === "active") && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] font-black text-ink-400">القنوات:</span>
+                          {(ad.publishedTo ?? []).length === 0 ? (
+                            <span className="text-[10px] font-bold text-ink-400">لم تُنشر للقنوات بعد</span>
+                          ) : (
+                            (ad.publishedTo as string[]).map((ch) => (
+                              <span
+                                key={ch}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${
+                                  ch === "telegram"
+                                    ? "border-[#229ed9]/40 bg-[#229ed9]/10 text-sky-300"
+                                    : "border-[#25d366]/40 bg-[#25d366]/10 text-[#4ade80]"
+                                }`}
+                              >
+                                {ch === "telegram" ? "تيليجرام ✓" : "واتساب ✓"}
+                              </span>
+                            ))
+                          )}
+                          {ad.status === "active" && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await repushMut({ token, kind: "ad", itemId: ad._id });
+                                } catch (err: any) {
+                                  alert(err.message ?? "تعذر النشر للقنوات");
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg border border-gold-500/40 bg-gold-500/10 px-2 py-0.5 text-[10px] font-black text-gold-300 transition-colors hover:bg-gold-500/20"
+                              title="إعادة نشر على قنوات المنصة"
+                            >
+                              <Send className="h-3 w-3" />
+                              إعادة نشر للقنوات
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex shrink-0 flex-col gap-1.5">
                       <button

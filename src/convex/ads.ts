@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { requireAdmin } from "./auth";
+import { api } from "./_generated/api";
 
 export const listActive = query({
   args: {},
@@ -48,7 +49,7 @@ export const createAd = mutation({
     await requireAdmin(ctx, args.token);
     if (!args.title.trim() || !args.message.trim())
       throw new ConvexError("العنوان والرسالة مطلوبان");
-    await ctx.db.insert("ads", {
+    const id = await ctx.db.insert("ads", {
       title: args.title.trim(),
       message: args.message.trim(),
       status: args.status,
@@ -58,6 +59,16 @@ export const createAd = mutation({
       endsAt: args.endsAt,
       createdAt: Date.now(),
     });
+    // Auto-publish active ads to the platform channels
+    if (args.status === "active") {
+      await ctx.scheduler.runAfter(0, api.channels.publishToChannels, {
+        kind: "ad",
+        itemId: id,
+        title: args.title.trim(),
+        message: args.message.trim(),
+        url: "/",
+      });
+    }
     return { ok: true };
   },
 });
@@ -78,7 +89,20 @@ export const updateAd = mutation({
   },
   handler: async (ctx, { token, id, patch }) => {
     await requireAdmin(ctx, token);
+    const existing = await ctx.db.get(id);
+    if (!existing) throw new ConvexError("الإعلان غير موجود");
+    const nextStatus = patch.status ?? existing.status;
     await ctx.db.patch(id, patch);
+    // Auto-publish whenever the ad becomes active
+    if (nextStatus === "active" && existing.status !== "active") {
+      await ctx.scheduler.runAfter(0, api.channels.publishToChannels, {
+        kind: "ad",
+        itemId: id,
+        title: existing.title,
+        message: existing.message,
+        url: "/",
+      });
+    }
     return { ok: true };
   },
 });

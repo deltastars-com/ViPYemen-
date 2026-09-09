@@ -1,7 +1,7 @@
 {
   "name": "vip-yemen-platform",
   "private": true,
-  "version": "6.2.2",
+  "version": "6.3.0",
   "type": "module",
   "description": "ViP Yemen — منصة التوظيف والتسويق العقاري والإلكتروني والخدمات البرمجية",
   "scripts": {

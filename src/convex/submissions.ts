@@ -292,6 +292,26 @@ export const setStatus = mutation({
         category: existing.category,
         createdAt: now,
       });
+      // Auto-publish to the platform channels (Telegram / WhatsApp)
+      const sectionUrl =
+        existing.category === "jobs"
+          ? "/jobs"
+          : existing.category === "real_estate"
+            ? "/real-estate"
+            : existing.category === "emarket"
+              ? "/emarket"
+              : "/software";
+      await ctx.scheduler.runAfter(0, api.channels.publishToChannels, {
+        kind: "submission",
+        itemId: id,
+        title: existing.title,
+        message: existing.description ?? existing.title,
+        url: sectionUrl,
+        price:
+          existing.price !== undefined
+            ? `${existing.price.toLocaleString("en-US")} ${existing.currency === "usd" ? "$" : "ريال يمني"}`
+            : undefined,
+      });
     }
     return { ok: true };
   },

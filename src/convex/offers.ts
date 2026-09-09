@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { requireAdmin } from "./auth";
+import { api } from "./_generated/api";
 
 export const listPublished = query({
   args: {},
@@ -39,7 +40,7 @@ export const createOffer = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.token);
     if (!args.title.trim()) throw new ConvexError("عنوان العرض مطلوب");
-    await ctx.db.insert("offers", {
+    const id = await ctx.db.insert("offers", {
       title: args.title.trim(),
       description: args.description.trim(),
       imageUrl: args.imageUrl || undefined,
@@ -51,6 +52,20 @@ export const createOffer = mutation({
       status: args.status,
       createdAt: Date.now(),
     });
+    // Auto-publish published offers to the platform channels
+    if (args.status === "published") {
+      await ctx.scheduler.runAfter(0, api.channels.publishToChannels, {
+        kind: "offer",
+        itemId: id,
+        title: args.title.trim(),
+        message: args.description.trim(),
+        url: "/offers",
+        price:
+          args.offerPrice !== undefined
+            ? `${args.offerPrice.toLocaleString("en-US")} ريال يمني${args.discountPercent !== undefined ? ` — خصم ${args.discountPercent}%` : ""}`
+            : undefined,
+      });
+    }
     return { ok: true };
   },
 });
@@ -73,7 +88,24 @@ export const updateOffer = mutation({
   },
   handler: async (ctx, { token, id, patch }) => {
     await requireAdmin(ctx, token);
+    const existing = await ctx.db.get(id);
+    if (!existing) throw new ConvexError("العرض غير موجود");
+    const nextStatus = patch.status ?? existing.status;
     await ctx.db.patch(id, patch);
+    // Auto-publish whenever the offer becomes published
+    if (nextStatus === "published" && existing.status !== "published") {
+      await ctx.scheduler.runAfter(0, api.channels.publishToChannels, {
+        kind: "offer",
+        itemId: id,
+        title: existing.title,
+        message: existing.description,
+        url: "/offers",
+        price:
+          existing.offerPrice !== undefined
+            ? `${existing.offerPrice.toLocaleString("en-US")} ريال يمني${existing.discountPercent !== undefined ? ` — خصم ${existing.discountPercent}%` : ""}`
+            : undefined,
+      });
+    }
     return { ok: true };
   },
 });

@@ -12,6 +12,7 @@ import {
   PackageCheck,
   RefreshCw,
   Eye,
+  Send,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Badge, Button, EmptyState, Input, Modal, Select, Spinner, Textarea } from "@/components/ui";
@@ -52,6 +53,7 @@ export function AdminSubmissions({
   const deleteMut = useMutation(api.submissions.deleteSubmission);
   const togglePhone = useMutation(api.submissions.togglePhoneVerified);
   const updateMut = useMutation(api.submissions.updateSubmission);
+  const repushMut = useMutation(api.channelPush.repush);
 
   const catConfig = useMemo(
     () => (category === "all" ? null : getCategory(category)),
@@ -231,6 +233,48 @@ export function AdminSubmissions({
                     </button>
                   </div>
                 </div>
+
+                {/* Channel publish status + one-click re-push */}
+                {(row.publishedTo?.length > 0 || row.status === "published" || row.status === "sold") && (
+                  <div className="flex flex-wrap items-center gap-1.5 border-t border-ink-700/50 bg-gold-500/[0.03] px-4 py-2">
+                    <span className="text-[10px] font-black text-ink-400">القنوات:</span>
+                    {(row.publishedTo ?? []).length === 0 ? (
+                      <span className="text-[10px] font-bold text-ink-400">لم تُنشر للقنوات بعد</span>
+                    ) : (
+                      (row.publishedTo as string[]).map((ch) => (
+                        <span
+                          key={ch}
+                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${
+                            ch === "telegram"
+                              ? "border-[#229ed9]/40 bg-[#229ed9]/10 text-sky-300"
+                              : "border-[#25d366]/40 bg-[#25d366]/10 text-[#4ade80]"
+                          }`}
+                        >
+                          {ch === "telegram" ? "تيليجرام ✓" : "واتساب ✓"}
+                        </span>
+                      ))
+                    )}
+                    {row.lastChannelPush && (
+                      <span className="text-[10px] font-semibold text-ink-500">آخر نشر: {formatDateTime(row.lastChannelPush)}</span>
+                    )}
+                    {(row.status === "published" || row.status === "sold") && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await repushMut({ token, kind: "submission", itemId: row._id });
+                          } catch (err: any) {
+                            alert(err.message ?? "تعذر النشر للقنوات");
+                          }
+                        }}
+                        className="mr-auto inline-flex items-center gap-1 rounded-lg border border-gold-500/40 bg-gold-500/10 px-2.5 py-1 text-[10px] font-black text-gold-300 transition-colors hover:bg-gold-500/20"
+                        title="إعادة نشر هذا الإعلان على قنوات المنصة (تيليجرام / واتساب)"
+                      >
+                        <Send className="h-3 w-3" />
+                        إعادة نشر للقنوات
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Attachments strip */}
                 {row.attachments && row.attachments.length > 0 && (

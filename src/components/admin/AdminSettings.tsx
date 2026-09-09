@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import {
   Save,
   Smartphone,
@@ -9,6 +9,8 @@ import {
   KeyRound,
   AlertTriangle,
   Fingerprint,
+  Send,
+  XCircle,
 } from "lucide-react";
 import {
   enrollBiometric,
@@ -229,6 +231,8 @@ export function AdminSettings({ token }: { token: string }) {
         </div>
       </div>
 
+      <ChannelSetupCard />
+
       <BiometricCard accountName={values.brandName || "admin"} />
 
       <div className="flex items-center gap-3">
@@ -244,6 +248,90 @@ export function AdminSettings({ token }: { token: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+function ChannelSetupCard() {
+  const getSetup = useAction(api.channels.getChannelSetup);
+  const [setup, setSetup] = useState<{ telegram: boolean; whatsapp: boolean } | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    getSetup()
+      .then((s) => live && setSetup(s))
+      .catch(() => live && setSetup({ telegram: false, whatsapp: false }));
+    return () => {
+      live = false;
+    };
+  }, [getSetup]);
+
+  const channels = [
+    {
+      key: "telegram" as const,
+      name: "تيليجرام",
+      ready: setup?.telegram ?? false,
+      vars: "TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID",
+      hint: "توكن البوت و معرف القناة (عدة قنوات مفصولة بفواصل)",
+    },
+    {
+      key: "whatsapp" as const,
+      name: "واتساب (Cloud API)",
+      ready: setup?.whatsapp ?? false,
+      vars: "WHATSAPP_ACCESS_TOKEN + WHATSAPP_PHONE_NUMBER_ID + WHATSAPP_BROADCAST_TO",
+      hint: "توكن واتساب أعمال، معرّف الرقم، وأرقام البث المستهدفة",
+    },
+  ];
+
+  return (
+    <Card className="p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-gold-500/30 bg-gold-500/10 text-gold-300">
+          <Send className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-base font-extrabold text-cream">النشر التلقائي للقنوات</h3>
+          <p className="text-xs text-ink-400">
+            كل إعلان أو عرض أو منشور يُنشر من لوحة التحكم يُرسل تلقائياً إلى قنوات المنصة
+          </p>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {channels.map((c) => (
+          <div
+            key={c.key}
+            className={`rounded-xl border p-3 ${
+              c.ready ? "border-emerald-500/30 bg-emerald-500/5" : "border-ink-600/60 bg-ink-800/40"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-extrabold text-cream">{c.name}</span>
+              {setup === null ? (
+                <Spinner className="h-4 w-4 text-gold-400" />
+              ) : c.ready ? (
+                <span className="flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-black text-emerald-300">
+                  <CheckCircle2 className="h-3 w-3" />
+                  مضبوط — يُنشر تلقائياً
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-300">
+                  <XCircle className="h-3 w-3" />
+                  غير مضبوط
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-[10px] font-bold text-ink-400" dir="ltr" style={{ textAlign: "right" }}>
+              {c.vars}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-ink-300">{c.hint}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 rounded-lg border border-ink-600/50 bg-ink-950/40 p-3 text-[11px] leading-relaxed text-ink-300">
+        أضف هذه المتغيرات في <b className="text-gold-300">Convex Dashboard → Project Settings → Environment Variables</b>.
+        بدون مفاتيح تبقى المنصة تعمل بالكامل وتنشر الإعلانات على الواجهة، وعند ضبط المفاتيح
+        يبدأ النشر التلقائي للقنوات فوراً — مع زر «إعادة نشر للقنوات» على كل عنصر منشور.
+      </p>
+    </Card>
   );
 }
 

@@ -59,7 +59,7 @@ export function AssistantPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const runWikiSearchRef = useRef(runWikiSearch);
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
-  const [aiProvider, setAiProvider] = useState<"deepseek" | "gemini" | null>(null);
+  const [aiProvider, setAiProvider] = useState<"gemini" | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
@@ -180,11 +180,9 @@ export function AssistantPage() {
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-ink-300">
               ابحث في كل ما يخص المنصة: المنشورات، العروض، الإعلانات، والأسئلة
-              الشائعة — بإجابات ذكية من محركي المعرفة الاحترافيين
-              <b className="mx-1 text-gold-300">DeepSeek</b>
-              و
+              الشائعة — بإجابات ذكية من محرك المعرفة الاحترافي
               <b className="mx-1 text-gold-300">Gemini AI</b>
-              مع تحويل تلقائي بينهما، وأي معلومة عامة عبر البحث الموسوعي.
+              بأحدث النماذج مع تحويل تلقائي عند تحديثها، وأي معلومة عامة عبر البحث الموسوعي.
             </p>
             <form
               onSubmit={(e) => {
@@ -297,14 +295,8 @@ export function AssistantPage() {
                       إجابة المساعد الذكي
                     </h3>
                     {aiProvider && (
-                      <span
-                        className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black ${
-                          aiProvider === "deepseek"
-                            ? "border-sky-500/40 bg-sky-500/10 text-sky-300"
-                            : "border-violet-500/40 bg-violet-500/10 text-violet-300"
-                        }`}
-                      >
-                        المحرك: {aiProvider === "deepseek" ? "DeepSeek" : "Gemini AI"}
+                      <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-black text-violet-300">
+                        المحرك: Gemini AI
                       </span>
                     )}
                   </div>

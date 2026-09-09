@@ -788,6 +788,66 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 6.2.1 — المساعد الذكي Gemini فقط (إزالة DeepSeek) + زر خروج من الواجهة
+    const v621 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "6.2.1"))
+      .first();
+    if (!v621) {
+      await ctx.db.insert("releases", {
+        version: "6.2.1",
+        title: "تطبيق Android 6.2.1 — المساعد الذكي Gemini وزر الخروج (APK)",
+        description:
+          "الإصدار 6.2.1: إصلاح خطأ المساعد الذكي — الاعتماد الكامل على محرك Gemini AI فقط بأحدث النماذج مع تحويل تلقائي عند تحديثها، زر خروج في الواجهة العامة لإنهاء الجلسة بعد الاستخدام، وكل مميزات 6.2.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.2.1/vip-yemen-android-v6.2.1.apk",
+        notes: "الحزمة com.vip.yemen — تحديث مباشر فوق 6.2.0 بدون حذف",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.2.1",
+        title: "حزمة Google Play — AAB 6.2.1",
+        description: "حزمة AAB موقّعة بالإصدار 6.2.1 مع إصلاح المساعد الذكي وزر الخروج، جاهزة للرفع إلى Google Play Console.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.2.1/vip-yemen-android-v6.2.1.aab",
+        notes: "استخدم store-listing.json و SIGNING-AND-OWNERSHIP.md",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.2.1",
+        title: "تطبيق الويب المتقدم 6.2.1 (PWA)",
+        description: "نسخة الويب 6.2.1: المساعد الذكي يعمل بمحرك Gemini فقط بدون أخطاء، وزر خروج في القائمة الرئيسية.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.2.1/vip-yemen-web-pwa-v6.2.1.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت — تحديث تلقائي",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.2.1",
+        title: "تطبيق iOS — IPA 6.2.1",
+        description: "تطبيق iOS للحزمة com.vip.yemen بالإصدار 6.2.1 — يُبنى عبر Codemagic ويرفع إلى App Store Connect.",
+        platform: "ios",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/latest",
+        notes: "انظر codemagic.yaml لخطوات البناء والتوقيع",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.2.1",
+        title: "الكود المصدري الكامل + ملفات التوقيع والتوثيق والمتاجر",
+        description:
+          "الكود المصدري الكامل للإصدار 6.2.1، ملف التوقيع (PKCS12)، store-listing.json، PRIVACY-POLICY-APP.md، SIGNING-AND-OWNERSHIP.md، codemagic.yaml، وجميع ملفات المتاجر.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.2.1/vip-yemen-source-v6.2.1.zip",
+        notes: "جميع ملفات الرفع لمتجر Google Play و App Store",
+        createdAt: now,
+      });
+    }
+
     return { ok: true };
   },
 });

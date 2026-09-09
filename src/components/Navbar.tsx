@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X, LayoutDashboard } from "lucide-react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, LayoutDashboard, LogOut } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
+import { getAdminToken, clearAdminToken } from "@/lib/convex";
 
 const LINKS = [
   { to: "/", label: "الرئيسية" },
@@ -17,7 +18,21 @@ const LINKS = [
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [signedIn, setSignedIn] = useState(() => !!getAdminToken());
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Reflect login/logout state: re-check the session token whenever the
+  // route changes (e.g. after signing in at /auth or logging out).
+  useEffect(() => {
+    setSignedIn(!!getAdminToken());
+  }, [location.pathname]);
+
+  function handleLogout() {
+    clearAdminToken();
+    setSignedIn(false);
+    navigate("/");
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -69,6 +84,16 @@ export function Navbar() {
             <LayoutDashboard className="h-4 w-4" />
             لوحة التحكم
           </Link>
+          {signedIn && (
+            <button
+              onClick={handleLogout}
+              title="إنهاء الجلسة وتسجيل الخروج"
+              className="hidden items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20 md:inline-flex"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              خروج
+            </button>
+          )}
           <button
             className="rounded-lg border border-ink-600/70 p-2 text-cream lg:hidden"
             onClick={() => setOpen((o) => !o)}
@@ -104,6 +129,15 @@ export function Navbar() {
                 <LayoutDashboard className="h-4 w-4" />
                 لوحة التحكم
               </Link>
+              {signedIn && (
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  خروج
+                </button>
+              )}
             </div>
           </nav>
         </div>

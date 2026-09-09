@@ -1,174 +1,124 @@
 // Knowledge AI client for ViP Yemen assistant.
 //
-// Two professional knowledge engines, fully integrated with automatic
-// failover:
-//   1. DeepSeek (deepseek-chat — OpenAI-compatible API, api.deepseek.com)
-//   2. Gemini (Google Generative Language REST API, generativelanguage.googleapis.com)
+// Single professional knowledge engine: Gemini (Google Generative Language
+// REST API, generativelanguage.googleapis.com). Plain REST fetch — no SDKs,
+// so no internal SDK credentials ever ship in the built JS bundle.
 //
-// Uses plain REST fetch (no SDKs) so no internal SDK credentials ever ship
-// in the built JS bundle. If a provider key is missing or the request
-// fails, the engine falls back to the other provider automatically.
+// Model resilience: Google rotates model names (old models like
+// gemini-2.0-flash return HTTP 404 once deprecated). The client therefore
+// tries the models in GEMINI_MODELS order and automatically falls forward
+// to the next available model when the current one is gone — so the
+// assistant keeps working as Google evolves its lineup.
 //
 // Usage: import { knowledgeAI } from "@/lib/gemini";
-// Requires: VITE_GEMINI_KEY and/or VITE_DEEPSEEK_KEY in the build environment.
+// Requires: VITE_GEMINI_KEY in the build environment.
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEEPSEEK_API_BASE = "https://api.deepseek.com/chat/completions";
+
+// Preferred model first; VITE_GEMINI_MODEL (optional) overrides the list.
+// When a model returns "no longer available" / not found, the next one is
+// tried automatically.
+const GEMINI_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+];
 
 export type GeminiResult =
   | { text: string }
   | { error: string };
 
 export type KnowledgeAnswer =
-  | { text: string; provider: "deepseek" | "gemini" }
+  | { text: string; provider: "gemini" }
   | { error: string };
 
 function geminiKey(): string {
   return (import.meta.env.VITE_GEMINI_KEY as string | undefined)?.trim() ?? "";
 }
 
-function deepseekKey(): string {
-  return (import.meta.env.VITE_DEEPSEEK_KEY as string | undefined)?.trim() ?? "";
+function geminiModelOverride(): string {
+  return (import.meta.env.VITE_GEMINI_MODEL as string | undefined)?.trim() ?? "";
+}
+
+function modelCandidates(): string[] {
+  const override = geminiModelOverride();
+  return override ? [override, ...GEMINI_MODELS] : GEMINI_MODELS;
 }
 
 export async function geminiGenerate(prompt: string, options?: { model?: string; maxTokens?: number }): Promise<GeminiResult> {
   const apiKey = geminiKey();
   if (!apiKey) {
-    return { error: "[gemini] VITE_GEMINI_KEY missing — install it in the build environment to enable the assistant AI features." };
+    return { error: "[gemini] مفتاح VITE_GEMINI_KEY غير مضبوط — أضِفه في إعدادات البناء لتفعيل المساعد الذكي." };
   }
 
-  const modelName = options?.model ?? "gemini-2.0-flash";
-  const url = `${GEMINI_API_BASE}/${modelName}:generateContent?key=${apiKey}`;
+  const requested = options?.model ?? "";
+  const candidates = requested
+    ? [requested, ...modelCandidates()]
+    : modelCandidates();
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-            ],
+  let lastError = "";
+  for (const modelName of candidates) {
+    const url = `${GEMINI_API_BASE}/${modelName}:generateContent?key=${apiKey}`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: options?.maxTokens ?? 1024,
           },
-        ],
-        generationConfig: {
-          maxOutputTokens: options?.maxTokens ?? 1024,
-        },
-      }),
-    });
+        }),
+      });
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      return { error: `[gemini] API error ${res.status}: ${body.slice(0, 200)}` };
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        // 400/404 for a deprecated/unknown model → try the next candidate.
+        if (res.status === 400 || res.status === 404) {
+          lastError = `[gemini] النموذج ${modelName} لم يعد متاحاً (${res.status}) — جارٍ التبديل إلى نموذج أحدث.`;
+          continue;
+        }
+        // Anything else (invalid key, quota…) is a real failure — surface it.
+        return { error: `[gemini] خطأ من الخادم ${res.status}: ${body.slice(0, 200)}` };
+      }
+
+      const json = (await res.json()) as {
+        candidates?: Array<{ content: { parts: Array<{ text: string }> } }>;
+        error?: { message: string };
+      };
+
+      if (json.error) {
+        return { error: `[gemini] ${json.error.message}` };
+      }
+
+      const candidate = json.candidates?.[0];
+      if (!candidate?.content?.parts?.[0]?.text) {
+        return { error: "[gemini] استجابة فارغة من النموذج" };
+      }
+
+      return { text: candidate.content.parts[0].text };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      lastError = `[gemini] فشل الاتصال: ${message}`;
     }
-
-    const json = (await res.json()) as {
-      candidates?: Array<{ content: { parts: Array<{ text: string }> } }>;
-      error?: { message: string };
-    };
-
-    if (json.error) {
-      return { error: `[gemini] ${json.error.message}` };
-    }
-
-    const candidate = json.candidates?.[0];
-    if (!candidate?.content?.parts?.[0]?.text) {
-      return { error: "[gemini] empty response from model" };
-    }
-
-    return { text: candidate.content.parts[0].text };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { error: `[gemini] request failed: ${message}` };
   }
+
+  return { error: lastError || "[gemini] تعذر الوصول إلى محرك المعرفة" };
 }
 
-/** DeepSeek (deepseek-chat) via its OpenAI-compatible chat completions API. */
-export async function deepseekGenerate(prompt: string, options?: { model?: string; maxTokens?: number }): Promise<GeminiResult> {
-  const apiKey = deepseekKey();
-  if (!apiKey) {
-    return { error: "[deepseek] VITE_DEEPSEEK_KEY missing — install it in the build environment to enable DeepSeek." };
-  }
-
-  const modelName = options?.model ?? "deepseek-chat";
-
-  try {
-    const res = await fetch(DEEPSEEK_API_BASE, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: modelName,
-        messages: [
-          {
-            role: "system",
-            content:
-              "أنت مساعد ذكي لمنصة ViP Yemen الشاملة (التوظيف، التسويق العقاري، التسويق الإلكتروني، البرمجيات، العروض، الإعلانات). أجب بالعربية، موجز ودقيق وموثوق.",
-          },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: options?.maxTokens ?? 1024,
-        stream: false,
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      return { error: `[deepseek] API error ${res.status}: ${body.slice(0, 200)}` };
-    }
-
-    const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-      error?: { message?: string };
-    };
-
-    if (json.error?.message) {
-      return { error: `[deepseek] ${json.error.message}` };
-    }
-
-    const content = json.choices?.[0]?.message?.content;
-    if (!content) {
-      return { error: "[deepseek] empty response from model" };
-    }
-
-    return { text: content };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { error: `[deepseek] request failed: ${message}` };
-  }
-}
-
-export const gemini = {
-  // Simple question-answering helper for the assistant page.
-  async answer(question: string): Promise<GeminiResult> {
-    const prompt =
-      `أنت مساعد ذكي لمنصة ViP Yemen الشاملة (التوظيف، التسويق العقاري، التسويق الإلكتروني، البرمجيات، العروض، الإعلانات).أجب بالعربية، موجز ودقيق:\n\n${question}`;
-    return geminiGenerate(prompt, { model: "gemini-2.0-flash", maxTokens: 1024 });
-  },
-};
-
-/** Unified knowledge engine: DeepSeek first, automatic Gemini failover. */
+/** Unified knowledge engine — Gemini only, with automatic model fallback. */
 export const knowledgeAI = {
   async answer(question: string): Promise<KnowledgeAnswer> {
     const prompt =
       `أنت مساعد ذكي لمنصة ViP Yemen الشاملة (التوظيف، التسويق العقاري، التسويق الإلكتروني، البرمجيات، العروض، الإعلانات).أجب بالعربية، موجز ودقيق:\n\n${question}`;
 
-    // Engine 1: DeepSeek (when its key is configured)
-    if (deepseekKey()) {
-      const ds = await deepseekGenerate(prompt, { model: "deepseek-chat", maxTokens: 1024 });
-      if ("text" in ds) return { text: ds.text, provider: "deepseek" };
-      // Fall through to Gemini on any DeepSeek failure
-    }
-
-    // Engine 2: Gemini
-    const gm = await geminiGenerate(prompt, { model: "gemini-2.0-flash", maxTokens: 1024 });
+    const gm = await geminiGenerate(prompt, { maxTokens: 1024 });
     if ("text" in gm) return { text: gm.text, provider: "gemini" };
-
-    // Both engines unavailable
-    const dsMsg = deepseekKey() ? "" : "مفتاح DeepSeek غير مضبوط. ";
-    return { error: `${dsMsg}${gm.error}` };
+    return { error: gm.error };
   },
 };

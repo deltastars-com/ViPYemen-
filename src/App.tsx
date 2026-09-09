@@ -26,9 +26,6 @@ const AssistantPage = lazy(() =>
 const PrivacyPolicyPage = lazy(() =>
   import("./pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage }))
 );
-const ReleasesPage = lazy(() =>
-  import("./pages/ReleasesPage").then((m) => ({ default: m.ReleasesPage }))
-);
 const AuthPage = lazy(() => import("./pages/AuthPage").then((m) => ({ default: m.AuthPage })));
 const AdminPage = lazy(() => import("./pages/AdminPage").then((m) => ({ default: m.AdminPage })));
 const NotFoundPage = lazy(() =>
@@ -135,7 +132,6 @@ export default function App() {
               <Route path="/channels" element={<ChannelsPage />} />
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-              <Route path="/releases" element={<ReleasesPage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFoundPage />} />

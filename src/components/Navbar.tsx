@@ -12,7 +12,6 @@ const LINKS = [
   { to: "/software", label: "البرمجيات" },
   { to: "/offers", label: "العروض" },
   { to: "/channels", label: "قنواتنا" },
-  { to: "/releases", label: "الإصدارات" },
 ];
 
 export function Navbar() {

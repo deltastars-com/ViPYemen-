@@ -97,7 +97,16 @@ export function Footer() {
             <li><Link className="transition-colors hover:text-gold-300" to="/offers">قسم العروض الترويجية</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/channels">قنواتنا الرقمية</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/assistant">المساعد — البحث الشامل</Link></li>
-            <li><Link className="transition-colors hover:text-gold-300" to="/releases">الإصدارات والتطبيقات</Link></li>
+            <li>
+              <a
+                className="transition-colors hover:text-gold-300"
+                href={PLATFORM_WHATSAPP_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                الحصول على نسخة التطبيق
+              </a>
+            </li>
           </ul>
         </div>
 
@@ -131,7 +140,6 @@ export function Footer() {
           </a>
           <div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold text-ink-400">
             <Link className="transition-colors hover:text-gold-300" to="/privacy-policy">سياسة الخصوصية</Link>
-            <Link className="transition-colors hover:text-gold-300" to="/releases">دليل النشر</Link>
           </div>
         </div>
       </div>

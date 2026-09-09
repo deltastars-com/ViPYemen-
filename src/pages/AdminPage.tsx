@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "convex/react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Briefcase,
@@ -18,6 +19,10 @@ import {
   Menu,
   X,
   Users2,
+  Undo2,
+  Globe,
+  Lock,
+  ArrowDownToLine,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { getAdminToken, clearAdminToken, CONVEX_URL, CONVEX_DEPLOY_KEY } from "@/lib/convex";
@@ -73,10 +78,24 @@ export function AdminPage() {
   const [tab, setTab] = useState<AdminTab>("overview");
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
-  // Biometric gate state (hooks must run unconditionally — early returns follow)
+  // Tab-history navigation (hooks must run unconditionally — early returns follow)
+  const historyRef = useRef<AdminTab[]>([]);
+  // Biometric gate state
   const [biometricUnlocked, setBiometricUnlocked] = useState(!isBiometricEnrolled());
   const [bioBusy, setBioBusy] = useState(false);
   const [bioError, setBioError] = useState("");
+
+  function goToTab(t: AdminTab) {
+    if (t === tab) return;
+    historyRef.current = [...historyRef.current, tab].slice(-30);
+    setTab(t);
+    setMenuOpen(false);
+  }
+
+  function goBack() {
+    const prev = historyRef.current.pop();
+    if (prev) setTab(prev);
+  }
 
   if (!CONVEX_URL) {
     return (
@@ -192,7 +211,24 @@ export function AdminPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden text-xs font-bold text-ink-300 sm:block">{session.name}</span>
+            {isBiometricEnrolled() && biometricUnlocked && (
+              <button
+                onClick={() => setBiometricUnlocked(false)}
+                title="قفل لوحة التحكم — تتطلب البصمة/الوجه لإعادة الفتح"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 px-3 py-1.5 text-xs font-bold text-gold-300 transition-colors hover:bg-gold-500/20"
+              >
+                <Lock className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">قفل بالبصمة</span>
+              </button>
+            )}
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600/60 px-3 py-1.5 text-xs font-bold text-ink-200 transition-colors hover:border-gold-500/50 hover:text-gold-300"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">الموقع العام</span>
+            </Link>
+            <span className="hidden text-xs font-bold text-ink-300 md:block">{session.name}</span>
             <button
               onClick={handleLogout}
               className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20"
@@ -212,7 +248,7 @@ export function AdminPage() {
             "hidden lg:block"
           )}
         >
-          <AdminSidebar tab={tab} setTab={setTab} />
+          <AdminSidebar tab={tab} setTab={goToTab} />
         </aside>
 
         {menuOpen && (
@@ -222,32 +258,83 @@ export function AdminPage() {
               className="absolute right-0 top-0 h-full w-72 overflow-y-auto border-l border-ink-700/60 bg-ink-950 p-3"
               onClick={(e) => e.stopPropagation()}
             >
-              <AdminSidebar tab={tab} setTab={(t) => { setTab(t); setMenuOpen(false); }} />
+              <AdminSidebar tab={tab} setTab={goToTab} />
             </aside>
           </div>
         )}
 
         {/* Content */}
         <main className="min-w-0 flex-1 p-4 sm:p-6">
+          {/* Quick navigation bar — move between sections without full logout */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <button
+              onClick={goBack}
+              disabled={historyRef.current.length === 0}
+              title="العودة إلى القسم السابق"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600/60 px-3 py-1.5 text-xs font-bold text-ink-200 transition-colors hover:border-gold-500/50 hover:text-gold-300 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+              رجوع
+            </button>
+            <div className="hidden items-center gap-1 overflow-x-auto rounded-lg border border-ink-600/60 px-2 py-1.5 md:flex">
+              <ArrowDownToLine className="h-3.5 w-3.5 shrink-0 text-ink-400" />
+              <select
+                value={tab}
+                onChange={(e) => goToTab(e.target.value as AdminTab)}
+                className="bg-transparent text-xs font-bold text-ink-200 outline-none"
+                aria-label="الانتقال السريع بين الأقسام"
+              >
+                {TABS.map((t) => (
+                  <option key={t.key} value={t.key} className="bg-ink-950">
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-1 items-center gap-1 overflow-x-auto pb-1 md:hidden">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => goToTab(t.key)}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                    tab === t.key
+                      ? "bg-gold-500/15 text-gold-300"
+                      : "border border-ink-600/60 text-ink-300 hover:text-cream"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="mb-6 flex items-center justify-between gap-3">
             <h1 className="text-xl font-black text-cream">
               <activeTab.icon className="mb-1 ml-2 inline h-5 w-5 text-gold-400" />
               {activeTab.label}
             </h1>
           </div>
-          {tab === "overview" && <AdminOverview token={token} setTab={setTab} />}
-          {tab === "jobs" && <AdminSubmissions token={token} category="jobs" />}
-          {tab === "real_estate" && <AdminSubmissions token={token} category="real_estate" />}
-          {tab === "emarket" && <AdminSubmissions token={token} category="emarket" />}
-          {tab === "software" && <AdminSubmissions token={token} category="software" />}
-          {tab === "archived" && <AdminSubmissions token={token} category="all" archived />}
-          {tab === "ads" && <AdminAds token={token} />}
-          {tab === "offers" && <AdminOffers token={token} />}
-          {tab === "finance" && <AdminFinance token={token} />}
-          {tab === "notifications" && <AdminNotifications token={token} />}
-          {tab === "clients" && <AdminClients token={token} />}
-          {tab === "releases" && <AdminReleases token={token} />}
-          {tab === "settings" && <AdminSettings token={token} />}
+
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+          >
+            {tab === "overview" && <AdminOverview token={token} setTab={goToTab} />}
+            {tab === "jobs" && <AdminSubmissions token={token} category="jobs" />}
+            {tab === "real_estate" && <AdminSubmissions token={token} category="real_estate" />}
+            {tab === "emarket" && <AdminSubmissions token={token} category="emarket" />}
+            {tab === "software" && <AdminSubmissions token={token} category="software" />}
+            {tab === "archived" && <AdminSubmissions token={token} category="all" archived />}
+            {tab === "ads" && <AdminAds token={token} />}
+            {tab === "offers" && <AdminOffers token={token} />}
+            {tab === "finance" && <AdminFinance token={token} />}
+            {tab === "notifications" && <AdminNotifications token={token} />}
+            {tab === "clients" && <AdminClients token={token} />}
+            {tab === "releases" && <AdminReleases token={token} />}
+            {tab === "settings" && <AdminSettings token={token} />}
+          </motion.div>
         </main>
       </div>
     </div>
@@ -272,6 +359,15 @@ function AdminSidebar({ tab, setTab }: { tab: AdminTab; setTab: (t: AdminTab) =>
           {t.label}
         </button>
       ))}
+      <div className="border-t border-ink-700/50 pt-2">
+        <Link
+          to="/"
+          className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-right text-[13px] font-bold text-ink-200 transition-colors hover:bg-ink-800/70 hover:text-gold-300"
+        >
+          <Globe className="h-5 w-5 shrink-0 text-ink-400" />
+          العودة إلى الموقع العام
+        </Link>
+      </div>
     </nav>
   );
 }

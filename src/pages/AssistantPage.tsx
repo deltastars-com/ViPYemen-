@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
-import { gemini } from "@/lib/gemini";
+import { knowledgeAI } from "@/lib/gemini";
 import { useQuery } from "convex/react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -46,7 +46,7 @@ const FAQS = [
   },
   {
     q: "هل يمكن تثبيت المنصة كتطبيق؟",
-    a: "نعم — المنصة تطبيق ويب تقدمي (PWA) يمكن تثبيته على هاتفك ويعمل حتى بدون إنترنت، بالإضافة إلى إصدارات Android وiOS في قسم الإصدارات.",
+    a: "نعم — المنصة تطبيق ويب تقدمي (PWA) يمكن تثبيته على هاتفك ويعمل حتى بدون إنترنت. لإصدارات Android وiOS تواصل مع إدارة المنصة عبر واتساب 00967711780999 لتزويدك بالنسخة المعتمدة.",
   },
 ];
 
@@ -59,6 +59,7 @@ export function AssistantPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const runWikiSearchRef = useRef(runWikiSearch);
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [aiProvider, setAiProvider] = useState<"deepseek" | "gemini" | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
@@ -142,12 +143,14 @@ export function AssistantPage() {
     setAiLoading(true);
     setAiError(null);
     setAiAnswer(null);
+    setAiProvider(null);
     try {
-      const result = await gemini.answer(query);
+      const result = await knowledgeAI.answer(query);
       if ("error" in result) {
         setAiError(result.error);
       } else {
         setAiAnswer(result.text ?? "");
+        setAiProvider(result.provider);
       }
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "حدث خطأ غير متوقع");
@@ -177,7 +180,11 @@ export function AssistantPage() {
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-ink-300">
               ابحث في كل ما يخص المنصة: المنشورات، العروض، الإعلانات، والأسئلة
-              الشائعة — أو ابحث عن أي معلومة عامة عبر البحث الموسوعي.
+              الشائعة — بإجابات ذكية من محركي المعرفة الاحترافيين
+              <b className="mx-1 text-gold-300">DeepSeek</b>
+              و
+              <b className="mx-1 text-gold-300">Gemini AI</b>
+              مع تحويل تلقائي بينهما، وأي معلومة عامة عبر البحث الموسوعي.
             </p>
             <form
               onSubmit={(e) => {
@@ -284,10 +291,23 @@ export function AssistantPage() {
               )}
               {aiAnswer && (
                 <div className="card-surface rounded-xl border border-gold-500/25 p-5">
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-gold-300">
-                    <Crown className="h-4 w-4" />
-                    إجابة المساعد الذكي
-                  </h3>
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <h3 className="flex items-center gap-2 text-sm font-extrabold text-gold-300">
+                      <Crown className="h-4 w-4" />
+                      إجابة المساعد الذكي
+                    </h3>
+                    {aiProvider && (
+                      <span
+                        className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black ${
+                          aiProvider === "deepseek"
+                            ? "border-sky-500/40 bg-sky-500/10 text-sky-300"
+                            : "border-violet-500/40 bg-violet-500/10 text-violet-300"
+                        }`}
+                      >
+                        المحرك: {aiProvider === "deepseek" ? "DeepSeek" : "Gemini AI"}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm leading-relaxed text-ink-200">{aiAnswer}</p>
                 </div>
               )}

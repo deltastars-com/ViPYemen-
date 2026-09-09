@@ -33,12 +33,25 @@ export type KnowledgeAnswer =
   | { text: string; provider: "gemini" }
   | { error: string };
 
+// IMPORTANT: env vars are read via DYNAMIC keys. Vite statically replaces
+// dotted `import.meta.env.VITE_X` accesses with their build-time value — when
+// the key is missing that becomes `undefined` and esbuild then tree-shakes
+// the whole fetch implementation out of the bundle. Dynamic-key reads keep
+// the code in every build and resolve the real value at runtime.
+const GEMINI_KEY_NAME = "VITE_GEMINI_KEY";
+const GEMINI_MODEL_NAME = "VITE_GEMINI_MODEL";
+
+function readEnv(name: string): string {
+  const env = import.meta.env as unknown as Record<string, string | undefined>;
+  return env[name]?.trim() ?? "";
+}
+
 function geminiKey(): string {
-  return (import.meta.env.VITE_GEMINI_KEY as string | undefined)?.trim() ?? "";
+  return readEnv(GEMINI_KEY_NAME);
 }
 
 function geminiModelOverride(): string {
-  return (import.meta.env.VITE_GEMINI_MODEL as string | undefined)?.trim() ?? "";
+  return readEnv(GEMINI_MODEL_NAME);
 }
 
 function modelCandidates(): string[] {

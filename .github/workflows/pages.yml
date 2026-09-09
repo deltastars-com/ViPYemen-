@@ -76,6 +76,7 @@ jobs:
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GEMINI_KEY: ${{ secrets.VITE_GEMINI_KEY }}
 
       # GitHub Pages SPA fallback: any deep link (/jobs, /privacy-policy, …)
       # is served index.html through 404.html, so client-side routes work

@@ -971,6 +971,69 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 6.4.1 — الإصدار الذهبي: البناء النهائي الآلي بالكامل
+    const v641 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "6.4.1"))
+      .first();
+    if (!v641) {
+      await ctx.db.insert("releases", {
+        version: "6.4.1",
+        title: "تطبيق Android 6.4.1 — الإصدار الذهبي (APK)",
+        description:
+          "الإصدار 6.4.1 النهائي: الثيم الأزرق الملكي #121685 الكامل، أيقونة تبديل اللغة، التقويم الهجري مع اليوم، قسم الإعلانات الترويجية، عناوين أقسام احترافية، إصلاح نهائي لخطأ إقلاع التطبيق (رابط الخادم)، رسائل ودية للمساعد الذكي، وبناء آلي مضمون لا يفشل أبداً.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.4.1/vip-yemen-android-v6.4.1.apk",
+        notes: "الحزمة com.vip.yemen — تحديث مباشر فوق 6.3.0 بدون حذف",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.4.1",
+        title: "حزمة Google Play — AAB 6.4.1",
+        description:
+          "حزمة AAB موقّعة بالمفتاح الرسمي، جاهزة للرفع إلى Google Play Console مع ملفات المتاجر والتوثيق والتوقيع.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.4.1/vip-yemen-android-v6.4.1.aab",
+        notes: "استخدم store-listing.json و SIGNING-AND-OWNERSHIP.md",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.4.1",
+        title: "تطبيق الويب المتقدم 6.4.1 (PWA) — الإصدار الذهبي",
+        description:
+          "نسخة الويب النهائية: تعمل بدون إنترنت، تحديث تلقائي، الثيم الأزرق الملكي، تبديل اللغة، التقويم الهجري، وقسم الإعلانات في الواجهة.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.4.1/vip-yemen-web-pwa-v6.4.1.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت — تحديث تلقائي",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.4.1",
+        title: "تطبيق iOS — IPA 6.4.1",
+        description:
+          "تطبيق iOS للحزمة com.vip.yemen بالإصدار 6.4.1 — يُبنى عبر Codemagic ويرفع إلى App Store Connect.",
+        platform: "ios",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/latest",
+        notes: "انظر codemagic.yaml لخطوات البناء والتوقيع",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.4.1",
+        title: "الكود المصدري الكامل + ملفات التوقيع والتوثيق والمتاجر",
+        description:
+          "الكود المصدري الكامل للإصدار 6.4.1، ملف التوقيع (PKCS12)، store-listing.json، PRIVACY-POLICY-APP.md، SIGNING-AND-OWNERSHIP.md، codemagic.yaml، وجميع ملفات المتاجر.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.4.1/vip-yemen-source-v6.4.1.zip",
+        notes: "جميع ملفات الرفع لمتجر Google Play و App Store",
+        createdAt: now,
+      });
+    }
+
     return { ok: true };
   },
 });

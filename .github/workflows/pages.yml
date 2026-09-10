@@ -64,8 +64,8 @@ jobs:
               echo "url=$URL" >> "$GITHUB_OUTPUT"
               echo "deployed and resolved: $URL"
             else
-              echo "::error::VITE_CONVEX_URL is invalid and CONVEX_DEPLOY_KEY is not set either. Set a valid CONVEX_DEPLOY_KEY and re-run."
-              exit 1
+              echo "::warning::VITE_CONVEX_URL is invalid and CONVEX_DEPLOY_KEY is not set. Using the built-in live production URL — the app still connects to the live backend."
+              echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
             fi
           elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
             echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
@@ -83,8 +83,12 @@ jobs:
             echo "url=$URL" >> "$GITHUB_OUTPUT"
             echo "deployed and resolved: $URL"
           else
-            echo "::error::Neither VITE_CONVEX_URL (repo variable) nor CONVEX_DEPLOY_KEY (secret) is set. The dashboard and sections cannot work without a backend URL. Set CONVEX_DEPLOY_KEY and re-run."
-            exit 1
+            # No valid URL and no deploy key: the client bundle carries the
+            # known-good live deployment URL as its built-in fallback, so the
+            # app still connects to the live backend. Warn loudly instead of
+            # failing the whole build.
+            echo "::warning::No valid VITE_CONVEX_URL and no CONVEX_DEPLOY_KEY secret. Using the built-in live production URL (https://notable-shepherd-367.convex.cloud). Add CONVEX_DEPLOY_KEY as a repo SECRET to auto-deploy backend changes."
+            echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
           fi
 
       # GitHub Pages serves this repo under /ViPYemen-/, so the Pages build

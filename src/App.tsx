@@ -1,5 +1,6 @@
 import { Component, Suspense, lazy, useEffect, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
+import { useLang } from "./lib/i18n";
 import { Analytics } from "@vercel/analytics/react";
 import { AppLayout } from "./components/AppLayout";
 import { LogoMark } from "./components/Logo";
@@ -41,7 +42,7 @@ function RouteFallback() {
   );
 }
 
-class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+class ErrorBoundaryInner extends Component<{ children: ReactNode; t: (k: string) => string }, { hasError: boolean }> {
   state = { hasError: false };
 
   static getDerivedStateFromError() {
@@ -49,27 +50,22 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 
   componentDidCatch(error: unknown) {
-    // Hand the render crash to the auto-recovery watchdog: it shows the
-    // branded recovery screen and restarts the platform automatically.
-    reportFatal(error, "واجهة");
+    reportFatal(error, "interface");
   }
 
   render() {
     if (this.state.hasError) {
-      // The auto-recovery overlay covers this fallback while the platform
-      // restarts itself; this stays as a final manual safety net.
+      const t = this.props.t;
       return (
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
-          <h1 className="text-xl font-black text-cream">حدث خطأ غير متوقع</h1>
-          <p className="max-w-md text-sm text-ink-300">
-            يعيد النظام تشغيل المنصة تلقائياً — إذا لم يحدث ذلك اضغط الزر أدناه.
-          </p>
+          <h1 className="text-xl font-black text-cream">{t("unexpectedError")}</h1>
+          <p className="max-w-md text-sm text-ink-300">{t("autoRestart")}</p>
           <div className="flex gap-3">
             <button onClick={() => window.location.reload()} className="btn-gold">
-              إعادة تشغيل المنصة
+              {t("restartPlatform")}
             </button>
             <Link to="/" className="btn-ghost" onClick={() => this.setState({ hasError: false })}>
-              العودة للرئيسية
+              {t("backToHome")}
             </Link>
           </div>
         </div>
@@ -77,6 +73,11 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
     }
     return this.props.children;
   }
+}
+
+function ErrorBoundary({ children }: { children: ReactNode }) {
+  const { t } = useLang();
+  return <ErrorBoundaryInner t={t}>{children}</ErrorBoundaryInner>;
 }
 
 function ScrollToTop() {

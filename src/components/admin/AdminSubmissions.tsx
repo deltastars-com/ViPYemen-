@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Badge, Button, EmptyState, Input, Modal, Select, Spinner, Textarea } from "@/components/ui";
-import { getCategory, getType, STATUS_LABELS, TYPE_ICONS } from "@/lib/categories";
+import { getCategory, getType, getStatusLabel, TYPE_ICONS } from "@/lib/categories";
 import { formatDateTime, whatsappLink, cn } from "@/lib/utils";
 
 const STATUS_FILTERS = [
@@ -134,7 +134,7 @@ export function AdminSubmissions({
             const cat = getCategory(row.category);
             const typeCfg = getType(cat, row.type);
             const TypeIcon = TYPE_ICONS[row.type] ?? cat.icon;
-            const st = STATUS_LABELS[row.status] ?? STATUS_LABELS.pending;
+            const st = getStatusLabel(row.status, (k) => k);
             return (
               <div key={row._id} className="card-surface overflow-hidden">
                 <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">

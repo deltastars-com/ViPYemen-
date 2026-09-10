@@ -3,6 +3,7 @@ import { CHANNELS } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 import { TelegramIcon, WhatsAppIcon, YouTubeIcon } from "./ChannelIcons";
 import type { ComponentType, SVGProps } from "react";
+import { useLang } from "@/lib/i18n";
 
 const CHANNEL_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
   whatsapp: WhatsAppIcon,
@@ -11,6 +12,7 @@ const CHANNEL_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
 };
 
 export function ChannelsSection({ className }: { className?: string }) {
+  const { t } = useLang();
   return (
     <div className={cn("grid gap-5 md:grid-cols-3", className)}>
       {CHANNELS.map((c) => {
@@ -27,7 +29,6 @@ export function ChannelsSection({ className }: { className?: string }) {
               c.hover
             )}
           >
-            {/* top brand glow */}
             <div
               className={cn(
                 "pointer-events-none absolute inset-x-0 top-0 h-24 opacity-0 transition-opacity duration-300 group-hover:opacity-100",
@@ -46,7 +47,7 @@ export function ChannelsSection({ className }: { className?: string }) {
               </div>
               <span className="flex items-center gap-1.5 rounded-full border border-ink-600/60 bg-ink-900/70 px-2.5 py-1 text-[10px] font-black text-ink-300">
                 <Radio className="h-3 w-3 animate-pulse text-gold-400" />
-                مباشر
+                {t("live")}
               </span>
             </div>
             <h3 className="relative mt-5 text-lg font-black text-cream">{c.name}</h3>

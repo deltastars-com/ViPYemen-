@@ -404,13 +404,30 @@ export function getType(category: CategoryConfig, typeValue: string): Submission
   );
 }
 
-export const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  pending: { label: "قيد الانتظار", className: "bg-amber-500/15 text-amber-300 border-amber-500/30" },
-  published: { label: "منشور", className: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" },
-  rejected: { label: "مرفوض", className: "bg-rose-500/15 text-rose-300 border-rose-500/30" },
-  sold: { label: "تم البيع", className: "bg-sky-500/15 text-sky-300 border-sky-500/30" },
-  archived: { label: "مؤرشف", className: "bg-ink-500/15 text-ink-300 border-ink-500/30" },
+const STATUS_STYLES: Record<string, string> = {
+  pending: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  published: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  rejected: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+  sold: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+  archived: "bg-ink-500/15 text-ink-300 border-ink-500/30",
 };
+
+const STATUS_KEYS: Record<string, string> = {
+  pending: "statusPending",
+  published: "statusPublished",
+  rejected: "statusRejected",
+  sold: "statusSold",
+  archived: "statusArchived",
+};
+
+/** Returns bilingual status label + style. Accepts a t() function from useLang. */
+export function getStatusLabel(status: string, t: (k: string) => string): { label: string; className: string } {
+  const key = STATUS_KEYS[status] ?? status;
+  return {
+    label: t(key),
+    className: STATUS_STYLES[status] ?? "bg-ink-500/15 text-ink-300 border-ink-500/30",
+  };
+}
 
 export const TYPE_ICONS: Record<string, LucideIcon> = {
   seeker: UserRound,

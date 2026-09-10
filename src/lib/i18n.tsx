@@ -1,4 +1,18 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+/**
+ * Full bilingual (Arabic / English) i18n system for ViP Yemen.
+ *
+ * Every user-visible string in the platform is served from this dictionary.
+ * Components call `t("key")` to get the current language's text.
+ * Nested helpers: `tCategory(key, field)`, `tField(cat, field, prop)`, `tOption(cat, field, opt)`.
+ */
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -6,7 +20,10 @@ export type Lang = "ar" | "en";
 
 const STORAGE_KEY = "vip_lang";
 
+/* ─── Main dictionary ─── */
+
 const DICT: Record<string, { ar: string; en: string }> = {
+  /* ── Navigation ── */
   home: { ar: "الرئيسية", en: "Home" },
   jobs: { ar: "التوظيف", en: "Jobs" },
   realEstate: { ar: "العقارات", en: "Real Estate" },
@@ -20,6 +37,8 @@ const DICT: Record<string, { ar: string; en: string }> = {
   ads: { ar: "إعلانات", en: "Ads" },
   today: { ar: "اليوم", en: "Today" },
   hijri: { ar: "هـ", en: "AH" },
+
+  /* ── Hero / Landing ── */
   heroBadge: { ar: "المنصة اليمنية الشاملة للخدمات", en: "Yemen's all-in-one services platform" },
   heroTitle1: { ar: "كل ما تحتاجه في منصة واحدة —", en: "Everything you need in one platform —" },
   heroTitle2: { ar: "توظيف، عقارات، تسويق، برمجيات", en: "Jobs, Real Estate, Marketing, Software" },
@@ -30,12 +49,16 @@ const DICT: Record<string, { ar: string; en: string }> = {
   ctaJobs: { ar: "ابدأ من قسم التوظيف", en: "Start with Jobs" },
   ctaMarket: { ar: "اعرض منتجك أو ابحث عن طلب", en: "Sell a product or search" },
   verified: { ar: "مراجعة إدارية وتدقيق لكل طلب قبل النشر", en: "Admin review & verification before every publish" },
+
+  /* ── Sections overview ── */
   sectionsTitle: { ar: "أقسام المنصة", en: "Platform Sections" },
   sectionsSub: {
     ar: "أربعة أقسام متكاملة، كلها تخضع لنفس آلية المراجعة والنشر المعتمدة من إدارة المنصة.",
     en: "Four integrated sections, all governed by the same review-and-publish system approved by the platform's management.",
   },
   enterSection: { ar: "ادخل القسم", en: "Enter section" },
+
+  /* ── How it works ── */
   howTitle: { ar: "آلية عمل المنصة", en: "How it works" },
   howSub: {
     ar: "نظام مراجعة مضمون يحمي حقوق الجميع — البائعين والمشترين والباحثين عن عمل.",
@@ -49,22 +72,32 @@ const DICT: Record<string, { ar: string; en: string }> = {
   step3Text: { ar: "تقوم الإدارة بالتدقيق والتعديل لضمان الحقوق والجودة", en: "Management verifies and edits to guarantee rights and quality" },
   step4: { ar: "4. نشر تلقائي", en: "4. Auto-publish" },
   step4Text: { ar: "بضغطة زر ينشر الطلب على واجهة المنصة وقنوات التواصل", en: "One click publishes your request on the platform and its channels" },
+
+  /* ── Latest / Listings ── */
   latestTitle: { ar: "أحدث المنشورات المعتمدة", en: "Latest approved listings" },
   browseAll: { ar: "تصفح الكل", en: "Browse all" },
+
+  /* ── Ads ── */
   adsTitle: { ar: "الإعلانات الترويجية", en: "Promotional Ads" },
   adsSub: {
     ar: "أحدث الإعلانات المعتمدة من إدارة المنصة — تظهر هنا وفي الشريط الإعلاني العلوي.",
     en: "The latest approved ads from the platform's management — shown here and in the top ticker.",
   },
+
+  /* ── Offers ── */
   offersTitle: { ar: "عروض مميزة", en: "Featured offers" },
   allOffers: { ar: "كل العروض", en: "All offers" },
   whyTitle: { ar: "لماذا ViP Yemen؟", en: "Why ViP Yemen?" },
+
+  /* ── Channels ── */
   channelsTitle: { ar: "قنواتنا الرقمية", en: "Our digital channels" },
   channelsSub: {
     ar: "كل منشور معتمد يُنشر تلقائياً على قنوات المنصة الرسمية — انضم لتصل إليك الفرص والعروض أولاً بأول.",
     en: "Every approved post is automatically published to the platform's official channels — join to get opportunities and offers first.",
   },
   channelsPage: { ar: "صفحة القنوات", en: "Channels page" },
+
+  /* ── Final CTA ── */
   finalCta: { ar: "جاهز تبدأ؟ سجّل بياناتك الآن — وسنتولى الباقي", en: "Ready to start? Register now — we handle the rest" },
   finalCtaSub: {
     ar: "فريقنا ذو خبرة سنوات في مجالات التوظيف والتسويق والبرمجة — نضمن لك الجودة والوصول لجمهور أوسع.",
@@ -72,8 +105,12 @@ const DICT: Record<string, { ar: string; en: string }> = {
   },
   registerNow: { ar: "سجّل في المنصة", en: "Register now" },
   watchOffers: { ar: "شاهد العروض", en: "See offers" },
+
+  /* ── Footer ── */
   footerSections: { ar: "أقسام المنصة", en: "Sections" },
   footerContact: { ar: "تواصل معنا", en: "Contact us" },
+
+  /* ── Assistant ── */
   searchPlaceholder: {
     ar: "اكتب سؤالك أو كلمة البحث... مثال: شقة في حدة، جوال للبيع، برمجة تطبيقات",
     en: "Type your question or search term... e.g. apartment in Hadda, phone for sale, app development",
@@ -93,18 +130,527 @@ const DICT: Record<string, { ar: string; en: string }> = {
     en: "Be the first — requests are reviewed and published as soon as management approves them",
   },
   whatsappContact: { ar: "تواصل معنا عبر واتساب", en: "Contact us on WhatsApp" },
+
+  /* ── Auth page ── */
+  adminPanel: { ar: "لوحة تحكم ViP Yemen", en: "ViP Yemen Admin Panel" },
+  adminPanelSub: { ar: "منطقة آمنة لإدارة المنصة — للمسؤولين فقط", en: "Secure area for platform management — admins only" },
+  mustChangePassword: {
+    ar: "يجب تغيير كلمة المرور الافتراضية عند أول دخول لأمان حسابك. ستُستخدم بياناتك لتأكيد الهوية.",
+    en: "You must change the default password on first login for account security. Your data will be used for identity verification.",
+  },
+  email: { ar: "البريد الإلكتروني", en: "Email" },
+  currentPassword: { ar: "كلمة المرور الحالية", en: "Current password" },
+  newPassword: { ar: "كلمة المرور الجديدة", en: "New password" },
+  confirmNewPassword: { ar: "تأكيد كلمة المرور الجديدة", en: "Confirm new password" },
+  saveNewPassword: { ar: "حفظ كلمة المرور الجديدة", en: "Save new password" },
+  passwordMismatch: { ar: "كلمتا المرور غير متطابقتين", en: "Passwords do not match" },
+  passwordChanged: { ar: "تم تغيير كلمة المرور بنجاح — جارٍ الدخول...", en: "Password changed successfully — logging in..." },
+  passwordChangeError: { ar: "تعذر تغيير كلمة المرور", en: "Failed to change password" },
+  loginError: { ar: "خطأ في تسجيل الدخول", en: "Login error" },
+  forgotPassword: { ar: "نسيت كلمة المرور؟", en: "Forgot password?" },
+  resetPasswordTitle: { ar: "استعادة كلمة المرور", en: "Reset password" },
+  resetPasswordSub: { ar: "أدخل بريد الإدارة وسيصلك رمز مكوّن من 6 أرقام.", en: "Enter the admin email and you'll receive a 6-digit code." },
+  sendResetCode: { ar: "إرسال رمز الاستعادة", en: "Send reset code" },
+  resetCodeSent: { ar: "تم إرسال رمز الاستعادة إلى بريدك الإلكتروني — تحقق من صندوق الوارد", en: "Reset code sent to your email — check your inbox" },
+  resetCodeFailed: { ar: "تعذر إرسال البريد حالياً (لم يُضبط مفتاح الإرسال) — استخدم رمز الطوارئ أدناه", en: "Could not send email (sending key not set) — use the emergency code below" },
+  resetCodeError: { ar: "تعذر إرسال رمز الاستعادة", en: "Failed to send reset code" },
+  resetCode: { ar: "رمز الاستعادة", en: "Reset code" },
+  resetCodePlaceholder: { ar: "6 أرقام", en: "6 digits" },
+  resetConfirmPassword: { ar: "تأكيد كلمة المرور", en: "Confirm password" },
+  resetCodeLabel: { ar: "رمز الطوارئ (بيئة تجريبية)", en: "Emergency code (dev only)" },
+  setNewPassword: { ar: "تعيين كلمة المرور", en: "Set new password" },
+  passwordResetDone: { ar: "تم تعيين كلمة المرور الجديدة — سجّل الدخول الآن", en: "New password set — log in now" },
+  resetError: { ar: "تعذر إعادة التعيين", en: "Reset failed" },
+  loginTitle: { ar: "تسجيل الدخول", en: "Sign in" },
+  loginSub: { ar: "بريد الإدارة وكلمة المرور", en: "Admin email and password" },
+  loginBtn: { ar: "دخول لوحة التحكم", en: "Sign in to Admin" },
+  supportEmail: { ar: "للدعم الفني", en: "For support" },
+  currentPasswordPlaceholder: { ar: "••••••••", en: "••••••••" },
+  passwordPlaceholder: { ar: "8 أحرف على الأقل", en: "8 characters minimum" },
+  confirmPlaceholder: { ar: "أعد كتابة كلمة المرور", en: "Re-enter password" },
+
+  /* ── Not found ── */
+  notFoundTitle: { ar: "عذراً، الصفحة التي تبحث عنها غير موجودة أو تم نقلها. تأكد من الرابط أو عد إلى الصفحة الرئيسية.", en: "Sorry, the page you're looking for doesn't exist or has been moved. Check the URL or go back to the homepage." },
+  goHome: { ar: "العودة للرئيسية", en: "Go home" },
+
+  /* ── Error boundary ── */
+  unexpectedError: { ar: "حدث خطأ غير متوقع", en: "An unexpected error occurred" },
+  autoRestart: { ar: "يعيد النظام تشغيل المنصة تلقائياً — إذا لم يحدث ذلك اضغط الزر أدناه.", en: "The system will restart automatically — if not, click the button below." },
+  restartPlatform: { ar: "إعادة تشغيل المنصة", en: "Restart platform" },
+  backToHome: { ar: "العودة للرئيسية", en: "Back to home" },
+
+  /* ── Privacy policy ── */
+  privacyBadge: { ar: "سياسة الخصوصية", en: "Privacy Policy" },
+  privacyTitle: { ar: "سياسة الخوصية", en: "Privacy Policy" },
+  privacyLastUpdated: { ar: "آخر تحديث: 2026 — منصة ViP Yemen تلتزم بحماية بياناتك وخصوصيتك.", en: "Last updated: 2026 — ViP Yemen is committed to protecting your data and privacy." },
+  privacySection1Title: { ar: "1. البيانات التي نجمعها", en: "1. Data we collect" },
+  privacySection1Body: { ar: "نجمع فقط البيانات التي تقدمها طوعاً عند التسجيل: الاسم الكامل، رقم الهاتف، العنوان، بيانات الطلب، والمرفقات. لا نجمع أي بيانات من جهازك دون علمك.", en: "We only collect data you voluntarily provide when registering: full name, phone number, address, request details, and attachments. We do not collect any data from your device without your knowledge." },
+  privacySection2Title: { ar: "2. كيفية استخدام البيانات", en: "2. How we use data" },
+  privacySection2Body: { ar: "تُستخدم بياناتك حصرياً لأغراض المنصة: مراجعة الطلبات، التواصل معك، ونشر الطلبات المعتمدة.", en: "Your data is used exclusively for platform purposes: reviewing requests, communicating with you, and publishing approved listings." },
+  privacySection3Title: { ar: "3. حماية البيانات", en: "3. Data protection" },
+  privacySection3Body: { ar: "نستخدم تشفيراً متقدماً لكلمات المرور، وجلسات آمنة، وتخزيناً سحابياً محمياً.", en: "We use advanced encryption for passwords, secure sessions, and protected cloud storage." },
+  privacySection4Title: { ar: "4. مشاركة البيانات", en: "4. Data sharing" },
+  privacySection4Body: { ar: "لا نبيع ولا نشارك بياناتك مع أي طرف ثالث لأغراض تسويقية.", en: "We do not sell or share your data with any third party for marketing purposes." },
+  privacySection5Title: { ar: "5. التواصل", en: "5. Contact" },
+  privacySection5Body: { ar: "لأي استفسار حول بياناتك: vipservicesyemen@gmail.com أو واتساب 00967711780999.", en: "For any data inquiries: vipservicesyemen@gmail.com or WhatsApp 00967711780999." },
+  privacySection6Title: { ar: "6. حقوقك", en: "6. Your rights" },
+  privacySection6Body: { ar: "لديك الحق في طلب تصحيح أو حذف بياناتك في أي وقت.", en: "You have the right to request correction or deletion of your data at any time." },
+  privacyNote: {
+    ar: "يُعتمد هذا النص كسياسة خصوصية رسمية للمنصة وللتطبيقات المنشورة في متاجر Google Play وApp Store.",
+    en: "This text is adopted as the official privacy policy for the platform and apps published on Google Play and App Store.",
+  },
+
+  /* ── Offers page ── */
+  offersHallBadge: { ar: "صالة العروض الترويجية", en: "Promotional Offers Hall" },
+  offersHallTitle: { ar: "صالة العروض الحصرية", en: "Exclusive Offers Hall" },
+  offersHallSub: {
+    ar: "عروض وخدمات وخصومات تُنشر من إدارة المنصة لحظياً — بالصور والفيديوهات. كل عرض مُدقَّق ومضمون، واطلبه مباشرة عبر واتساب.",
+    en: "Deals, services and discounts published by platform management live — with photos and videos. Every offer is verified and guaranteed, request directly via WhatsApp.",
+  },
+  realDiscounts: { ar: "خصومات حقيقية", en: "Real discounts" },
+  adminVerified: { ar: "عروض مدققة من الإدارة", en: "Verified by management" },
+  liveUpdates: { ar: "تُحدث لحظياً", en: "Updated live" },
+  featuredOffer: { ar: "العرض المঈ", en: "Featured offer" },
+  discount: { ar: "خصم", en: "Discount" },
+  requestOffer: { ar: "اطلب هذا العرض", en: "Request this offer" },
+  watchVideo: { ar: "شاهد الفيديو", en: "Watch video" },
+  noOffers: { ar: "لا توجد عروض حالياً", en: "No offers available yet" },
+  noOffersHint: { ar: "تترقب عروضاً جديدة قريباً — تابعنا عبر واتساب", en: "New offers coming soon — follow us on WhatsApp" },
+  offersCta: {
+    ar: "لديك عرض خاص أو ترغب بالترويج لمنشأتك في صالة العروض؟ تواصل مع إدارة المنصة — ننشر عروضك بالصور والفيديوهات على واجهة المنصة وقنوات التواصل.",
+    en: "Have a special offer or want to promote your business in the Offers Hall? Contact platform management — we'll publish your offers with photos and videos.",
+  },
+  riyal: { ar: "ريال", en: "YER" },
+
+  /* ── Channels page ── */
+  channelsPageTitle: { ar: "قنواتنا الرقمية", en: "Our Digital Channels" },
+  channelsPageSub: {
+    ar: "تابع منصة ViP Yemen على جميع قنواتنا الرسمية — كل منشور معتمد يُنشر تلقائياً لتصل إليك Opportunities لحظة بلحظة.",
+    en: "Follow ViP Yemen on all our official channels — every approved post is published automatically so opportunities reach you in real time.",
+  },
+  whyJoin: { ar: "لماذا تنضم لقنواتنا؟", en: "Why join our channels?" },
+  livePost: { ar: "نشر لحظي", en: "Live publishing" },
+  livePostText: { ar: "كل منشور معتمد من لوحة التحكم يصل لقنواتنا فوراً — بدون تأخير.", en: "Every admin-approved post reaches our channels instantly — no delay." },
+  alerts: { ar: "تنبيهات فورية", en: "Instant alerts" },
+  alertsText: { ar: "إشعارات فورية لكل جديد: وظائف، عقارات، منتجات، وعروض حصرية.", en: "Instant notifications for everything new: jobs, real estate, products, and exclusive deals." },
+  community: { ar: "مجتمع واسع", en: "Wide community" },
+  communityText: { ar: "انضم لآلاف المتابعين وتابع الفرص قبل الجميع على منصات متعددة.", en: "Join thousands of followers and catch opportunities first across multiple platforms." },
+  trustedContent: { ar: "محتوى موثوق", en: "Trusted content" },
+  trustedContentText: { ar: "كل ما يُنشر على قنواتنا مرّ بالمراجعة الإدارية والتدقيق أولاً.", en: "Everything published on our channels goes through admin review and verification first." },
+  interlinkedChannels: { ar: "قنوات مترابطة — محتوى واحد متزامن", en: "Interlinked channels — one synchronized content" },
+  interlinkedSub: { ar: "المنشور المعتمد يظهر على الواجهة وعلى جميع القنوات معاً وبشكل آلي", en: "Approved posts appear on the platform and all channels simultaneously and automatically" },
+  live: { ar: "مباشر", en: "LIVE" },
+  dontMiss: { ar: "لا تفوّت أي فرصة — انضم الآن لجميع قنواتنا", en: "Don't miss any opportunity — join all our channels now" },
+  dontMissSub: {
+    ar: "وتذكّر: يمكنك أيضاً التسجيل مباشرة في أقسام المنصة أو التواصل معنا عبر واتساب الأعمال.",
+    en: "And remember: you can also register directly in the platform sections or contact us via WhatsApp.",
+  },
+  browseSections: { ar: "تصفح أقسام المنصة", en: "Browse platform sections" },
+  directContact: { ar: "للتواصل المباشر مع إدارة المنصة:", en: "For direct contact with platform management:" },
+  whatsappBusiness: { ar: "واتساب الأعمال", en: "WhatsApp Business" },
+
+  /* ── Submission form ── */
+  dataReviewedPrivately: {
+    ar: "تُعرض بياناتك أولاً في لوحة التحكم للمراجعة والتدقيق قبل النشر — ضماناً للحقوق والجودة.",
+    en: "Your data is first shown in the admin panel for review and verification before publishing — guaranteeing rights and quality.",
+  },
+  fullName: { ar: "الاسم الكامل", en: "Full name" },
+  fullNamePlaceholder: { ar: "الاسم الثلاثي", en: "Full name" },
+  phoneLabel: { ar: "رقم الهاتف (واتساب)", en: "Phone number (WhatsApp)" },
+  phonePlaceholder: { ar: "مثال: 771234567", en: "e.g. 771234567" },
+  addressLabel: { ar: "العنوان / المدينة", en: "Address / City" },
+  addressPlaceholder: { ar: "المحافظة والمدينة", en: "Governorate and city" },
+  priceLabel: { ar: "السعر", en: "Price" },
+  priceOptional: { ar: "السعر (اختياري)", en: "Price (optional)" },
+  yemeniRiyal: { ar: "ريال يمني", en: "Yemeni Riyal" },
+  dollar: { ar: "دولار", en: "USD" },
+  saudiRiyal: { ar: "ريال سعودي", en: "SAR" },
+  phoneVerify: { ar: "التحقق من رقم الهاتف", en: "Phone verification" },
+  otpPlaceholder: { ar: "أدخل رمز التحقق", en: "Enter verification code" },
+  getOtp: { ar: "احصل على الرمز", en: "Get code" },
+  otpCodeLabel: { ar: "رمز التحقق:", en: "Verification code:" },
+  otpSendViaWhatsapp: { ar: "أرسل الرمز عبر واتساب المنصة ({phone}) لإتمام التحقق، ثم أدخله في الحقل أعلاه.", en: "Send the code via the platform's WhatsApp ({phone}) to complete verification, then enter it above." },
+  sendViaWhatsapp: { ar: "إرسال الرمز عبر واتساب", en: "Send code via WhatsApp" },
+  otpError: { ar: "أدخل رقم الهاتف أولاً ثم اطلب رمز التحقق", en: "Enter your phone number first then request a verification code" },
+  otpSendError: { ar: "تعذر إرسال رمز التحقق", en: "Failed to send verification code" },
+  detailedDescription: { ar: "وصف تفصيلي", en: "Detailed description" },
+  attachmentsLabel: { ar: "المرفقات (صور المؤهلات، السيرة الذاتية، صور المنتج / العقار...)", en: "Attachments (qualification photos, CV, product / property photos...)" },
+  uploadingFiles: { ar: "جارٍ رفع الملفات...", en: "Uploading files..." },
+  chooseFiles: { ar: "اضغط لاختيار الملفات — صور / PDF", en: "Click to choose files — images / PDF" },
+  fileUploadError: { ar: "فشل رفع الملف — حاول مرة أخرى", en: "File upload failed — try again" },
+  deleteAttachment: { ar: "حذف المرفق", en: "Delete attachment" },
+  dataReviewNotice: {
+    ar: "بياناتك تُعرض على إدارة المنصة فقط بشكل خاص وسري للمراجعة والتدقيق قبل النشر. الإدارة قد تعدّل البيانات وتتواصل معك لضمان الجودة والموثوقية.",
+    en: "Your data is shown only to platform management privately for review and verification before publishing. Management may edit data and contact you to ensure quality and reliability.",
+  },
+  submitForReview: { ar: "إرسال الطلب للمراجعة", en: "Submit for review" },
+  submitError: { ar: "حدث خطأ أثناء الإرسال", en: "An error occurred during submission" },
+  submissionSuccess: { ar: "تم استلام طلبك بنجاح", en: "Your request has been received" },
+  submissionSuccessSub: {
+    ar: "سيتم مراجعة طلبك من قبل إدارة المنصة بشكل خاص وسري، وبعد التدقيق والتعديل سيُنشر على واجهة المنصة — وستتواصل معك الإدارة عند الحاجة.",
+    en: "Your request will be reviewed privately by platform management, and after verification and editing it will be published on the platform — management will contact you if needed.",
+  },
+  submitAnother: { ar: "إرسال طلب آخر", en: "Submit another request" },
+  selectOption: { ar: "اختر...", en: "Select..." },
+  whatsappNumber: { ar: "واتساب المنصة", en: "Platform WhatsApp" },
+  requiredFields: { ar: "حقول مطلوبة", en: "Required fields" },
+
+  /* ── Submission card ── */
+  verifiedNumber: { ar: "رقم موثق", en: "Verified number" },
+  sold: { ar: "تم البيع", en: "Sold" },
+  contactWhatsapp: { ar: "تواصل عبر واتساب", en: "Contact via WhatsApp" },
+
+  /* ── Offer card ── */
+  featuredBadge: { ar: "عرض مميز", en: "Featured" },
+
+  /* ── Status labels ── */
+  statusPending: { ar: "قيد الانتظار", en: "Pending" },
+  statusPublished: { ar: "منشور", en: "Published" },
+  statusRejected: { ar: "مرفوض", en: "Rejected" },
+  statusSold: { ar: "تم البيع", en: "Sold" },
+  statusArchived: { ar: "مؤرشف", en: "Archived" },
+
+  /* ── Category labels ── */
+  catJobs: { ar: "التوظيف", en: "Jobs" },
+  catJobsShort: { ar: "توظيف", en: "Jobs" },
+  catJobsHero: { ar: "فرص عمل موثوقة وكوادر مؤهلة", en: "Trusted job opportunities and qualified talent" },
+  catJobsDesc: {
+    ar: "سجّل بياناتك كباحث عن عمل أو أعلن عن وظيفة في منشأتك — تُراجع الطلبات من إدارة المنصة قبل النشر لضمان الحقوق والجودة.",
+    en: "Register as a job seeker or post a vacancy — requests are reviewed by platform management before publishing to ensure rights and quality.",
+  },
+  catRealEstate: { ar: "التسويق العقاري", en: "Real Estate" },
+  catRealEstateShort: { ar: "عقارات", en: "Real Estate" },
+  catRealEstateHero: { ar: "عقارات موثوقة وبائعون ومشترون حقيقيون", en: "Trusted properties with real sellers and buyers" },
+  catRealEstateDesc: {
+    ar: "اعرض أرضك أو منزلك أو عمارتك أو فيلتك، أو سجّل طلبك كباحث عن عقار — كل الطلبات تمر بمراجعة إدارة المنصة قبل النشر.",
+    en: "List your land, house, building, or villa, or register as a property seeker — all requests go through platform management review before publishing.",
+  },
+  catEmarket: { ar: "التسويق الإلكتروني", en: "E-Marketing" },
+  catEmarketShort: { ar: "تسويق إلكتروني", en: "E-Marketing" },
+  catEmarketHero: { ar: "اعرض منتجك أو ابحث عن طلبك — مع تحقق من رقم الهاتف", en: "List your product or search for what you need — with phone verification" },
+  catEmarketDesc: {
+    ar: "سوق إلكتروني شامل: أجهزة، سيارات، آلات، سلع متنوعة. يتحقق النظام من رقم هاتفك ويربطك مباشرة بواتساب المنصة.",
+    en: "A comprehensive e-market: devices, cars, machinery, diverse goods. The system verifies your phone number and connects you directly to the platform's WhatsApp.",
+  },
+  catSoftware: { ar: "البرمجيات وتطوير التطبيقات", en: "Software & App Development" },
+  catSoftwareShort: { ar: "برمجيات", en: "Software" },
+  catSoftwareHero: { ar: "مواقع وتطبيقات وأنظمة برمجية بمعايير عالمية", en: "Websites, apps and software systems with world-class standards" },
+  catSoftwareDesc: {
+    ar: "اطلب مشروعك البرمجي: مواقع ويب، تطبيقات جوال، لوحات تحكم، أنظمة متكاملة — تُراجع طلباتك من الإدارة وتُتواصل معك مباشرة.",
+    en: "Order your software project: websites, mobile apps, dashboards, integrated systems — your requests are reviewed by management who contact you directly.",
+  },
+
+  /* ── Submission type labels ── */
+  typeSeeker: { ar: "أبحث عن عمل", en: "Job seeker" },
+  typeEmployer: { ar: "أنا صاحب منشأة / أعلن عن وظيفة", en: "Employer / Post a job" },
+  typeOwner: { ar: "أنا مالك عقار — أريد البيع / التأجير", en: "Property owner — Sell / Rent" },
+  typeBuyer: { ar: "أبحث عن عقار", en: "Property seeker" },
+  typeSeller: { ar: "أعرض منتجاً للبيع", en: "Sell a product" },
+  typeClient: { ar: "أطلب خدمة برمجية", en: "Request software service" },
+
+  /* ── Form field labels ── */
+  fieldJobTitle: { ar: "المسمى الوظيفي المطلوب", en: "Job title" },
+  fieldJobTitlePlaceholder: { ar: "مثال: مهندس مدني / محاسب / مصمم جرافيك", en: "e.g. Civil Engineer / Accountant / Graphic Designer" },
+  fieldAboutYou: { ar: "ملخص عنك وخبراتك", en: "Summary of yourself and experience" },
+  fieldAboutYouPlaceholder: { ar: "اكتب نبذة عن خبراتك ومهاراتك وسبب بحثك عن هذه الوظيفة", en: "Write a brief about your experience, skills and why you're looking for this job" },
+  fieldProfession: { ar: "المهنة / التخصص", en: "Profession / Specialty" },
+  fieldExperience: { ar: "سنوات الخبرة", en: "Years of experience" },
+  fieldExperiencePlaceholder: { ar: "مثال: 3 سنوات", en: "e.g. 3 years" },
+  fieldQualifications: { ar: "المؤهلات والشهادات", en: "Qualifications & Certificates" },
+  fieldQualificationsPlaceholder: { ar: "اذكر مؤهلاتك العلمية والشهادات والدورات (يُرفق إثباتها في المرفقات)", en: "List your academic qualifications, certificates and courses (attach proof in attachments)" },
+  fieldExpectedSalary: { ar: "الراتب المتوقع (اختياري)", en: "Expected salary (optional)" },
+  fieldSalaryPlaceholder: { ar: "مثال: 150,000 ريال", en: "e.g. 150,000 YER" },
+  fieldCompanyName: { ar: "اسم المنشأة / الشركة", en: "Company / Organization name" },
+  fieldCompanyNamePlaceholder: { ar: "اسم المنشأة", en: "Company name" },
+  fieldJobDescription: { ar: "وصف الوظيفة والمهام", en: "Job description and duties" },
+  fieldJobDescriptionPlaceholder: { ar: "اكتب وصف المهام والمسؤوليات للوظيفة", en: "Describe the job duties and responsibilities" },
+  fieldWorkType: { ar: "نوع العمل", en: "Work type" },
+  fieldRequirements: { ar: "الشروط والمتطلبات", en: "Requirements" },
+  fieldRequirementsPlaceholder: { ar: "اذكر شروط التقديم: المؤهلات، الخبرة، المهارات المطلوبة", en: "List application requirements: qualifications, experience, required skills" },
+  fieldSalary: { ar: "الراتب (اختياري)", en: "Salary (optional)" },
+  fieldPropertyTitle: { ar: "عنوان العقار", en: "Property title" },
+  fieldPropertyTitlePlaceholder: { ar: "مثال: أرض في حدة — مساحة 200 متر", en: "e.g. Land in Hadda — 200 sqm" },
+  fieldPropertyDetails: { ar: "تفاصيل العقار", en: "Property details" },
+  fieldPropertyDetailsPlaceholder: { ar: "موقع العقار، الواجهة، الخدمات القريبة، سبب البيع، أي تفاصيل مهمة", en: "Location, facade, nearby services, reason for sale, any important details" },
+  fieldPropertyType: { ar: "نوع العقار", en: "Property type" },
+  fieldArea: { ar: "المساحة (متر مربع)", en: "Area (square meters)" },
+  fieldAreaPlaceholder: { ar: "مثال: 250", en: "e.g. 250" },
+  fieldDistrict: { ar: "الحي / المديرية", en: "District / Director" },
+  fieldDistrictPlaceholder: { ar: "مثال: حي شميلة — صنعاء", en: "e.g. Shamila district — Sanaa" },
+  fieldPurpose: { ar: "الغرض", en: "Purpose" },
+  fieldDocuments: { ar: "الأوراق والمستندات المتوفرة", en: "Available documents" },
+  fieldDocumentsPlaceholder: { ar: "مثال: صك ملكية، عقد مسجل، فاتورة كهرباء — مع رفع صورها في المرفقات", en: "e.g. Ownership deed, registered contract, electricity bill — attach photos" },
+  fieldPropertyWanted: { ar: "نوع العقار المطلوب", en: "Desired property type" },
+  fieldPropertyWantedPlaceholder: { ar: "مثال: فيلا في حدة بمساحة 300 متر", en: "e.g. Villa in Hadda, 300 sqm" },
+  fieldRequestDetails: { ar: "طلبك بالتفصيل", en: "Your request in detail" },
+  fieldRequestDetailsPlaceholder: { ar: "اكتب تفاصيل طلبك: الموقع المفضل، المساحة، المواصفات، الميزانية", en: "Describe your request: preferred location, area, specifications, budget" },
+  fieldDistrictPreferred: { ar: "الحي / المديرية المفضلة", en: "Preferred district" },
+  fieldDistrictPreferredPlaceholder: { ar: "مثال: حدة أو الحصبة — صنعاء", en: "e.g. Hadda or Hasba — Sanaa" },
+  fieldProductName: { ar: "اسم المنتج / السلعة", en: "Product / Item name" },
+  fieldProductNamePlaceholder: { ar: "مثال: جوال آيفون 13 — 128GB", en: "e.g. iPhone 13 — 128GB" },
+  fieldProductSpecs: { ar: "المواصفات والتفاصيل", en: "Specifications & details" },
+  fieldProductSpecsPlaceholder: { ar: "الحالة، المواصفات، الملحقات، سبب البيع، إمكانية التفاوض", en: "Condition, specs, accessories, reason for sale, negotiability" },
+  fieldProductType: { ar: "نوع المنتج", en: "Product type" },
+  fieldBrand: { ar: "الماركة / الموديل", en: "Brand / Model" },
+  fieldBrandPlaceholder: { ar: "مثال: سامسونج Galaxy S23", en: "e.g. Samsung Galaxy S23" },
+  fieldCondition: { ar: "الحالة", en: "Condition" },
+  fieldProductWanted: { ar: "المنتج / السلعة المطلوبة", en: "Desired product" },
+  fieldProductWantedPlaceholder: { ar: "مثال: لابتوب للمونتاج بميزانية 400,000", en: "e.g. Laptop for editing, budget 400,000" },
+  fieldRequestDetailsEmarket: { ar: "طلبك بالتفصيل", en: "Your request in detail" },
+  fieldRequestDetailsEmarketPlaceholder: { ar: "المواصفات المطلوبة، الميزانية، مكان التسليم", en: "Required specs, budget, delivery location" },
+  fieldProductTypeWanted: { ar: "نوع المنتج المطلوب", en: "Desired product type" },
+  fieldBrandPreferred: { ar: "الماركة / الموديل المفضل", en: "Preferred brand / model" },
+  fieldProjectType: { ar: "نوع المشروع", en: "Project type" },
+  fieldProjectTypePlaceholder: { ar: "مثال: متجر إلكتروني متكامل", en: "e.g. Complete e-commerce store" },
+  fieldProjectDescription: { ar: "وصف المشروع والمتطلبات", en: "Project description & requirements" },
+  fieldProjectDescriptionPlaceholder: { ar: "اشرح فكرة المشروع بالتفصيل: الأقسام، المستخدمون، الميزات المطلوبة، الفترة الزمنية", en: "Describe the project in detail: sections, users, required features, timeline" },
+  fieldBudget: { ar: "الميزانية التقديرية (اختياري)", en: "Estimated budget (optional)" },
+  fieldDeadline: { ar: "الفترة الزمنية المتوقعة", en: "Expected timeline" },
+  fieldDeadlinePlaceholder: { ar: "مثال: شهران", en: "e.g. 2 months" },
+  fieldReferences: { ar: "مراجع / نماذج مشابهة (اختياري)", en: "References / Similar examples (optional)" },
+  fieldReferencesPlaceholder: { ar: "روابط لمواقع أو تطبيقات مشابهة تفضلها", en: "Links to similar websites or apps you prefer" },
+
+  /* ── Select options — professions ── */
+  optEngineer: { ar: "مهندس", en: "Engineer" },
+  optAccountant: { ar: "محاسب", en: "Accountant" },
+  optTeacher: { ar: "معلم", en: "Teacher" },
+  optMedical: { ar: "ممرض / طبيب", en: "Nurse / Doctor" },
+  optDeveloper: { ar: "مبرمج / مطور", en: "Programmer / Developer" },
+  optDesigner: { ar: "مصمم جرافيك / مونتاج", en: "Graphic designer / Editor" },
+  optMarketer: { ar: "مسوق إلكتروني", en: "Digital marketer" },
+  optSecretary: { ar: "سكرتير / إداري", en: "Secretary / Admin" },
+  optWorker: { ar: "عامل", en: "Worker" },
+  optDriver: { ar: "سائق", en: "Driver" },
+  optOther: { ar: "أخرى", en: "Other" },
+
+  /* ── Select options — work type ── */
+  optFullTime: { ar: "دوام كامل", en: "Full time" },
+  optPartTime: { ar: "دوام جزئي", en: "Part time" },
+  optRemote: { ar: "عن بُعد", en: "Remote" },
+  optTemp: { ar: "مؤقت / موسمي", en: "Temporary / Seasonal" },
+
+  /* ── Select options — property type ── */
+  optLand: { ar: "أرض", en: "Land" },
+  optHouse: { ar: "منزل", en: "House" },
+  optBuilding: { ar: "عمارة", en: "Building" },
+  optVilla: { ar: "فيلا", en: "Villa" },
+  optApartment: { ar: "شقة", en: "Apartment" },
+  optCommercial: { ar: "محل تجاري", en: "Commercial" },
+  optFarm: { ar: "مزرعة", en: "Farm" },
+
+  /* ── Select options — purpose ── */
+  optSell: { ar: "بيع", en: "Sell" },
+  optRent: { ar: "إيجار", en: "Rent" },
+  optSellOrRent: { ar: "بيع أو إيجار", en: "Sell or rent" },
+  optBuy: { ar: "شراء", en: "Buy" },
+  optBuyOrRent: { ar: "شراء أو إيجار", en: "Buy or rent" },
+
+  /* ── Select options — product type ── */
+  optElectronics: { ar: "جهاز إلكتروني", en: "Electronic device" },
+  optPhoneTablet: { ar: "جوال / تابلت", en: "Phone / Tablet" },
+  optLaptop: { ar: "حاسوب / لابتوب", en: "Computer / Laptop" },
+  optCar: { ar: "سيارة", en: "Car" },
+  optMachinery: { ar: "آلة / معدات", en: "Machinery / Equipment" },
+  optGoods: { ar: "سلعة", en: "Goods" },
+
+  /* ── Select options — condition ── */
+  optNew: { ar: "جديد", en: "New" },
+  optUsedExcellent: { ar: "مستعمل — بحالة ممتازة", en: "Used — Excellent condition" },
+  optUsedGood: { ar: "مستعمل — جيد", en: "Used — Good condition" },
+  optUsedFair: { ar: "مستعمل — مقبول", en: "Used — Fair condition" },
+
+  /* ── Select options — software service type ── */
+  optWebsite: { ar: "موقع ويب", en: "Website" },
+  optAndroidApp: { ar: "تطبيق أندرويد", en: "Android app" },
+  optIosApp: { ar: "تطبيق iOS", en: "iOS app" },
+  optBothApps: { ar: "تطبيق Android + iOS", en: "Android + iOS app" },
+  optDashboard: { ar: "لوحة تحكم", en: "Dashboard" },
+  optIntegratedSystem: { ar: "نظام متكامل", en: "Integrated system" },
+  optUiUx: { ar: "تصميم واجهات UI/UX", en: "UI/UX design" },
+  optSeoMarketing: { ar: "تسويق إلكتروني و SEO", en: "Digital marketing & SEO" },
+  optMaintenance: { ar: "صيانة وتطوير", en: "Maintenance & development" },
 };
+
+/* ─── Category nested translations ─── */
+
+const CATEGORY_T: Record<
+  string,
+  Record<string, { ar: string; en: string }>
+> = {
+  jobs: {
+    label: DICT.catJobs,
+    shortLabel: DICT.catJobsShort,
+    hero: DICT.catJobsHero,
+    description: DICT.catJobsDesc,
+    seeker_label: DICT.typeSeeker,
+    seeker_titleLabel: DICT.fieldJobTitle,
+    seeker_titlePlaceholder: DICT.fieldJobTitlePlaceholder,
+    seeker_descLabel: DICT.fieldAboutYou,
+    seeker_descPlaceholder: DICT.fieldAboutYouPlaceholder,
+    seeker_profession: DICT.fieldProfession,
+    seeker_experience: DICT.fieldExperience,
+    seeker_experiencePlaceholder: DICT.fieldExperiencePlaceholder,
+    seeker_qualifications: DICT.fieldQualifications,
+    seeker_qualificationsPlaceholder: DICT.fieldQualificationsPlaceholder,
+    seeker_expectedSalary: DICT.fieldExpectedSalary,
+    seeker_expectedSalaryPlaceholder: DICT.fieldSalaryPlaceholder,
+    employer_label: DICT.typeEmployer,
+    employer_titleLabel: DICT.fieldJobTitle,
+    employer_titlePlaceholder: DICT.fieldJobTitlePlaceholder,
+    employer_descLabel: DICT.fieldJobDescription,
+    employer_descPlaceholder: DICT.fieldJobDescriptionPlaceholder,
+    employer_company: DICT.fieldCompanyName,
+    employer_companyPlaceholder: DICT.fieldCompanyNamePlaceholder,
+    employer_profession: DICT.fieldProfession,
+    employer_workType: DICT.fieldWorkType,
+    employer_requirements: DICT.fieldRequirements,
+    employer_requirementsPlaceholder: DICT.fieldRequirementsPlaceholder,
+    employer_salary: DICT.fieldSalary,
+    employer_salaryPlaceholder: DICT.fieldSalaryPlaceholder,
+  },
+  real_estate: {
+    label: DICT.catRealEstate,
+    shortLabel: DICT.catRealEstateShort,
+    hero: DICT.catRealEstateHero,
+    description: DICT.catRealEstateDesc,
+    owner_label: DICT.typeOwner,
+    owner_titleLabel: DICT.fieldPropertyTitle,
+    owner_titlePlaceholder: DICT.fieldPropertyTitlePlaceholder,
+    owner_descLabel: DICT.fieldPropertyDetails,
+    owner_descPlaceholder: DICT.fieldPropertyDetailsPlaceholder,
+    owner_propertyType: DICT.fieldPropertyType,
+    owner_area: DICT.fieldArea,
+    owner_areaPlaceholder: DICT.fieldAreaPlaceholder,
+    owner_district: DICT.fieldDistrict,
+    owner_districtPlaceholder: DICT.fieldDistrictPlaceholder,
+    owner_purpose: DICT.fieldPurpose,
+    owner_documents: DICT.fieldDocuments,
+    owner_documentsPlaceholder: DICT.fieldDocumentsPlaceholder,
+    buyer_label: DICT.typeBuyer,
+    buyer_titleLabel: DICT.fieldPropertyWanted,
+    buyer_titlePlaceholder: DICT.fieldPropertyWantedPlaceholder,
+    buyer_descLabel: DICT.fieldRequestDetails,
+    buyer_descPlaceholder: DICT.fieldRequestDetailsPlaceholder,
+    buyer_propertyType: DICT.fieldPropertyType,
+    buyer_district: DICT.fieldDistrictPreferred,
+    buyer_districtPlaceholder: DICT.fieldDistrictPreferredPlaceholder,
+    buyer_purpose: DICT.fieldPurpose,
+  },
+  emarket: {
+    label: DICT.catEmarket,
+    shortLabel: DICT.catEmarketShort,
+    hero: DICT.catEmarketHero,
+    description: DICT.catEmarketDesc,
+    seller_label: DICT.typeSeller,
+    seller_titleLabel: DICT.fieldProductName,
+    seller_titlePlaceholder: DICT.fieldProductNamePlaceholder,
+    seller_descLabel: DICT.fieldProductSpecs,
+    seller_descPlaceholder: DICT.fieldProductSpecsPlaceholder,
+    seller_productType: DICT.fieldProductType,
+    seller_brand: DICT.fieldBrand,
+    seller_brandPlaceholder: DICT.fieldBrandPlaceholder,
+    seller_condition: DICT.fieldCondition,
+    buyer_label: DICT.typeBuyer,
+    buyer_titleLabel: DICT.fieldProductWanted,
+    buyer_titlePlaceholder: DICT.fieldProductWantedPlaceholder,
+    buyer_descLabel: DICT.fieldRequestDetailsEmarket,
+    buyer_descPlaceholder: DICT.fieldRequestDetailsEmarketPlaceholder,
+    buyer_productType: DICT.fieldProductTypeWanted,
+    buyer_brand: DICT.fieldBrandPreferred,
+    buyer_brandPlaceholder: DICT.fieldBrandPreferredPlaceholder,
+  },
+  software: {
+    label: DICT.catSoftware,
+    shortLabel: DICT.catSoftwareShort,
+    hero: DICT.catSoftwareHero,
+    description: DICT.catSoftwareDesc,
+    client_label: DICT.typeClient,
+    client_titleLabel: DICT.fieldProjectType,
+    client_titlePlaceholder: DICT.fieldProjectTypePlaceholder,
+    client_descLabel: DICT.fieldProjectDescription,
+    client_descPlaceholder: DICT.fieldProjectDescriptionPlaceholder,
+    client_projectType: DICT.fieldProjectType,
+    client_budget: DICT.fieldBudget,
+    client_budgetPlaceholder: DICT.fieldSalaryPlaceholder,
+    client_deadline: DICT.fieldDeadline,
+    client_deadlinePlaceholder: DICT.fieldDeadlinePlaceholder,
+    client_references: DICT.fieldReferences,
+    client_referencesPlaceholder: DICT.fieldReferencesPlaceholder,
+  },
+};
+
+/* ─── Select option translations ─── */
+
+const OPTION_T: Record<string, { ar: string; en: string }> = {
+  مهندس: DICT.optEngineer,
+  محاسب: DICT.optAccountant,
+  معلم: DICT.optTeacher,
+  "ممرض / طبيب": DICT.optMedical,
+  "مبرمج / مطور": DICT.optDeveloper,
+  "مصمم جرافيك / مونتاج": DICT.optDesigner,
+  "مسوق إلكتروني": DICT.optMarketer,
+  "سكرتير / إداري": DICT.optSecretary,
+  عامل: DICT.optWorker,
+  سائق: DICT.optDriver,
+  أخرى: DICT.optOther,
+  "دوام كامل": DICT.optFullTime,
+  "دوام جزئي": DICT.optPartTime,
+  "عن بُعد": DICT.optRemote,
+  "مؤقت / موسمي": DICT.optTemp,
+  أرض: DICT.optLand,
+  منزل: DICT.optHouse,
+  عمارة: DICT.optBuilding,
+  فيلا: DICT.optVilla,
+  شقة: DICT.optApartment,
+  "محل تجاري": DICT.optCommercial,
+  مزرعة: DICT.optFarm,
+  بيع: DICT.optSell,
+  إيجار: DICT.optRent,
+  "بيع أو إيجار": DICT.optSellOrRent,
+  شراء: DICT.optBuy,
+  "شراء أو إيجار": DICT.optBuyOrRent,
+  "جهاز إلكتروني": DICT.optElectronics,
+  "جوال / تابلت": DICT.optPhoneTablet,
+  "حاسوب / لابتوب": DICT.optLaptop,
+  سيارة: DICT.optCar,
+  "آلة / معدات": DICT.optMachinery,
+  سلعة: DICT.optGoods,
+  جديد: DICT.optNew,
+  "مستعمل — بحالة ممتازة": DICT.optUsedExcellent,
+  "مستعمل — جيد": DICT.optUsedGood,
+  "مستعمل — مقبول": DICT.optUsedFair,
+  "موقع ويب": DICT.optWebsite,
+  "تطبيق أندرويد": DICT.optAndroidApp,
+  "تطبيق iOS": DICT.optIosApp,
+  "تطبيق Android + iOS": DICT.optBothApps,
+  "لوحة تحكم": DICT.optDashboard,
+  "نظام متكامل": DICT.optIntegratedSystem,
+  "تصميم واجهات UI/UX": DICT.optUiUx,
+  "تسويق إلكتروني و SEO": DICT.optSeoMarketing,
+  "صيانة وتطوير": DICT.optMaintenance,
+};
+
+/* ─── Context & Provider ─── */
 
 interface LangContextValue {
   lang: Lang;
   setLang: (lang: Lang) => void;
   t: (key: string) => string;
+  /** Translate a category's top-level property (label, hero, description, etc.) */
+  tCat: (categoryKey: string, property: string) => string;
+  /** Translate a submission type's field within a category */
+  tField: (categoryKey: string, typeValue: string, property: string) => string;
+  /** Translate a select option value */
+  tOption: (arabicValue: string) => string;
 }
 
 const LangContext = createContext<LangContextValue>({
   lang: "ar",
   setLang: () => {},
   t: (k) => k,
+  tCat: () => "",
+  tField: () => "",
+  tOption: (v) => v,
 });
 
 function initialLang(): Lang {
@@ -125,24 +671,35 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, lang);
     } catch {
-      /* storage unavailable — in-memory only */
+      /* storage unavailable */
     }
   }, [lang]);
 
-  const value: LangContextValue = {
-    lang,
-    setLang: setLangState,
-    t: (key) => DICT[key]?.[lang] ?? key,
-  };
+  const value: LangContextValue = useMemo(
+    () => ({
+      lang,
+      setLang: setLangState,
+      t: (key: string) => DICT[key]?.[lang] ?? key,
+      tCat: (catKey: string, prop: string) =>
+        CATEGORY_T[catKey]?.[prop]?.[lang] ?? "",
+      tField: (catKey: string, typeValue: string, prop: string) =>
+        CATEGORY_T[catKey]?.[`${typeValue}_${prop}`]?.[lang] ?? "",
+      tOption: (arabicValue: string) =>
+        OPTION_T[arabicValue]?.[lang] ?? arabicValue,
+    }),
+    [lang]
+  );
 
-  return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
+  return (
+    <LangContext.Provider value={value}>{children}</LangContext.Provider>
+  );
 }
 
 export function useLang(): LangContextValue {
   return useContext(LangContext);
 }
 
-/** Compact globe toggle — placed in the top bar with its own reserved space. */
+/** Compact globe toggle */
 export function LanguageToggle({ className }: { className?: string }) {
   const { lang, setLang } = useLang();
   const next: Lang = lang === "ar" ? "en" : "ar";
@@ -157,7 +714,9 @@ export function LanguageToggle({ className }: { className?: string }) {
       )}
     >
       <Globe className="h-4 w-4" />
-      <span className="text-[10px] font-black tracking-wide">{lang === "ar" ? "EN" : "عربي"}</span>
+      <span className="text-[10px] font-black tracking-wide">
+        {lang === "ar" ? "EN" : "عربي"}
+      </span>
     </button>
   );
 }

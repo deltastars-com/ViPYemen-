@@ -15,6 +15,7 @@ import {
 import { Button, Input, Label, Select, Textarea } from "./ui";
 import { getType, type CategoryConfig } from "@/lib/categories";
 import { fileKindOf, whatsappLink, PLATFORM_WHATSAPP_DISPLAY } from "@/lib/utils";
+import { useLang } from "@/lib/i18n";
 
 interface Attachment {
   name: string;
@@ -23,6 +24,7 @@ interface Attachment {
 }
 
 export function SubmissionForm({ category }: { category: CategoryConfig }) {
+  const { t, tField, tOption } = useLang();
   const [typeValue, setTypeValue] = useState(category.types[0].value);
   const submit = useMutation(api.submissions.submit);
   const requestOtp = useMutation(api.submissions.requestPhoneOtp);
@@ -49,14 +51,14 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
   async function handleOtp() {
     setError("");
     if (!phone.trim()) {
-      setError("أدخل رقم الهاتف أولاً ثم اطلب رمز التحقق");
+      setError(t("otpError"));
       return;
     }
     try {
       const res = await requestOtp({ phone });
       setOtpState({ code: res.code, phone: res.phone });
     } catch (e: any) {
-      setError(e.message ?? "تعذر إرسال رمز التحقق");
+      setError(e.message ?? t("otpSendError"));
     }
   }
 
@@ -79,7 +81,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
         ]);
       }
     } catch (e: any) {
-      setError(e.message ?? "فشل رفع الملف — حاول مرة أخرى");
+      setError(e.message ?? t("fileUploadError"));
     } finally {
       setUploading(false);
     }
@@ -106,7 +108,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
       });
       setDone(true);
     } catch (err: any) {
-      setError(err.message ?? "حدث خطأ أثناء الإرسال");
+      setError(err.message ?? t("submitError"));
     } finally {
       setBusy(false);
     }
@@ -118,13 +120,12 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
           <CheckCircle2 className="h-9 w-9" />
         </div>
-        <h3 className="text-xl font-extrabold text-cream">تم استلام طلبك بنجاح</h3>
+        <h3 className="text-xl font-extrabold text-cream">{t("submissionSuccess")}</h3>
         <p className="max-w-md text-sm leading-relaxed text-ink-300">
-          سيتم مراجعة طلبك من قبل إدارة المنصة بشكل خاص وسري، وبعد التدقيق
-          والتعديل سيُنشر على واجهة المنصة — وستتواصل معك الإدارة عند الحاجة.
+          {t("submissionSuccessSub")}
         </p>
         <Button type="button" onClick={() => { setDone(false); setOtpState(null); setOtpCode(""); setAttachments([]); }}>
-          إرسال طلب آخر
+          {t("submitAnother")}
         </Button>
       </div>
     );
@@ -134,59 +135,58 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
     <form onSubmit={handleSubmit} className="card-surface space-y-5 p-5 sm:p-6">
       <div>
         <div className="mb-3 flex flex-wrap gap-2">
-          {category.types.map((t) => (
+          {category.types.map((tp) => (
             <button
-              key={t.value}
+              key={tp.value}
               type="button"
-              onClick={() => setTypeValue(t.value)}
+              onClick={() => setTypeValue(tp.value)}
               className={
-                typeValue === t.value
+                typeValue === tp.value
                   ? "btn-gold !px-4 !py-2 text-xs"
                   : "btn-ghost !px-4 !py-2 text-xs"
               }
             >
-              <t.icon className="h-4 w-4" />
-              {t.label}
+              <tp.icon className="h-4 w-4" />
+              {tField(category.key, tp.value, "label")}
             </button>
           ))}
         </div>
         <p className="text-xs font-semibold text-ink-300">
-          تُعرض بياناتك أولاً في لوحة التحكم للمراجعة والتدقيق قبل النشر — ضماناً
-          للحقوق والجودة.
+          {t("dataReviewedPrivately")}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>{typeConfig.titleLabel} *</Label>
+          <Label>{tField(category.key, typeValue, "titleLabel")} *</Label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={typeConfig.titlePlaceholder}
+            placeholder={tField(category.key, typeValue, "titlePlaceholder")}
             required
           />
         </div>
         <div>
-          <Label>الاسم الكامل *</Label>
-          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="الاسم الثلاثي" required />
+          <Label>{t("fullName")} *</Label>
+          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t("fullNamePlaceholder")} required />
         </div>
         <div>
-          <Label>رقم الهاتف (واتساب) *</Label>
+          <Label>{t("phoneLabel")} *</Label>
           <Input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="مثال: 771234567"
+            placeholder={t("phonePlaceholder")}
             dir="ltr"
             className="text-left"
             required
           />
         </div>
         <div>
-          <Label>العنوان / المدينة *</Label>
-          <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="المحافظة والمدينة" required />
+          <Label>{t("addressLabel")} *</Label>
+          <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("addressPlaceholder")} required />
         </div>
         <div>
-          <Label>السعر (اختياري)</Label>
+          <Label>{t("priceOptional")}</Label>
           <div className="flex gap-2">
             <Input
               value={price}
@@ -198,46 +198,46 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
               className="text-left"
             />
             <Select value={currency} onChange={(e) => setCurrency(e.target.value)} className="!w-36 shrink-0">
-              <option value="yer">ريال يمني</option>
-              <option value="usd">دولار</option>
-              <option value="sar">ريال سعودي</option>
+              <option value="yer">{t("yemeniRiyal")}</option>
+              <option value="usd">{t("dollar")}</option>
+              <option value="sar">{t("saudiRiyal")}</option>
             </Select>
           </div>
         </div>
         <div>
-          <Label>التحقق من رقم الهاتف</Label>
+          <Label>{t("phoneVerify")}</Label>
           <div className="flex gap-2">
             <Input
               value={otpCode}
               onChange={(e) => setOtpCode(e.target.value)}
-              placeholder="أدخل رمز التحقق"
+              placeholder={t("otpPlaceholder")}
               dir="ltr"
               className="text-left"
             />
             <Button type="button" variant="ghost" className="shrink-0 !px-3 text-xs" onClick={handleOtp}>
               <PhoneCall className="h-4 w-4" />
-              احصل على الرمز
+              {t("getOtp")}
             </Button>
           </div>
           {otpState && (
             <div className="mt-2 space-y-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs">
               <p className="font-bold text-emerald-300">
-                رمز التحقق: <span dir="ltr" className="tracking-widest">{otpState.code}</span>
+                {t("otpCodeLabel")} <span dir="ltr" className="tracking-widest">{otpState.code}</span>
               </p>
               <p className="text-ink-200">
-                أرسل الرمز عبر واتساب المنصة ({PLATFORM_WHATSAPP_DISPLAY}) لإتمام التحقق، ثم أدخله في الحقل أعلاه.
+                {t("otpSendViaWhatsapp").replace("{phone}", PLATFORM_WHATSAPP_DISPLAY)}
               </p>
               <a
                 href={whatsappLink(
                   PLATFORM_WHATSAPP_DISPLAY,
-                  `رمز التحقق الخاص بي: ${otpState.code}\nالاسم: ${fullName}\nالرقم: ${phone}`
+                  `${t("otpCodeLabel")} ${otpState.code}\n${t("fullName")}: ${fullName}\n${t("phoneLabel")}: ${phone}`
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 font-bold text-emerald-300 underline underline-offset-4"
               >
                 <MessageCircle className="h-3.5 w-3.5" />
-                إرسال الرمز عبر واتساب
+                {t("sendViaWhatsapp")}
               </a>
             </div>
           )}
@@ -247,7 +247,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
       {typeConfig.fields.map((f) => (
         <div key={f.name}>
           <Label>
-            {f.label} {f.required && "*"}
+            {tField(category.key, typeValue, f.name)} {f.required && "*"}
           </Label>
           {f.type === "textarea" ? (
             <Textarea
@@ -262,9 +262,9 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
               onChange={(e) => setFields((prev) => ({ ...prev, [f.name]: e.target.value }))}
               required={f.required}
             >
-              <option value="">اختر...</option>
+              <option value="">{t("selectOption")}</option>
               {f.options?.map((o) => (
-                <option key={o} value={o}>{o}</option>
+                <option key={o} value={o}>{tOption(o)}</option>
               ))}
             </Select>
           ) : (
@@ -280,16 +280,16 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
       ))}
 
       <div>
-        <Label>وصف تفصيلي</Label>
+        <Label>{tField(category.key, typeValue, "descLabel")}</Label>
         <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder={typeConfig.descriptionPlaceholder}
+          placeholder={tField(category.key, typeValue, "descPlaceholder")}
         />
       </div>
 
       <div>
-        <Label>المرفقات (صور المؤهلات، السيرة الذاتية، صور المنتج / العقار...)</Label>
+        <Label>{t("attachmentsLabel")}</Label>
         <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-ink-600/70 py-6 text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-300">
           {uploading ? (
             <Loader2 className="h-7 w-7 animate-spin" />
@@ -297,7 +297,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
             <UploadCloud className="h-7 w-7" />
           )}
           <span className="text-xs font-bold">
-            {uploading ? "جارٍ رفع الملفات..." : "اضغط لاختيار الملفات — صور / PDF"}
+            {uploading ? t("uploadingFiles") : t("chooseFiles")}
           </span>
           <input
             type="file"
@@ -326,7 +326,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
                   type="button"
                   onClick={() => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
                   className="text-rose-300 hover:text-rose-200"
-                  aria-label="حذف المرفق"
+                  aria-label={t("deleteAttachment")}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -338,10 +338,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
 
       <div className="flex items-start gap-2 rounded-xl border border-gold-500/25 bg-gold-500/5 p-3 text-xs text-ink-300">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold-400" />
-        <p>
-          بياناتك تُعرض على إدارة المنصة فقط بشكل خاص وسري للمراجعة والتدقيق قبل
-          النشر. الإدارة قد تعدّل البيانات وتتواصل معك لضمان الجودة والموثوقية.
-        </p>
+        <p>{t("dataReviewNotice")}</p>
       </div>
 
       {error && (
@@ -351,7 +348,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
       )}
 
       <Button type="submit" loading={busy} className="w-full">
-        إرسال الطلب للمراجعة
+        {t("submitForReview")}
       </Button>
     </form>
   );

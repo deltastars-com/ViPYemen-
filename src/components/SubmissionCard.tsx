@@ -2,6 +2,7 @@ import { MessageCircle, Phone, BadgeCheck, ImageIcon, FileText, CheckCircle2 } f
 import { Badge, Card } from "./ui";
 import { getCategory, getType, TYPE_ICONS, PRODUCT_ICONS } from "@/lib/categories";
 import { formatPrice, whatsappLink } from "@/lib/utils";
+import { useLang } from "@/lib/i18n";
 
 export interface PublicSubmission {
   _id: string;
@@ -25,6 +26,7 @@ export interface PublicSubmission {
 }
 
 export function SubmissionCard({ item }: { item: PublicSubmission }) {
+  const { t, tField, tOption } = useLang();
   const category = getCategory(item.category);
   const typeConfig = getType(category, item.type);
   const isSold = item.status === "sold";
@@ -40,10 +42,10 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
           <div>
             <h3 className="text-sm font-extrabold leading-snug text-cream">{item.title}</h3>
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <Badge className="border-ink-600/60 bg-ink-800/60 text-ink-200">{typeConfig.label}</Badge>
+              <Badge className="border-ink-600/60 bg-ink-800/60 text-ink-200">{tField(item.category, item.type, "label")}</Badge>
               {category.key === "emarket" && (
                 <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-300">
-                  {item.fields?.productType ?? "سلعة"}
+                  {item.fields?.productType ? tOption(item.fields.productType) : t("optGoods")}
                 </Badge>
               )}
               {item.price !== undefined && (
@@ -59,7 +61,7 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500/15 text-sky-300">
               <CheckCircle2 className="h-6 w-6" />
             </span>
-            <span className="text-[10px] font-black text-sky-300">تم البيع</span>
+            <span className="text-[10px] font-black text-sky-300">{t("sold")}</span>
           </div>
         )}
       </div>
@@ -75,13 +77,13 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
             if (!val) return null;
             return (
               <span key={f.name} className="chip">
-                {f.label}: <b className="text-cream">{val}</b>
+                {tField(item.category, item.type, f.name)}: <b className="text-cream">{tOption(val)}</b>
               </span>
             );
           })}
           {item.address && (
             <span className="chip">
-              العنوان: <b className="text-cream">{item.address}</b>
+              {t("addressLabel").replace(" *", "").replace(" / City", "").replace(" / المدينة", "")}: <b className="text-cream">{item.address}</b>
             </span>
           )}
         </div>
@@ -121,7 +123,7 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
           {item.phoneVerified && (
             <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-300">
               <BadgeCheck className="h-3.5 w-3.5" />
-              رقم موثق
+              {t("verifiedNumber")}
             </span>
           )}
           {typeConfig.showPhoneOnCard && item.phone && (
@@ -134,14 +136,14 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
         <a
           href={whatsappLink(
             typeConfig.showPhoneOnCard && item.phone ? item.phone : "00967711780999",
-            `مرحباً، أنا مهتم بـ "${item.title}" المنشور على منصة ViP Yemen`
+            `${t("contactWhatsapp")}: "${item.title}" — ViP Yemen`
           )}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#25d366]/15 px-3 py-1.5 text-[11px] font-black text-[#4ade80] transition-colors hover:bg-[#25d366]/25"
         >
           <MessageCircle className="h-3.5 w-3.5" />
-          تواصل عبر واتساب
+          {t("contactWhatsapp")}
         </a>
       </div>
     </Card>

@@ -6,8 +6,10 @@ import { api } from "../convex/_generated/api";
 import { OfferCard, type PublicOffer } from "@/components/OfferCard";
 import { Badge, EmptyState, Spinner } from "@/components/ui";
 import { PLATFORM_WHATSAPP_DISPLAY, PLATFORM_WHATSAPP_LINK, whatsappLink } from "@/lib/utils";
+import { useLang } from "@/lib/i18n";
 
 export function OffersPage() {
+  const { t } = useLang();
   const offers = useQuery(api.offers.listPublished);
   const rows = (offers ?? []) as unknown as PublicOffer[];
   const featured = rows.find((o) => o.isFeatured) ?? rows[0];
@@ -15,7 +17,6 @@ export function OffersPage() {
 
   return (
     <div className="animate-fade-up">
-      {/* Hall header */}
       <section className="relative overflow-hidden border-b border-ink-700/50">
         <div
           className="absolute inset-0 opacity-25"
@@ -28,24 +29,24 @@ export function OffersPage() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <span className="chip mx-auto !border-gold-500/40 !bg-gold-500/10 !text-gold-300">
               <Crown className="h-3.5 w-3.5" />
-              صالة العروض الترويجية
+              {t("offersHallBadge")}
             </span>
             <h1 className="section-title mt-4 text-cream">
-              صالة <span className="gold-text">العروض</span> الحصرية
+              {t("offersHallTitle").split(" ").slice(0, -1).join(" ")}{" "}
+              <span className="gold-text">{t("offersHallTitle").split(" ").slice(-1)}</span>
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-ink-300">
-              عروض وخدمات وخصومات تُنشر من إدارة المنصة لحظياً — بالصور والفيديوهات.
-              كل عرض مُدقَّق ومضمون، واطلبه مباشرة عبر واتساب.
+              {t("offersHallSub")}
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold text-ink-300">
               <span className="chip !border-gold-500/40 !bg-gold-500/10 !text-gold-300">
-                <BadgePercent className="h-3.5 w-3.5" /> خصومات حقيقية
+                <BadgePercent className="h-3.5 w-3.5" /> {t("realDiscounts")}
               </span>
               <span className="chip !border-emerald-500/40 !bg-emerald-500/10 !text-emerald-300">
-                <ShieldCheck className="h-3.5 w-3.5" /> عروض مدققة من الإدارة
+                <ShieldCheck className="h-3.5 w-3.5" /> {t("adminVerified")}
               </span>
               <span className="chip !border-sky-500/40 !bg-sky-500/10 !text-sky-300">
-                <LogoMark className="h-4 w-4" /> تُحدث لحظياً
+                <LogoMark className="h-4 w-4" /> {t("liveUpdates")}
               </span>
             </div>
           </motion.div>
@@ -58,10 +59,9 @@ export function OffersPage() {
             <Spinner className="h-8 w-8" />
           </div>
         ) : rows.length === 0 ? (
-          <EmptyState title="لا توجد عروض حالياً" hint="تترقب عروضاً جديدة قريباً — تابعنا عبر واتساب" />
+          <EmptyState title={t("noOffers")} hint={t("noOffersHint")} />
         ) : (
           <>
-            {/* Featured spotlight */}
             {featured && (
               <motion.div
                 initial={{ opacity: 0, y: 24 }}
@@ -82,12 +82,12 @@ export function OffersPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge className="border-gold-500/50 bg-gold-500/20 text-gold-200">
                         <Crown className="h-3.5 w-3.5" />
-                        العرض المميز
+                        {t("featuredOffer")}
                       </Badge>
                       {featured.discountPercent ? (
                         <Badge className="border-rose-500/50 bg-rose-500/15 text-rose-300">
                           <BadgePercent className="h-3.5 w-3.5" />
-                          خصم {featured.discountPercent}%
+                          {t("discount")} {featured.discountPercent}%
                         </Badge>
                       ) : null}
                     </div>
@@ -102,7 +102,7 @@ export function OffersPage() {
                         <div className="flex items-baseline gap-2.5">
                           <span className="text-3xl font-black text-gold-300">
                             {featured.offerPrice.toLocaleString("en-US")}
-                            <span className="mr-1 text-sm font-bold">ريال</span>
+                            <span className="mr-1 text-sm font-bold">{t("riyal")}</span>
                           </span>
                           {featured.originalPrice !== undefined && (
                             <span className="text-sm font-bold text-ink-400 line-through">
@@ -116,14 +116,14 @@ export function OffersPage() {
                       <a
                         href={whatsappLink(
                           "00967711780999",
-                          `مرحباً، أريد الاستفادة من العرض المميز "${featured.title}" في منصة ViP Yemen`
+                          `${t("requestOffer")} "${featured.title}" — ViP Yemen`
                         )}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn-gold"
                       >
                         <MessageCircle className="h-4 w-4" />
-                        اطلب هذا العرض
+                        {t("requestOffer")}
                       </a>
                       {featured.videoUrl && (
                         <a
@@ -133,7 +133,7 @@ export function OffersPage() {
                           className="btn-ghost"
                         >
                           <PlayCircle className="h-4 w-4 text-gold-400" />
-                          شاهد الفيديو
+                          {t("watchVideo")}
                         </a>
                       )}
                     </div>
@@ -151,7 +151,6 @@ export function OffersPage() {
               </motion.div>
             )}
 
-            {/* Offers grid */}
             {rest.length > 0 && (
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                 {rest.map((offer, i) => (
@@ -167,16 +166,13 @@ export function OffersPage() {
               </div>
             )}
 
-            {/* Hall CTA */}
             <div className="mt-12 flex flex-col items-center gap-4 rounded-3xl border border-gold-500/25 bg-gold-500/5 p-8 text-center">
               <p className="max-w-lg text-sm leading-relaxed text-ink-200">
-                لديك عرض خاص أو ترغب بالترويج لمنشأتك في صالة العروض؟ تواصل مع
-                إدارة المنصة — ننشر عروضك بالصور والفيديوهات على واجهة المنصة
-                وقنوات التواصل.
+                {t("offersCta")}
               </p>
               <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn-gold">
                 <MessageCircle className="h-4 w-4" />
-                واتساب المنصة: {PLATFORM_WHATSAPP_DISPLAY}
+                {t("whatsappBusiness")}: {PLATFORM_WHATSAPP_DISPLAY}
               </a>
             </div>
           </>

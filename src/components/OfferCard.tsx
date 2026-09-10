@@ -1,6 +1,7 @@
 import { BadgeCheck, Crown, MessageCircle, PlayCircle } from "lucide-react";
 import { Badge, Card } from "./ui";
 import { whatsappLink } from "@/lib/utils";
+import { useLang } from "@/lib/i18n";
 
 export interface PublicOffer {
   _id: string;
@@ -16,6 +17,7 @@ export interface PublicOffer {
 }
 
 export function OfferCard({ offer }: { offer: PublicOffer }) {
+  const { t } = useLang();
   return (
     <Card
       className={`card-surface-hover overflow-hidden ${
@@ -38,7 +40,7 @@ export function OfferCard({ offer }: { offer: PublicOffer }) {
           {offer.isFeatured && (
             <Badge className="shrink-0 border-gold-500/40 bg-gold-500/15 text-gold-300">
               <Crown className="h-3 w-3" />
-              عرض مميز
+              {t("featuredBadge")}
             </Badge>
           )}
         </div>
@@ -49,14 +51,14 @@ export function OfferCard({ offer }: { offer: PublicOffer }) {
           <div className="mt-3 flex items-center gap-3">
             <span className="flex items-center gap-1 rounded-lg bg-rose-500/15 px-2.5 py-1 text-xs font-black text-rose-300">
               <BadgeCheck className="h-3.5 w-3.5" />
-              خصم {offer.discountPercent}%
+              {t("discount")} {offer.discountPercent}%
             </span>
           </div>
         ) : null}
         {offer.offerPrice !== undefined && (
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-xl font-black text-gold-300">
-              {offer.offerPrice.toLocaleString("en-US")} ريال
+              {offer.offerPrice.toLocaleString("en-US")} {t("riyal")}
             </span>
             {offer.originalPrice !== undefined && (
               <span className="text-xs font-bold text-ink-400 line-through">
@@ -74,17 +76,17 @@ export function OfferCard({ offer }: { offer: PublicOffer }) {
               className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600/60 px-3 py-1.5 text-[11px] font-black text-ink-200 transition-colors hover:border-gold-500/50 hover:text-gold-300"
             >
               <PlayCircle className="h-3.5 w-3.5" />
-              شاهد الفيديو
+              {t("watchVideo")}
             </a>
           )}
           <a
-            href={whatsappLink("00967711780999", `مرحباً، أنا مهتم بالعرض "${offer.title}" على منصة ViP Yemen`)}
+            href={whatsappLink("00967711780999", `${t("requestOffer")} "${offer.title}" — ViP Yemen`)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#25d366]/15 px-3 py-1.5 text-[11px] font-black text-[#4ade80] transition-colors hover:bg-[#25d366]/25"
           >
             <MessageCircle className="h-3.5 w-3.5" />
-            اطلب العرض
+            {t("requestOffer")}
           </a>
         </div>
       </div>

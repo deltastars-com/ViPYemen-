@@ -15,9 +15,11 @@ import {
 import { api } from "../convex/_generated/api";
 import { Button, Card, Input, Label } from "@/components/ui";
 import { LogoMark } from "@/components/Logo";
-import { getAdminToken, setAdminToken, clearAdminToken } from "@/lib/convex";
+import { getAdminToken, setAdminToken } from "@/lib/convex";
+import { useLang } from "@/lib/i18n";
 
 export function AuthPage() {
+  const { t } = useLang();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/admin";
   const navigate = useNavigate();
@@ -73,7 +75,7 @@ export function AuthPage() {
         navigate(returnTo, { replace: true });
       }
     } catch (err: any) {
-      setError(err.message ?? "خطأ في تسجيل الدخول");
+      setError(err.message ?? t("loginError"));
     } finally {
       setBusy(false);
     }
@@ -83,7 +85,7 @@ export function AuthPage() {
     e.preventDefault();
     setError("");
     if (newPassword !== confirmPassword) {
-      setError("كلمتا المرور غير متطابقتين");
+      setError(t("passwordMismatch"));
       return;
     }
     setBusy(true);
@@ -93,10 +95,10 @@ export function AuthPage() {
         currentPassword: password,
         newPassword,
       });
-      setSuccess("تم تغيير كلمة المرور بنجاح — جارٍ الدخول...");
+      setSuccess(t("passwordChanged"));
       setTimeout(() => navigate(returnTo, { replace: true }), 900);
     } catch (err: any) {
-      setError(err.message ?? "تعذر تغيير كلمة المرور");
+      setError(err.message ?? t("passwordChangeError"));
     } finally {
       setBusy(false);
     }
@@ -111,13 +113,13 @@ export function AuthPage() {
     try {
       const res = await requestReset({ email });
       if (res.delivered) {
-        setSuccess("تم إرسال رمز الاستعادة إلى بريدك الإلكتروني — تحقق من صندوق الوارد");
+        setSuccess(t("resetCodeSent"));
       } else {
         setDevCode(res.devCode);
-        setSuccess("تعذر إرسال البريد حالياً (لم يُضبط مفتاح الإرسال) — استخدم رمز الطوارئ أدناه");
+        setSuccess(t("resetCodeFailed"));
       }
     } catch (err: any) {
-      setError(err.message ?? "تعذر إرسال رمز الاستعادة");
+      setError(err.message ?? t("resetCodeError"));
     } finally {
       setBusy(false);
     }
@@ -127,20 +129,20 @@ export function AuthPage() {
     e.preventDefault();
     setError("");
     if (newPassword !== confirmPassword) {
-      setError("كلمتا المرور غير متطابقتين");
+      setError(t("passwordMismatch"));
       return;
     }
     setBusy(true);
     try {
       await resetPassword({ email, code: resetCode, newPassword });
-      setSuccess("تم تعيين كلمة المرور الجديدة — سجّل الدخول الآن");
+      setSuccess(t("passwordResetDone"));
       setMode("login");
       setPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setResetCode("");
     } catch (err: any) {
-      setError(err.message ?? "تعذر إعادة التعيين");
+      setError(err.message ?? t("resetError"));
     } finally {
       setBusy(false);
     }
@@ -164,9 +166,9 @@ export function AuthPage() {
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <LogoMark className="h-16 w-16" />
           <div>
-            <h1 className="text-2xl font-black text-cream">لوحة تحكم ViP Yemen</h1>
+            <h1 className="text-2xl font-black text-cream">{t("adminPanel")}</h1>
             <p className="mt-1 text-xs font-semibold text-ink-300">
-              منطقة آمنة لإدارة المنصة — للمسؤولين فقط
+              {t("adminPanelSub")}
             </p>
           </div>
         </div>
@@ -176,18 +178,15 @@ export function AuthPage() {
             <>
               <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs leading-relaxed text-amber-200">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <p>
-                  يجب تغيير كلمة المرور الافتراضية عند أول دخول لأمان حسابك.
-                  ستُستخدم بياناتك لتأكيد الهوية.
-                </p>
+                <p>{t("mustChangePassword")}</p>
               </div>
               <form onSubmit={handleChange} className="space-y-4">
                 <div>
-                  <Label>البريد الإلكتروني</Label>
+                  <Label>{t("email")}</Label>
                   <Input value={email} disabled dir="ltr" className="text-left opacity-60" />
                 </div>
                 <div>
-                  <Label>كلمة المرور الحالية *</Label>
+                  <Label>{t("currentPassword")} *</Label>
                   <Input
                     type="password"
                     value={password}
@@ -197,44 +196,42 @@ export function AuthPage() {
                   />
                 </div>
                 <div>
-                  <Label>كلمة المرور الجديدة *</Label>
+                  <Label>{t("newPassword")} *</Label>
                   <Input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="8 أحرف على الأقل"
+                    placeholder={t("passwordPlaceholder")}
                     required
                   />
                 </div>
                 <div>
-                  <Label>تأكيد كلمة المرور الجديدة *</Label>
+                  <Label>{t("confirmNewPassword")} *</Label>
                   <Input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="أعد كتابة كلمة المرور"
+                    placeholder={t("confirmPlaceholder")}
                     required
                   />
                 </div>
                 {error && <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs font-bold text-rose-300">{error}</p>}
                 <Button type="submit" loading={busy} className="w-full">
                   <ShieldCheck className="h-4 w-4" />
-                  حفظ كلمة المرور الجديدة
+                  {t("saveNewPassword")}
                 </Button>
               </form>
             </>
           ) : mode === "reset" ? (
             <>
               <div className="mb-5">
-                <h2 className="text-base font-extrabold text-cream">استعادة كلمة المرور</h2>
-                <p className="mt-1 text-xs text-ink-300">
-                  أدخل بريد الإدارة وسيصلك رمز مكوّن من 6 أرقام.
-                </p>
+                <h2 className="text-base font-extrabold text-cream">{t("resetPasswordTitle")}</h2>
+                <p className="mt-1 text-xs text-ink-300">{t("resetPasswordSub")}</p>
               </div>
               {!success && !devCode ? (
                 <form onSubmit={handleRequestReset} className="space-y-4">
                   <div>
-                    <Label>البريد الإلكتروني</Label>
+                    <Label>{t("email")}</Label>
                     <Input
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -246,7 +243,7 @@ export function AuthPage() {
                   {error && <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs font-bold text-rose-300">{error}</p>}
                   <Button type="submit" loading={busy} className="w-full">
                     <RefreshCw className="h-4 w-4" />
-                    إرسال رمز الاستعادة
+                    {t("sendResetCode")}
                   </Button>
                 </form>
               ) : (
@@ -259,46 +256,46 @@ export function AuthPage() {
                   )}
                   {devCode && (
                     <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center">
-                      <p className="text-[11px] font-bold text-amber-200">رمز الطوارئ (بيئة تجريبية)</p>
+                      <p className="text-[11px] font-bold text-amber-200">{t("resetCodeLabel")}</p>
                       <p dir="ltr" className="mt-1 text-2xl font-black tracking-[0.4em] text-amber-300">{devCode}</p>
                     </div>
                   )}
                   <form onSubmit={handleReset} className="space-y-4">
                     <div>
-                      <Label>رمز الاستعادة *</Label>
+                      <Label>{t("resetCode")} *</Label>
                       <Input
                         value={resetCode}
                         onChange={(e) => setResetCode(e.target.value)}
                         dir="ltr"
                         className="text-left tracking-widest"
-                        placeholder="6 أرقام"
+                        placeholder={t("resetCodePlaceholder")}
                         required
                       />
                     </div>
                     <div>
-                      <Label>كلمة المرور الجديدة *</Label>
+                      <Label>{t("newPassword")} *</Label>
                       <Input
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="8 أحرف على الأقل"
+                        placeholder={t("passwordPlaceholder")}
                         required
                       />
                     </div>
                     <div>
-                      <Label>تأكيد كلمة المرور *</Label>
+                      <Label>{t("resetConfirmPassword")} *</Label>
                       <Input
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="أعد كتابة كلمة المرور"
+                        placeholder={t("confirmPlaceholder")}
                         required
                       />
                     </div>
                     {error && <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs font-bold text-rose-300">{error}</p>}
                     <Button type="submit" loading={busy} className="w-full">
                       <KeyRound className="h-4 w-4" />
-                      تعيين كلمة المرور
+                      {t("setNewPassword")}
                     </Button>
                   </form>
                 </>
@@ -307,12 +304,12 @@ export function AuthPage() {
           ) : (
             <>
               <div className="mb-5">
-                <h2 className="text-base font-extrabold text-cream">تسجيل الدخول</h2>
-                <p className="mt-1 text-xs text-ink-300">بريد الإدارة وكلمة المرور</p>
+                <h2 className="text-base font-extrabold text-cream">{t("loginTitle")}</h2>
+                <p className="mt-1 text-xs text-ink-300">{t("loginSub")}</p>
               </div>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <Label>البريد الإلكتروني</Label>
+                  <Label>{t("email")}</Label>
                   <Input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -322,7 +319,7 @@ export function AuthPage() {
                   />
                 </div>
                 <div>
-                  <Label>كلمة المرور</Label>
+                  <Label>{t("currentPassword")}</Label>
                   <Input
                     type="password"
                     value={password}
@@ -334,7 +331,7 @@ export function AuthPage() {
                 {error && <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs font-bold text-rose-300">{error}</p>}
                 <Button type="submit" loading={busy} className="w-full">
                   <LogIn className="h-4 w-4" />
-                  دخول لوحة التحكم
+                  {t("loginBtn")}
                 </Button>
               </form>
               <button
@@ -342,7 +339,7 @@ export function AuthPage() {
                 className="mx-auto mt-4 flex items-center gap-1.5 text-xs font-bold text-gold-400 hover:text-gold-300"
               >
                 <Lock className="h-3.5 w-3.5" />
-                نسيت كلمة المرور؟
+                {t("forgotPassword")}
               </button>
             </>
           )}
@@ -350,7 +347,7 @@ export function AuthPage() {
 
         <p className="mt-5 flex items-center justify-center gap-1.5 text-center text-[11px] font-semibold text-ink-400">
           <Mail className="h-3.5 w-3.5" />
-          vipservicesyemen@gmail.com — للدعم الفني
+          vipservicesyemen@gmail.com — {t("supportEmail")}
         </p>
       </motion.div>
     </div>

@@ -11,7 +11,7 @@ import { useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function SectionPage({ category }: { category: CategoryConfig }) {
-  const { t } = useLang();
+  const { t, tCat, tField } = useLang();
   const published = useQuery(api.submissions.listPublished, { category: category.key });
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
@@ -42,15 +42,15 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
           >
             <span className="chip mb-4 !border-gold-500/40 !bg-gold-500/10 !text-gold-300">
               <category.icon className="h-3.5 w-3.5" />
-              {category.label}
+              {tCat(category.key, "label")}
             </span>
             <h1 className="section-title leading-tight text-cream">
-              {category.hero.split(" ").slice(0, -1).join(" ")}{" "}
-              <span className="gold-text">{category.hero.split(" ").slice(-1)}</span>
+              {tCat(category.key, "hero").split(" ").slice(0, -1).join(" ")}{" "}
+              <span className="gold-text">{tCat(category.key, "hero").split(" ").slice(-1)}</span>
             </h1>
             <div className="section-title-underline" />
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-300 sm:text-base">
-              {category.description}
+              {tCat(category.key, "description")}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button onClick={() => setShowForm((s) => !s)} className="btn-gold">
@@ -80,7 +80,7 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
           <>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="flex items-center gap-2 text-lg font-extrabold text-cream">
-                <span>{t("publishedIn")} {category.label}</span>
+                <span>{t("publishedIn")} {tCat(category.key, "label")}</span>
                 <span className="rounded-full border border-gold-500/40 bg-gold-500/10 px-2.5 py-0.5 text-xs font-black text-gold-300">
                   {published ? items.length : "…"}
                 </span>
@@ -97,18 +97,18 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
                 >
                   {t("all")}
                 </button>
-                {category.types.map((t) => (
+                {category.types.map((tp) => (
                   <button
-                    key={t.value}
-                    onClick={() => setTypeFilter(t.value)}
+                    key={tp.value}
+                    onClick={() => setTypeFilter(tp.value)}
                     className={cn(
                       "rounded-lg px-3 py-1.5 text-xs font-bold transition-colors",
-                      typeFilter === t.value
+                      typeFilter === tp.value
                         ? "bg-gold-500 text-ink-950"
                         : "border border-ink-600/60 text-ink-300 hover:border-gold-500/50"
                     )}
                   >
-                    {t.label}
+                    {tField(category.key, tp.value, "label")}
                   </button>
                 ))}
               </div>

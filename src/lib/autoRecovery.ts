@@ -184,7 +184,7 @@ function showOverlay(message: string) {
     justifyContent: "center",
     padding: "20px",
     background:
-      "radial-gradient(ellipse 90% 60% at 50% -10%, rgba(212,175,55,0.12), transparent), radial-gradient(ellipse 70% 50% at 50% 115%, rgba(38,44,71,0.6), transparent), #0a0e1a",
+      "radial-gradient(ellipse 90% 60% at 50% -10%, rgba(212,175,55,0.14), transparent), radial-gradient(ellipse 70% 50% at 50% 115%, rgba(23,28,92,0.9), transparent), #121685",
     direction: "rtl",
     fontFamily: "'Cairo', 'Segoe UI', system-ui, sans-serif",
   });
@@ -193,7 +193,7 @@ function showOverlay(message: string) {
 
   const card = el("div", {
     width: "min(92vw, 420px)",
-    background: "#141a2e",
+    background: "#101458",
     border: "1px solid rgba(212,175,55,0.35)",
     borderRadius: "26px",
     padding: "34px 26px 26px",
@@ -273,7 +273,7 @@ function showOverlay(message: string) {
     padding: "12px 18px",
     fontSize: "14px",
     fontWeight: "900",
-    color: "#0a0e1a",
+    color: "#121685",
     border: "none",
     background: "linear-gradient(180deg, #e5c55f, #b8922a)",
     boxShadow: "0 10px 26px -10px rgba(212,175,55,0.55)",

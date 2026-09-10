@@ -34,7 +34,7 @@ export default defineConfig({
         scope: "/",
         display: "standalone",
         orientation: "portrait",
-        background_color: "#0a0e1a",
+        background_color: "#121685",
         theme_color: "#c9a227",
         categories: ["business", "shopping", "productivity"],
         icons: [

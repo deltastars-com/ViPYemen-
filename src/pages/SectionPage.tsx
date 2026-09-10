@@ -7,9 +7,11 @@ import { SubmissionForm } from "@/components/SubmissionForm";
 import { SubmissionCard, type PublicSubmission } from "@/components/SubmissionCard";
 import { EmptyState, Spinner } from "@/components/ui";
 import type { CategoryConfig } from "@/lib/categories";
+import { useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function SectionPage({ category }: { category: CategoryConfig }) {
+  const { t } = useLang();
   const published = useQuery(api.submissions.listPublished, { category: category.key });
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
@@ -40,12 +42,13 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
           >
             <span className="chip mb-4 !border-gold-500/40 !bg-gold-500/10 !text-gold-300">
               <category.icon className="h-3.5 w-3.5" />
-              قسم {category.label}
+              {category.label}
             </span>
             <h1 className="section-title leading-tight text-cream">
               {category.hero.split(" ").slice(0, -1).join(" ")}{" "}
               <span className="gold-text">{category.hero.split(" ").slice(-1)}</span>
             </h1>
+            <div className="section-title-underline" />
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-300 sm:text-base">
               {category.description}
             </p>
@@ -54,12 +57,12 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
                 {showForm ? (
                   <>
                     <ListFilter className="h-4 w-4" />
-                    عرض المنشورات
+                    {t("viewPosts")}
                   </>
                 ) : (
                   <>
                     <PenLine className="h-4 w-4" />
-                    سجّل بياناتك الآن
+                    {t("registerNowBtn")}
                   </>
                 )}
               </button>
@@ -76,8 +79,11 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
         ) : (
           <>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-extrabold text-cream">
-                المنشورات المعتمدة في قسم {category.label}
+              <h2 className="flex items-center gap-2 text-lg font-extrabold text-cream">
+                <span>{t("publishedIn")} {category.label}</span>
+                <span className="rounded-full border border-gold-500/40 bg-gold-500/10 px-2.5 py-0.5 text-xs font-black text-gold-300">
+                  {published ? items.length : "…"}
+                </span>
               </h2>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -89,7 +95,7 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
                       : "border border-ink-600/60 text-ink-300 hover:border-gold-500/50"
                   )}
                 >
-                  الكل
+                  {t("all")}
                 </button>
                 {category.types.map((t) => (
                   <button
@@ -114,8 +120,8 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
               </div>
             ) : items.length === 0 ? (
               <EmptyState
-                title="لا توجد منشورات معتمدة بعد"
-                hint="كن أول من يسجل — تُراجع الطلبات وتُنشر فور اعتمادها من الإدارة"
+                title={t("noPosts")}
+                hint={t("noPostsHint")}
               />
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -130,7 +136,7 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
               className="btn-ghost mx-auto mt-10 flex"
             >
               <ArrowLeft className="h-4 w-4" />
-              سجّل في قسم {category.label}
+              {t("registerNowBtn")}
             </button>
           </>
         )}

@@ -13,6 +13,7 @@ import {
   ArrowUp,
 } from "lucide-react";
 import { Logo } from "./Logo";
+import { useLang } from "@/lib/i18n";
 import { PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
 import { TelegramIcon, WhatsAppIcon } from "./ChannelIcons";
 
@@ -36,6 +37,7 @@ const LINKTREES = [
 const TIKTOK_URL = "https://www.tiktok.com/@vipservicesyemen1";
 
 export function Footer() {
+  const { t } = useLang();
   return (
     <footer className="mt-20 border-t border-ink-700/50 bg-ink-950">
       <div className="container-app grid gap-10 py-14 md:grid-cols-3">
@@ -88,7 +90,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-sm font-black text-gold-300">أقسام المنصة</h4>
+          <h4 className="mb-4 text-sm font-black text-gold-300">{t("footerSections")}</h4>
           <ul className="space-y-2.5 text-sm font-semibold text-ink-300">
             <li><Link className="transition-colors hover:text-gold-300" to="/jobs">قسم التوظيف</Link></li>
             <li><Link className="transition-colors hover:text-gold-300" to="/real-estate">قسم التسويق العقاري</Link></li>
@@ -111,7 +113,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-sm font-black text-gold-300">تواصل معنا</h4>
+          <h4 className="mb-4 text-sm font-black text-gold-300">{t("footerContact")}</h4>
           <ul className="space-y-3 text-sm text-ink-300">
             <li className="flex items-center gap-2.5">
               <Phone className="h-4 w-4 shrink-0 text-gold-400" />

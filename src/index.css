@@ -14,17 +14,18 @@
   --color-gold-800: #755a1f;
   --color-gold-900: #5c471c;
 
-  --color-ink-50: #f6f7fb;
-  --color-ink-100: #e9ebf4;
-  --color-ink-200: #d3d8ea;
-  --color-ink-300: #adb6d4;
-  --color-ink-400: #828fba;
-  --color-ink-500: #626fa1;
-  --color-ink-600: #4d5886;
-  --color-ink-700: #3f486c;
-  --color-ink-800: #262c47;
-  --color-ink-900: #141a2e;
-  --color-ink-950: #0a0e1a;
+  /* Royal-blue theme (#121685) — the platform's official deep-blue identity */
+  --color-ink-50: #eef0fb;
+  --color-ink-100: #e0e3f8;
+  --color-ink-200: #c6cbf1;
+  --color-ink-300: #9ba3e5;
+  --color-ink-400: #717bd2;
+  --color-ink-500: #545dba;
+  --color-ink-600: #434ba0;
+  --color-ink-700: #363c84;
+  --color-ink-800: #282d67;
+  --color-ink-900: #1a1e52;
+  --color-ink-950: #121685;
 
   --color-cream: #f5f0e1;
 
@@ -66,13 +67,20 @@
   body {
     @apply bg-ink-950 text-cream font-sans antialiased;
     background-image:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212, 175, 55, 0.08), transparent),
-      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(38, 44, 71, 0.5), transparent);
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212, 175, 55, 0.09), transparent),
+      radial-gradient(ellipse 55% 40% at 88% 108%, rgba(84, 93, 186, 0.5), transparent),
+      radial-gradient(ellipse 40% 35% at 8% 92%, rgba(212, 175, 55, 0.05), transparent);
     background-attachment: fixed;
   }
 
   ::selection {
     @apply bg-gold-500 text-ink-950;
+  }
+
+  /* Theme-color guard: the page background always paints the royal-blue
+     identity even before Tailwind utilities load. */
+  html {
+    background-color: #121685;
   }
 
   ::-webkit-scrollbar {
@@ -125,6 +133,14 @@
 
   .section-title {
     @apply text-2xl font-extrabold sm:text-3xl;
+  }
+
+  .section-title-underline {
+    @apply mt-3 h-1 w-24 rounded-full bg-gradient-to-l from-gold-400 via-gold-500/70 to-gold-600/30;
+  }
+
+  .section-title-underline-center {
+    @apply mx-auto;
   }
 
   .chip {

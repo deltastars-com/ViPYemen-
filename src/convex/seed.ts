@@ -908,6 +908,69 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // الإصدار 6.4.0 — الثيم الأزرق الملكي، تبديل اللغة، التقويم الهجري، قسم الإعلانات
+    const v640 = await ctx.db
+      .query("releases")
+      .filter((q) => q.eq(q.field("version"), "6.4.0"))
+      .first();
+    if (!v640) {
+      await ctx.db.insert("releases", {
+        version: "6.4.0",
+        title: "تطبيق Android 6.4.0 — الثيم الأزرق الملكي وتبديل اللغة (APK)",
+        description:
+          "الإصدار 6.4.0: تغيير الثيم بالكامل إلى الهوية الزرقاء الملكية #121685 في كل شاشات المنصة والتطبيق، أيقونة تبديل اللغة (عربي/English) أعلى الشاشة بدون أي تراكب، التقويم الهجري مع اليوم في الشريط العلوي، قسم الإعلانات الترويجية في الواجهة، عناوين أقسام احترافية، إصلاح نهائي لخطأ إقلاع التطبيق (رابط الخادم)، ورسائل ودية للمساعد الذكي.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.4.0/vip-yemen-android-v6.4.0.apk",
+        notes: "الحزمة com.vip.yemen — تحديث مباشر فوق 6.3.0 بدون حذف",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.4.0",
+        title: "حزمة Google Play — AAB 6.4.0",
+        description:
+          "حزمة AAB موقّعة بالثيم الأزرق الملكي وكل تحسينات 6.4.0، جاهزة للرفع إلى Google Play Console مع ملفات المتاجر والتوثيق والتوقيع.",
+        platform: "android",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.4.0/vip-yemen-android-v6.4.0.aab",
+        notes: "استخدم store-listing.json و SIGNING-AND-OWNERSHIP.md",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.4.0",
+        title: "تطبيق الويب المتقدم 6.4.0 (PWA)",
+        description:
+          "نسخة الويب 6.4.0: الثيم الأزرق الملكي الكامل، تبديل اللغة الفوري، التقويم الهجري، قسم الإعلانات في الواجهة، عناوين أقسام محسّنة، وإقلاع سلس بدون أي شاشات خطأ.",
+        platform: "web",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.4.0/vip-yemen-web-pwa-v6.4.0.zip",
+        notes: "تثبيت مباشر كتطبيق ويب تقدمي ثابت — تحديث تلقائي",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.4.0",
+        title: "تطبيق iOS — IPA 6.4.0",
+        description:
+          "تطبيق iOS للحزمة com.vip.yemen بالإصدار 6.4.0 بالثيم الجديد — يُبنى عبر Codemagic ويرفع إلى App Store Connect.",
+        platform: "ios",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/latest",
+        notes: "انظر codemagic.yaml لخطوات البناء والتوقيع",
+        createdAt: now,
+      });
+      await ctx.db.insert("releases", {
+        version: "6.4.0",
+        title: "الكود المصدري الكامل + ملفات التوقيع والتوثيق والمتاجر",
+        description:
+          "الكود المصدري الكامل للإصدار 6.4.0، ملف التوقيع (PKCS12)، store-listing.json، PRIVACY-POLICY-APP.md، SIGNING-AND-OWNERSHIP.md، codemagic.yaml، وجميع ملفات المتاجر.",
+        platform: "docs",
+        fileUrl:
+          "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.4.0/vip-yemen-source-v6.4.0.zip",
+        notes: "جميع ملفات الرفع لمتجر Google Play و App Store",
+        createdAt: now,
+      });
+    }
+
     return { ok: true };
   },
 });

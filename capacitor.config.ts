@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: "com.vip.yemen",
   appName: "ViP Yemen",
   webDir: "dist",
-  backgroundColor: "#0a0e1a",
+  backgroundColor: "#121685",
   server: {
     androidScheme: "https",
   },
@@ -17,7 +17,7 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 1200,
-      backgroundColor: "#0a0e1a",
+      backgroundColor: "#121685",
       showSpinner: false,
       androidSplashResourceName: "splash",
       iosSplashResourceName: "splash",

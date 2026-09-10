@@ -12,6 +12,7 @@ import {
   Code2,
   Crown,
   Home,
+  LayoutGrid,
   Megaphone,
   MessageCircle,
   Search,
@@ -28,6 +29,8 @@ import { OfferCard } from "@/components/OfferCard";
 import { ChannelsSection } from "@/components/ChannelsSection";
 import { HeroIllustration, VerifiedSeal } from "@/components/Illustrations";
 import { Spinner } from "@/components/ui";
+import { SectionHeading } from "@/components/SectionHeading";
+import { useLang } from "@/lib/i18n";
 import { PLATFORM_WHATSAPP_DISPLAY, PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
 
 const fade = {
@@ -36,11 +39,13 @@ const fade = {
 };
 
 export function Landing() {
+  const { t } = useLang();
   const seed = useMutation(api.seed.ensureSeedData);
   useEffect(() => {
     seed().catch(() => {});
   }, [seed]);
   const stats = useQuery(api.submissions.getPublicStats);
+  const ads = useQuery(api.ads.listActive);
   const offers = useQuery(api.offers.listPublished);
   const jobs = useQuery(api.submissions.listPublished, { category: "jobs", limit: 3 });
   const realEstate = useQuery(api.submissions.listPublished, { category: "real_estate", limit: 3 });
@@ -62,32 +67,30 @@ export function Landing() {
           className="pointer-events-none absolute inset-0"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse 70% 55% at 50% -5%, rgba(212,175,55,0.14), transparent), radial-gradient(ellipse 45% 40% at 88% 40%, rgba(38,44,71,0.7), transparent), radial-gradient(ellipse 45% 40% at 10% 70%, rgba(212,175,55,0.06), transparent)",
+              "radial-gradient(ellipse 70% 55% at 50% -5%, rgba(212,175,55,0.15), transparent), radial-gradient(ellipse 45% 40% at 88% 40%, rgba(84,93,186,0.55), transparent), radial-gradient(ellipse 45% 40% at 10% 70%, rgba(212,175,55,0.06), transparent)",
           }}
         />
         <div className="container-app relative pb-20 pt-16 text-center sm:pt-24">
           <motion.div initial="hidden" animate="show" variants={fade}>
             <span className="chip mx-auto !border-gold-500/40 !bg-gold-500/10 !text-gold-300">
               <Crown className="h-3.5 w-3.5" />
-              المنصة اليمنية الشاملة للخدمات
+              {t("heroBadge")}
             </span>
             <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-black leading-[1.25] text-cream sm:text-5xl lg:text-6xl">
-              كل ما تحتاجه في منصة واحدة —
-              <span className="gold-text"> توظيف، عقارات، تسويق، برمجيات</span>
+              {t("heroTitle1")}
+              <span className="gold-text"> {t("heroTitle2")}</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-sm leading-relaxed text-ink-300 sm:text-base">
-              منصة ViP Yemen تربط أصحاب الأعمال والباحثين عن الفرص في اليمن.
-              كل طلب يمر بمراجعة إدارة المنصة والتدقيق قبل النشر — ضماناً للحقوق
-              والجودة والموثوقية للجميع.
+              {t("heroSub")}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link to="/jobs" className="btn-gold">
                 <Briefcase className="h-4 w-4" />
-                ابدأ من قسم التوظيف
+                {t("ctaJobs")}
               </Link>
               <Link to="/emarket" className="btn-ghost">
                 <ShoppingBag className="h-4 w-4" />
-                اعرض منتجك أو ابحث عن طلب
+                {t("ctaMarket")}
               </Link>
             </div>
             <div className="mx-auto mt-12 flex max-w-4xl items-end justify-center gap-4">
@@ -103,7 +106,7 @@ export function Landing() {
             </div>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] font-black text-gold-300/90">
               <VerifiedSeal className="h-5 w-5" />
-              مراجعة إدارية وتدقيق لكل طلب قبل النشر
+              {t("verified")}
             </div>
           </motion.div>
 
@@ -131,12 +134,8 @@ export function Landing() {
 
       {/* ============ Services ============ */}
       <section className="container-app py-16">
-        <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fade} className="mb-10 text-center">
-          <h2 className="section-title text-cream">أقسام المنصة</h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-ink-300">
-            أربعة أقسام متكاملة، كلها تخضع لنفس آلية المراجعة والنشر المعتمدة
-            من إدارة المنصة.
-          </p>
+        <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fade}>
+          <SectionHeading icon={LayoutGrid} title={t("sectionsTitle")} subtitle={t("sectionsSub")} center />
         </motion.div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {CATEGORIES.map((c, i) => (
@@ -157,7 +156,7 @@ export function Landing() {
                 <h3 className="text-lg font-extrabold text-cream">{c.label}</h3>
                 <p className="mt-2 text-[13px] leading-relaxed text-ink-300">{c.hero}</p>
                 <p className="mt-4 flex items-center gap-1.5 text-xs font-black text-gold-400">
-                  ادخل القسم
+                  {t("enterSection")}
                   <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
                 </p>
               </Link>
@@ -169,18 +168,15 @@ export function Landing() {
       {/* ============ How it works ============ */}
       <section className="border-y border-ink-700/40 bg-ink-900/40 py-16">
         <div className="container-app">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fade} className="mb-10 text-center">
-            <h2 className="section-title text-cream">آلية عمل المنصة</h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-ink-300">
-              نظام مراجعة مضمون يحمي حقوق الجميع — البائعين والمشترين والباحثين عن عمل.
-            </p>
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fade}>
+            <SectionHeading icon={ShieldCheck} title={t("howTitle")} subtitle={t("howSub")} center />
           </motion.div>
           <div className="grid gap-4 md:grid-cols-4">
             {[
-              { icon: PenLineIcon, title: "1. تسجيل البيانات", text: "تسجل بياناتك وترفق صور المؤهلات أو المنتج أو العقار" },
-              { icon: Eye, title: "2. مراجعة سرية", text: "يصل طلبك للوحة التحكم بشكل خاص ومستقل للمراجعة والتدقيق" },
-              { icon: ShieldCheck, title: "3. تعديل واعتماد", text: "تقوم الإدارة بالتدقيق والتعديل لضمان الحقوق والجودة" },
-              { icon: Megaphone, title: "4. نشر تلقائي", text: "بضغطة زر ينشر الطلب على واجهة المنصة وقنوات التواصل" },
+              { icon: PenLineIcon, title: t("step1"), text: t("step1Text") },
+              { icon: Eye, title: t("step2"), text: t("step2Text") },
+              { icon: ShieldCheck, title: t("step3"), text: t("step3Text") },
+              { icon: Megaphone, title: t("step4"), text: t("step4Text") },
             ].map((step) => (
               <div key={step.title} className="card-surface p-5 text-center">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-gold-500/40 bg-gold-500/10 text-gold-300">
@@ -196,10 +192,10 @@ export function Landing() {
 
       {/* ============ Latest listings ============ */}
       <section className="container-app py-16">
-        <div className="mb-8 flex items-center justify-between">
-          <h2 className="section-title text-cream">أحدث المنشورات المعتمدة</h2>
-          <Link to="/jobs" className="flex items-center gap-1.5 text-sm font-black text-gold-400 hover:text-gold-300">
-            تصفح الكل
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <SectionHeading icon={BadgeCheck} title={t("latestTitle")} className="mb-0" />
+          <Link to="/jobs" className="flex shrink-0 items-center gap-1.5 pb-2 text-sm font-black text-gold-400 hover:text-gold-300">
+            {t("browseAll")}
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </div>
@@ -216,16 +212,40 @@ export function Landing() {
         )}
       </section>
 
+      {/* ============ Promotional ads section ============ */}
+      {ads && ads.length > 0 && (
+        <section className="container-app pb-4">
+          <SectionHeading icon={Megaphone} title={t("adsTitle")} subtitle={t("adsSub")} center />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {(ads as any[]).slice(0, 6).map((ad) => (
+              <div
+                key={ad._id}
+                className="card-surface card-surface-hover relative overflow-hidden p-5"
+              >
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-gold-400 via-gold-500/60 to-transparent" />
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gold-500/40 bg-gold-500/10 text-gold-300">
+                    <Crown className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-cream">{ad.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-ink-300">{ad.message}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ============ Featured offers ============ */}
       {offers && offers.length > 0 && (
         <section className="border-y border-ink-700/40 bg-ink-900/40 py-16">
           <div className="container-app">
-            <div className="mb-8 flex items-center justify-between">
-              <h2 className="section-title text-cream">
-                عروض <span className="gold-text">مميزة</span>
-              </h2>
-              <Link to="/offers" className="flex items-center gap-1.5 text-sm font-black text-gold-400 hover:text-gold-300">
-                كل العروض
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <SectionHeading icon={Crown} title={t("offersTitle")} highlight={undefined} className="mb-0" />
+              <Link to="/offers" className="flex shrink-0 items-center gap-1.5 pb-2 text-sm font-black text-gold-400 hover:text-gold-300">
+                {t("allOffers")}
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </div>
@@ -242,9 +262,7 @@ export function Landing() {
       <section className="container-app py-16">
         <div className="card-surface grid gap-8 p-8 md:grid-cols-2 md:p-12">
           <div>
-            <h2 className="section-title text-cream">
-              لماذا <span className="gold-text">ViP Yemen؟</span>
-            </h2>
+            <SectionHeading icon={ShieldCheck} title={t("whyTitle")} className="mb-6" />
             <ul className="mt-6 space-y-4">
               {[
                 "مراجعة إدارية وتدقيق لكل طلب قبل النشر — ضمان الحقوق للجميع",
@@ -298,20 +316,12 @@ export function Landing() {
       <section className="border-y border-ink-700/40 bg-ink-900/30 py-16">
         <div className="container-app">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h2 className="section-title text-cream">
-                قنواتنا <span className="gold-text">الرقمية</span>
-              </h2>
-              <p className="mt-2 max-w-xl text-sm text-ink-300">
-                كل منشور معتمد يُنشر تلقائياً على قنوات المنصة الرسمية — انضم
-                لتصل إليك الفرص والعروض أولاً بأول.
-              </p>
-            </div>
+            <SectionHeading icon={Megaphone} title={t("channelsTitle")} subtitle={t("channelsSub")} className="mb-0" />
             <Link
               to="/channels"
-              className="flex shrink-0 items-center gap-1.5 text-sm font-black text-gold-400 hover:text-gold-300"
+              className="flex shrink-0 items-center gap-1.5 pb-2 text-sm font-black text-gold-400 hover:text-gold-300"
             >
-              صفحة القنوات
+              {t("channelsPage")}
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </div>
@@ -330,20 +340,19 @@ export function Landing() {
           />
           <LogoMark className="mx-auto mb-4 h-10 w-10" />
           <h2 className="mx-auto max-w-2xl text-2xl font-black leading-relaxed text-cream sm:text-3xl">
-            جاهز تبدأ؟ سجّل بياناتك الآن — وسنتولى الباقي
+            {t("finalCta")}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-ink-300">
-            فريقنا ذو خبرة سنوات في مجالات التوظيف والتسويق والبرمجة — نضمن لك
-            الجودة والوصول لجمهور أوسع.
+            {t("finalCtaSub")}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link to="/jobs" className="btn-gold">
               <Building2 className="h-4 w-4" />
-              سجّل في المنصة
+              {t("registerNow")}
             </Link>
             <Link to="/offers" className="btn-ghost">
               <Crown className="h-4 w-4" />
-              شاهد العروض
+              {t("watchOffers")}
             </Link>
           </div>
         </div>

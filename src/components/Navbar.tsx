@@ -4,15 +4,16 @@ import { Menu, X, LayoutDashboard, LogOut } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
 import { getAdminToken, clearAdminToken } from "@/lib/convex";
+import { LanguageToggle, useLang } from "@/lib/i18n";
 
 const LINKS = [
-  { to: "/", label: "الرئيسية" },
-  { to: "/jobs", label: "التوظيف" },
-  { to: "/real-estate", label: "العقارات" },
-  { to: "/emarket", label: "التسويق الإلكتروني" },
-  { to: "/software", label: "البرمجيات" },
-  { to: "/offers", label: "العروض" },
-  { to: "/channels", label: "قنواتنا" },
+  { to: "/", key: "home" },
+  { to: "/jobs", key: "jobs" },
+  { to: "/real-estate", key: "realEstate" },
+  { to: "/emarket", key: "emarket" },
+  { to: "/software", key: "software" },
+  { to: "/offers", key: "offers" },
+  { to: "/channels", key: "channels" },
 ];
 
 export function Navbar() {
@@ -21,6 +22,7 @@ export function Navbar() {
   const [signedIn, setSignedIn] = useState(() => !!getAdminToken());
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLang();
 
   // Reflect login/logout state: re-check the session token whenever the
   // route changes (e.g. after signing in at /auth or logging out).
@@ -71,18 +73,19 @@ export function Navbar() {
                 )
               }
             >
-              {l.label}
+              {t(l.key)}
             </NavLink>
           ))}
         </nav>
 
         <div className="flex items-center gap-2">
+          <LanguageToggle />
           <Link to="/assistant" className="btn-ghost hidden !px-3.5 !py-2 text-xs md:inline-flex">
-            المساعد — البحث الشامل
+            {t("assistant")}
           </Link>
           <Link to="/admin" className="btn-gold hidden !px-4 !py-2 text-xs md:inline-flex">
             <LayoutDashboard className="h-4 w-4" />
-            لوحة التحكم
+            {t("dashboard")}
           </Link>
           {signedIn && (
             <button
@@ -91,7 +94,7 @@ export function Navbar() {
               className="hidden items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20 md:inline-flex"
             >
               <LogOut className="h-3.5 w-3.5" />
-              خروج
+              {t("logout")}
             </button>
           )}
           <button
@@ -118,16 +121,16 @@ export function Navbar() {
                   )
                 }
               >
-                {l.label}
+                {t(l.key)}
               </NavLink>
             ))}
             <div className="mt-2 flex gap-2 border-t border-ink-700/50 pt-3">
               <Link to="/assistant" className="btn-ghost flex-1 text-xs">
-                المساعد — البحث الشامل
+                {t("assistant")}
               </Link>
               <Link to="/admin" className="btn-gold flex-1 text-xs">
                 <LayoutDashboard className="h-4 w-4" />
-                لوحة التحكم
+                {t("dashboard")}
               </Link>
               {signedIn && (
                 <button
@@ -135,7 +138,7 @@ export function Navbar() {
                   className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20"
                 >
                   <LogOut className="h-3.5 w-3.5" />
-                  خروج
+                  {t("logout")}
                 </button>
               )}
             </div>

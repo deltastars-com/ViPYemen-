@@ -21,7 +21,26 @@ import { api } from "../convex/_generated/api";
 import { Button, EmptyState, Input } from "@/components/ui";
 import { SubmissionCard, type PublicSubmission } from "@/components/SubmissionCard";
 import { OfferCard, type PublicOffer } from "@/components/OfferCard";
+import { useLang } from "@/lib/i18n";
 import { PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
+
+/** Turn raw engine errors into short, human-friendly Arabic messages. */
+function friendlyAiError(raw: string): string {
+  const m = (raw || "").toLowerCase();
+  if (/vite_gemini_key|مفتاح/.test(m)) {
+    return "لم يتم تفعيل مفتاح محرك الذكاء الاصطناعي بعد — أضِفه من إعدادات المنصة ثم أعد المحاولة.";
+  }
+  if (/404|لم يعد متاحاً|no longer available/.test(m)) {
+    return "محرك الذكاء يحدّث نماذجه تلقائياً — أعد المحاولة الآن وسيعمل فوراً.";
+  }
+  if (/401|403|api key|خطأ من الخادم|permission/i.test(m)) {
+    return "تعذّر الاتصال بخدمة الذكاء الاصطناعي (راجع مفتاح Gemini) — استخدم البحث الموسوعي بالأسفل.";
+  }
+  if (/فشل الاتصال|failed to fetch|networkerror|internet|offline/.test(m)) {
+    return "لا يوجد اتصال بالإنترنت حالياً — استخدم البحث الموسوعي بالأسفل.";
+  }
+  return "تعذّر الحصول على إجابة ذكية حالياً — أعد المحاولة أو استخدم البحث الموسوعي بالأسفل.";
+}
 
 const FAQS = [
   {
@@ -51,6 +70,7 @@ const FAQS = [
 ];
 
 export function AssistantPage() {
+  const { t } = useLang();
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [wikiResults, setWikiResults] = useState<{ title: string; snippet: string; url: string }[] | null>(null);
@@ -173,11 +193,12 @@ export function AssistantPage() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <span className="chip mx-auto !border-gold-500/40 !bg-gold-500/10 !text-gold-300">
               <Search className="h-3.5 w-3.5" />
-              المساعد — البحث الشامل
+              {t("assistantBadge")}
             </span>
             <h1 className="section-title mt-4 text-cream">
-              محرك بحث <span className="gold-text">معرفي شامل</span>
+              {t("assistantTitle1")} <span className="gold-text">{t("assistantTitle2")}</span>
             </h1>
+            <div className="section-title-underline section-title-underline-center" />
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-ink-300">
               ابحث في كل ما يخص المنصة: المنشورات، العروض، الإعلانات، والأسئلة
               الشائعة — بإجابات ذكية من محرك المعرفة الاحترافي
@@ -195,12 +216,12 @@ export function AssistantPage() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="اكتب سؤالك أو كلمة البحث... مثال: شقة في حدة، جوال للبيع، برمجة تطبيقات"
+                placeholder={t("searchPlaceholder")}
                 className="!py-3.5 !text-base"
               />
               <Button type="submit" className="shrink-0" loading={wikiLoading}>
                 {wikiLoading ? null : <Search className="h-4 w-4" />}
-                بحث
+                {t("search")}
               </Button>
             </form>
           </motion.div>
@@ -210,7 +231,7 @@ export function AssistantPage() {
       <section className="container-app py-10">
         {!q ? (
           <>
-            <h2 className="mb-6 text-lg font-extrabold text-cream">الأسئلة الشائعة</h2>
+            <h2 className="mb-6 text-lg font-extrabold text-cream">{t("faqs")}</h2>
             <div className="mx-auto max-w-3xl space-y-3">
               {FAQS.map((f, i) => (
                 <div key={i} className="card-surface overflow-hidden">
@@ -283,8 +304,18 @@ export function AssistantPage() {
               )}
               {aiError && (
                 <div className="card-surface rounded-xl border border-rose-500/30 p-4">
-                  <p className="text-sm font-bold text-rose-300">{aiError}</p>
+                  <p className="flex items-center gap-2 text-sm font-bold text-rose-300">
+                    <Megaphone className="h-4 w-4 shrink-0" />
+                    {friendlyAiError(aiError)}
+                  </p>
                   <p className="mt-2 text-xs text-ink-300">يمكنك استخدام البحث الموسوعي العام أدناه كبديل.</p>
+                  <button
+                    onClick={() => runAiAnswer()}
+                    disabled={aiLoading}
+                    className="btn-gold mt-3 !px-4 !py-2 text-xs"
+                  >
+                    إعادة المحاولة
+                  </button>
                 </div>
               )}
               {aiAnswer && (

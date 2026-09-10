@@ -1,0 +1,47 @@
+[
+  {
+    "title": "باقة التسويق الشامل",
+    "description": "حملة تسويقية متكاملة لمنشأتك على جميع منصات التواصل الاجتماعي — تصميم إعلانات، نشر دوري، وتقارير أداء.",
+    "original_price": 200000,
+    "offer_price": 150000,
+    "discount_percent": 25,
+    "is_featured": true,
+    "status": "published"
+  },
+  {
+    "title": "تصميم شعار احترافي",
+    "description": "تصميم هوية بصرية كاملة لعلامتك التجارية: شعار + بطاقات + ألوان وخطوط — بجودة عالمية.",
+    "original_price": 80000,
+    "offer_price": 50000,
+    "discount_percent": 37,
+    "is_featured": false,
+    "status": "published"
+  },
+  {
+    "title": "تطوير موقع متكامل",
+    "description": "موقع ويب متجاوب مع لوحة تحكم إدارية ونظام إدارة محتوى — يشمل الاستضافة والنطاق للسنة الأولى.",
+    "original_price": 600000,
+    "offer_price": 450000,
+    "discount_percent": 25,
+    "is_featured": true,
+    "status": "published"
+  },
+  {
+    "title": "تطبيق موبايل احترافي",
+    "description": "تطبيق Android + iOS متكامل مع لوحة تحكم وإشعارات — يصلح لمتجر أو منصة خدمات.",
+    "original_price": 800000,
+    "offer_price": 600000,
+    "discount_percent": 25,
+    "is_featured": false,
+    "status": "published"
+  },
+  {
+    "title": "حملة إعلانية متكاملة",
+    "description": "حملة إعلانية على Google Ads + Facebook + Instagram لمدة شهر مع تقارير أداء أسبوعية.",
+    "original_price": 150000,
+    "offer_price": 100000,
+    "discount_percent": 33,
+    "is_featured": true,
+    "status": "published"
+  }
+]

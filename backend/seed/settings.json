@@ -1,0 +1,18 @@
+{
+  "platform_name": "ViP Yemen",
+  "platform_name_ar": "منصة ViP Yemen",
+  "whatsapp_number": "00967711780999",
+  "email": "vipservicesyemen@gmail.com",
+  "telegram_channel": "@VIPservices2",
+  "facebook_page": "https://www.facebook.com/ViPservicesYemen/",
+  "instagram": "https://www.instagram.com/vipservicesyemen",
+  "twitter": "https://twitter.com/ViPservicesYeme",
+  "youtube": "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw",
+  "tiktok": "https://www.tiktok.com/@vipservicesyemen1",
+  "location": "اليمن — صنعاء",
+  "copyright": "© 2026 ViP Yemen — المهندس علي درهم الدحان",
+  "default_currency": "YER",
+  "auto_publish": true,
+  "require_phone_verification": true,
+  "maintenance_mode": false
+}

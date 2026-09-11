@@ -110,6 +110,15 @@ jobs:
       - name: Add SPA fallback for Pages
         run: cp dist/index.html dist/404.html
 
+      # Standalone bilingual privacy policy (public/privacy-policy.html is
+      # copied to dist by Vite). Served as a real 200-OK HTML page at
+      # /privacy-policy/ — required by Google Play / App Store review crawlers
+      # (a SPA route behind 404.html answers 404 to them).
+      - name: Publish standalone privacy policy page
+        run: |
+          mkdir -p dist/privacy-policy
+          cp dist/privacy-policy.html dist/privacy-policy/index.html
+
       # Publish to the gh-pages branch — the repo's Pages site is served from
       # this branch ("Deploy from a branch" source), which GitHub auto-builds
       # on every push. This path is not subject to the github-pages

@@ -2,8 +2,8 @@
   "app": {
     "packageId": "com.vip.yemen",
     "appName": "ViP Yemen",
-    "versionName": "6.7.1",
-    "versionCode": 6070001
+    "versionName": "6.7.2",
+    "versionCode": 6070002
   },
   "googlePlay": {
     "title": "ViP Yemen — التوظيف والتسويق العقاري والإلكتروني",
@@ -11,15 +11,15 @@
     "fullDescription": "منصة ViP Yemen هي المنصة اليمنية الشاملة التي تربط أصحاب الأعمال والباحثين عن الفرص.\n\n✨ أقسام المنصة:\n• التوظيف — سجّل بياناتك كباحث عن عمل أو أعلن عن وظيفة في منشأتك\n• التسويق العقاري — اعرض عقارك أو ابحث عن العقار المناسب\n• التسويق الإلكتروني — اعرض منتجاتك أو ابحث عن السلعة المطلوبة\n• البرمجيات وتطوير التطبيقات — اطلب مشروعك البرمجي\n\n🛡️ مميزات المنصة:\n• مراجعة إدارية وتدقيق لكل طلب قبل النشر — ضمان الحقوق والجودة\n• التحقق من أرقام الهواتف وربطها بواتساب المنصة الرسمي\n• نشر تلقائي على واجهة المنصة وقنوات التواصل الاجتماعي\n• سرية تامة للبيانات الخاصة\n• لوحة تحكم مؤمنة بالبصمة والوجه\n• نظام عروض ترويجية بالصور والفيديوهات\n• شريط إعلاني تفاعلي\n• مساعد ذكي للبحث الشامل\n• يعمل بدون إنترنت كتطبيق ويب تقدمي (PWA)\n\n📱 تواصل معنا:\n• واتساب: 00967711780999\n• البريد: vipservicesyemen@gmail.com\n• الموقع: اليمن — صنعاء",
     "category": "BUSINESS",
     "language": "ar",
-    "privacyPolicyUrl": "https://vipyemen.com/privacy-policy"
+    "privacyPolicyUrl": "https://vi-p-yemen.vercel.app/privacy-policy"
   },
   "appStore": {
     "name": "ViP Yemen",
     "subtitle": "التوظيف والتسويق العقاري والإلكتروني",
     "description": "منصة ViP Yemen هي المنصة اليمنية الشاملة التي تربط أصحاب الأعمال والباحثين عن الفرص في اليمن. تشمل أقسام التوظيف والتسويق العقاري والتسويق الإلكتروني والخدمات البرمجية — مع مراجعة إدارية وتدقيق لكل طلب قبل النشر لضمان الحقوق والجودة.",
     "keywords": "توظيف,وظائف,عقارات,تسويق,-electronic-market,vi pyemen,jobs,yemen,real estate,marketplace",
-    "privacyPolicyUrl": "https://vipyemen.com/privacy-policy",
+    "privacyPolicyUrl": "https://vi-p-yemen.vercel.app/privacy-policy",
     "supportUrl": "mailto:vipservicesyemen@gmail.com",
-    "marketingUrl": "https://vipyemen.com"
+    "marketingUrl": "https://vi-p-yemen.vercel.app"
   }
 }

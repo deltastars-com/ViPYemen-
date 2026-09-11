@@ -3,7 +3,7 @@
 
 **آخر تحديث / Last updated:** سبتمبر 2026
 **الحزمة / Package:** com.vip.yemen
-**رابط السياسة / Policy URL:** https://vipyemen.com/privacy-policy
+**رابط السياسة / Policy URL:** https://vi-p-yemen.vercel.app/privacy-policy
 
 ---
 

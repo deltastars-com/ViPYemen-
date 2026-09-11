@@ -110,7 +110,7 @@
 ## 🌐 رابط سياسة الخصوصية
 
 ```
-https://your-domain.com/privacy-policy.html
+https://vi-p-yemen.vercel.app/privacy-policy
 ```
 
 ---

@@ -2,7 +2,7 @@
 # Copy-Paste Ready: Signing, Secrets & Integration Credentials
 
 **الحزمة / Package:** `com.vip.yemen`
-**الإصدار الحالي:** 6.7.1 · **versionCode:** 6070001
+**الإصدار الحالي:** 6.7.2 · **versionCode:** 6070002
 **آخر تحديث:** سبتمبر 2026
 
 > ⚠️ **هذا الملف يحتوي بيانات حساسة.** لا تنشره علناً ولا ترسله لأي طرف غير موثوق.
@@ -150,8 +150,8 @@ BFsbKHaJz8AJc8wxCdC0OMo4dHRIjNJzbg-IA2WlPijvoHhp2VEEaQmkr86fzv1qGWXuHvEZLiRoEI4h
 openssl pkcs12 -in android/keystore/vipyemen-release.p12 -passin pass:ViPYemen2026@Sign -nokeys -clcerts | openssl x509 -noout -fingerprint -sha1 -fingerprint -sha256
 
 # من APK جاهز
-keytool -printcert -jarfile vip-yemen-android-v6.7.1.apk
-apksigner verify --print-certs vip-yemen-android-v6.7.1.apk
+keytool -printcert -jarfile vip-yemen-android-v6.7.2.apk
+apksigner verify --print-certs vip-yemen-android-v6.7.2.apk
 ```
 
 النتيجة المتوقعة:
@@ -164,15 +164,20 @@ SHA256: FD:AE:0D:25:93:F7:96:46:DD:07:7C:23:52:D1:68:2C:BE:9F:CC:3D:27:17:2A:6D:
 
 ## 6️⃣ سياسة الخصوصية — الروابط الرسمية
 
-| الاستخدام | الرابط |
-|---|---|
-| صفحة الخصوصية داخل المنصة | `https://vipyemen.com/privacy-policy` |
-| نسخة GitHub Pages | `https://deltastars-com.github.io/ViPYemen-/privacy-policy` |
-| نص سياسة الخصوصية للمتاجر | `PRIVACY-POLICY-APP.md` في المستودع |
-| سياسة الخصوصية للمنصة | `PRIVACY-POLICY.md` في المستودع |
+| الاستخدام | الرابط | الحالة |
+|---|---|---|
+| **صفحة الخصوصية الرسمية (للمتاجر)** | `https://vi-p-yemen.vercel.app/privacy-policy` | ✅ تعمل (200 OK) |
+| الواجهة الرئيسية | `https://vi-p-yemen.vercel.app` | ✅ تعمل |
+| صفحة الخصوصية على GitHub Pages | `https://deltastars-com.github.io/ViPYemen-/privacy-policy/` | ✅ 200 OK |
+| نسخة GitHub Pages | `https://deltastars-com.github.io/ViPYemen-/` | مرآة إضافية |
+| نص سياسة الخصوصية للمتاجر | `PRIVACY-POLICY-APP.md` في المستودع | — |
+| سياسة الخصوصية للمنصة | `PRIVACY-POLICY.md` في المستودع | — |
 
-> في Google Play Console ضع رابط الصفحة الحيّة (vipyemen.com/privacy-policy) —
-> وهو يعمل حالياً لأن صفحة `/privacy-policy` منشورة داخل التطبيق والنسخة المنشورة.
+> ⚠️ النطاق `vipyemen.com` **غير مسجل/غير موصول بـ DNS حالياً** — لا تستخدمه
+> في Play Console أو App Store Connect حتى يتم ربطه فعلياً.
+> عند ربطه مستقبلاً: Vercel → Project → Domains → أضف `vipyemen.com`،
+> ثم حدّث الروابط أعلاه و`store-listing.json` و`index.html`.
+> **الرابط المعتمد الآن للرفع في المتجرين:** `https://vi-p-yemen.vercel.app/privacy-policy`
 
 ---
 

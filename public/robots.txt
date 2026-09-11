@@ -5,4 +5,4 @@ Allow: /
 # public sections are fully crawlable.
 Disallow: /auth
 
-Sitemap: https://vipyemen.com/sitemap.xml
+Sitemap: https://vi-p-yemen.vercel.app/sitemap.xml

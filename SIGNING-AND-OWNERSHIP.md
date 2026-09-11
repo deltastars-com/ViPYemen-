@@ -22,6 +22,12 @@ install automatically over the previous one — no uninstall needed**.
 | Valid until | 23 Jan 2054 |
 | Certificate subject | `C=YE, ST=Sanaa, L=Sanaa, O=ViP Yemen, OU=Mobile Development, CN=ViP Yemen, emailAddress=vipservicesyemen@gmail.com` |
 | SHA-256 fingerprint | `FD:AE:0D:25:93:F7:96:46:DD:07:7C:23:52:D1:68:2C:BE:9F:CC:3D:27:17:2A:6D:8E:F9:15:3E:A7:65:F4:8B` |
+| SHA-1 fingerprint | `C6:F7:D4:A7:09:77:1E:DC:9B:B1:90:A6:CB:6E:5B:29:55:BD:11:3F` |
+
+> 🔑 **Copy-paste signing values** (keystore base64, passwords, SHA-1,
+> Firebase/Play/Vercel setup) live in **`SECRETS-SETUP.md`**.
+> The release workflow also verifies every APK against the
+> `EXPECTED_SIGNATURE_SHA1` secret in addition to the SHA-256 pin.
 
 The release workflow signs `assembleRelease` + `bundleRelease` with this key
 on every tagged release. Repository Secrets

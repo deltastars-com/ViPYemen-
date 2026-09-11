@@ -266,17 +266,31 @@ jobs:
       - name: Assert APK is signed with the official key
         run: |
           cd android
+          APK=app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
           # apksigner prints the digest lowercase with colons (fd:ae:0d:…);
           # strip separators and uppercase before comparing to the official value.
-          FP=$("$APKSIGNER" verify --print-certs app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk | grep -i "SHA-256 digest" | head -1 | awk '{print $NF}' | tr -d ':' | tr '[:lower:]' '[:upper:]')
-          echo "APK SHA-256: $FP"
-          EXPECT="FDAE0D2593F79646DD077C2352D1682CBE9FCC3D27172A6D8EF9153EA765F48B"
-          if [[ "$FP" != "$EXPECT" ]]; then
-            echo "::error::APK signature does not match the official keystore!"
+          FP256=$("$APKSIGNER" verify --print-certs "$APK" | grep -i "SHA-256 digest" | head -1 | awk '{print $NF}' | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          FP1=$("$APKSIGNER" verify --print-certs "$APK" | grep -i "SHA-1 digest" | head -1 | awk '{print $NF}' | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          echo "APK SHA-256: $FP256"
+          echo "APK SHA-1:   $FP1"
+          # SHA-256 matches the committed keystore certificate. SHA-1 is the
+          # same certificate digest in the form Google Play Console / Firebase
+          # / Vercel ask for (EXPECTED_SIGNATURE_SHA1 secret — see SECRETS-SETUP.md).
+          EXPECT256="FDAE0D2593F79646DD077C2352D1682CBE9FCC3D27172A6D8EF9153EA765F48B"
+          EXPECT1="${EXPECTED_SIGNATURE_SHA1//:/}"
+          EXPECT1=$(printf '%s' "$EXPECT1" | tr '[:lower:]' '[:upper:]')
+          if [[ "$FP256" != "$EXPECT256" ]]; then
+            echo "::error::APK SHA-256 does not match the official keystore!"
             exit 1
           fi
-          echo "official signature verified"
+          if [[ -n "$EXPECT1" && "$FP1" != "$EXPECT1" ]]; then
+            echo "::error::APK SHA-1 does not match EXPECTED_SIGNATURE_SHA1 secret ($EXPECT1)!"
+            exit 1
+          fi
+          echo "official signature verified (SHA-256 + SHA-1)"
+        env:
+          EXPECTED_SIGNATURE_SHA1: ${{ secrets.EXPECTED_SIGNATURE_SHA1 }}
 
       - name: Upload APK/AAB to draft release
         uses: softprops/action-gh-release@v2

@@ -54,3 +54,9 @@ ios/App/App.xcworkspace/xcuserdata/
 # Credentials files (keep local only)
 CREDENTIALS-AND-SIGNING.md
 release-build/
+
+# Firebase config (download your own copy from the Firebase console)
+google-services.json
+android/app/google-services.json
+**/google-services.json
+GoogleService-Info.plist

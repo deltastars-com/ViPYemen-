@@ -1,63 +1,92 @@
-# Codemagic CI/CD — ViP Yemen iOS builds
+# Codemagic CI/CD — ViP Yemen iOS Release (IPA → App Store Connect)
 # Docs: https://docs.codemagic.io/getting-started/yaml
 #
-# Required environment variables in Codemagic → Team settings:
-#   APP_STORE_CONNECT_PRIVATE_KEY    — App Store Connect API key (.p8)
-#   APP_STORE_CONNECT_KEY_ID         — API key ID
-#   APP_STORE_CONNECT_ISSUER_ID      — Issuer ID
-#   CERTIFICATE_PRIVATE_KEY          — Apple Distribution cert (.p12, base64)
-#   CERTIFICATE_PASSWORD             — Certificate password
-#   PROVISIONING_PROFILE_DATA        — App Store provisioning profile (base64)
-#   VITE_CONVEX_URL                  — Convex project URL
-#   VITE_SUPABASE_URL                — Supabase project URL
-#   VITE_SUPABASE_ANON_KEY           — Supabase anon key
-#   VITE_GEMINI_KEY                  — Gemini API key
+# ═══════════════════════════════════════════════════════════════════════════
+# REQUIRED environment variables — add them in Codemagic →
+# Teams (choose your team) → Environment variables → Group "app_store_credentials"
+# and group "vite_env". Full copy-paste reference: SECRETS-SETUP.md (section 7).
+#
+# Group: app_store_credentials
+# ───────────────────────────────────────────────────────────────────────────
+#   APP_STORE_CONNECT_PRIVATE_KEY   Contents of the .p8 API key (BEGIN … END)
+#   APP_STORE_CONNECT_KEY_ID        API key ID (10 chars)
+#   APP_STORE_CONNECT_ISSUER_ID     Issuer ID (uuid)
+#   CERTIFICATE_PRIVATE_KEY         Apple Distribution .p12 → base64
+#   CERTIFICATE_PASSWORD            .p12 export password
+#   PROVISIONING_PROFILE_DATA       App Store profile (.mobileprovision) → base64
+#
+# Group: vite_env
+# ───────────────────────────────────────────────────────────────────────────
+#   VITE_CONVEX_URL                 https://notable-shepherd-367.convex.cloud
+#   VITE_SUPABASE_URL               https://etgkhpasgfgeofifditu.supabase.co
+#   VITE_SUPABASE_ANON_KEY          Supabase anon key
+#   VITE_GEMINI_KEY                 Gemini API key
+#
+# Access for the API key: Team Key with "App Manager" role —
+# App Store Connect → Users and Access → Integrations → Team keys.
+# ═══════════════════════════════════════════════════════════════════════════
 
 workflows:
   ios-release:
     name: ViP Yemen iOS Release
     max_build_duration: 60
+    instance_type: mac_mini_m2
     environment:
       groups:
         - app_store_credentials
         - vite_env
+      vars:
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "com.vip.yemen"
     triggering:
       events:
         - tag
       branch_patterns:
         - pattern: '*'
           include: true
+      # Releases are built from v* tags (v6.7.0 …) pushed to GitHub
     scripts:
       - name: Install dependencies
         script: |
-          brew install bun
+          set -e
+          # Bun is preinstalled on Codemagic macOS machines
           bun install
+      - name: Generate official icons
+        script: bun run icons
+      - name: Typecheck
+        script: bun run typecheck
       - name: Build web assets
         script: bun run build
+      - name: Sync Capacitor iOS
+        script: npx cap sync ios
       - name: Set up code signing
         script: |
+          set -e
           cd ios/App
-          # Decode Apple Distribution certificate and import into a keychain
+          # Decode the Apple Distribution certificate into a temporary keychain
           echo "$CERTIFICATE_PRIVATE_KEY" | base64 --decode > cert.p12
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security import cert.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          rm -f cert.p12
           # Decode and install the App Store provisioning profile where
           # xcodebuild expects it
           echo "$PROVISIONING_PROFILE_DATA" | base64 --decode > ViP_Yemen.mobileprovision
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp ViP_Yemen.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/ViP_Yemen.mobileprovision"
-      - name: Build IPA
+      - name: Archive and export IPA
         script: |
+          set -e
           cd ios/App
           xcodebuild -project App.xcodeproj \
             -scheme App \
             -sdk iphoneos \
             -configuration Release \
             -archivePath $PWD/build/App.xcarchive \
-            archive
+            archive | xcpretty
           xcodebuild -project App.xcodeproj \
             -scheme App \
             -sdk iphoneos \
@@ -65,11 +94,18 @@ workflows:
             -exportArchive \
             -archivePath $PWD/build/App.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath $PWD/build/output
+            -exportPath $PWD/build/output | xcpretty
     artifacts:
       - ios/App/build/output/*.ipa
     publishing:
       app_store_connect:
+        # Requires: APP_STORE_CONNECT_PRIVATE_KEY / _KEY_ID / _ISSUER_ID
+        # and a .p8 Team key with App Manager role.
+        # The app record `com.vip.yemen` must already exist in
+        # App Store Connect (created once from the Developer portal).
+        auth: api_key
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_ID
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true        # uploaded build goes to TestFlight
+        expire_build_submitted_for_review: false

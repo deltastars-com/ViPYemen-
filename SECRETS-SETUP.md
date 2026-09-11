@@ -176,7 +176,63 @@ SHA256: FD:AE:0D:25:93:F7:96:46:DD:07:7C:23:52:D1:68:2C:BE:9F:CC:3D:27:17:2A:6D:
 
 ---
 
-## 7️⃣ الحسابات الرسمية للتوثيق والملكية
+## 7️⃣ Codemagic — بناء iOS (IPA) والنشر إلى App Store Connect
+
+سير العمل `ios-release` في `codemagic.yaml` **جاهز بالكامل**: يبني الويب،
+يزامن Capacitor، يوقّع، يصدّر IPA، ويرفعه إلى App Store Connect وTestFlight.
+
+### أ. مفاتيح App Store Connect API (المصدر الرسمي)
+من **App Store Connect → Users and Access → Integrations → Team Keys**
+(https://appstoreconnect.apple.com/access/integrations/api):
+
+| متغير Codemagic | من أين تحصل عليه |
+|---|---|
+| `APP_STORE_CONNECT_PRIVATE_KEY` | حمّل ملف مفتاح API (`.p8`) والصق **محتواه النصي كاملاً** (من `-----BEGIN PRIVATE KEY-----` إلى `-----END PRIVATE KEY-----`) |
+| `APP_STORE_CONNECT_KEY_ID` | معرّف المفتاح (10 خانات يظهر بجانب اسمه) |
+| `APP_STORE_CONNECT_ISSUER_ID` | معرّف Issuer (UUID أعلى جدول المفاتيح) |
+
+> صلاحية المفتاح: **App Manager** — ضرورية للرفع وTestFlight.
+
+### ب. شهادة التوقيع وملف البروفايل
+| متغير Codemagic | القيمة |
+|---|---|
+| `CERTIFICATE_PRIVATE_KEY` | شهادة **Apple Distribution** (`.p12`) مشفّرة base64 — تصدّرها من Keychain Access على جهاز Mac |
+| `CERTIFICATE_PASSWORD` | كلمة مرور تصدير الـ `.p12` |
+| `PROVISIONING_PROFILE_DATA` | بروفايل **App Store** لمعرّف التطبيق `com.vip.yemen` بصيغة base64 — اسمه يجب أن يكون `ViP Yemen App Store` (مطابق لـ `ios/App/ExportOptions.plist`) |
+
+خطوات إنشاء البروفايل: developer.apple.com → Certificates, IDs & Profiles →
+Identifiers → أنشئ App ID `com.vip.yemen` → Profiles → + →
+**App Store Connect** → اختر App ID → حمّل الملف ثم:
+`base64 -i ViP_Yemen_AppStore.mobileprovision | pbcopy`
+
+### ج. متغيرات بيئة التطبيق (مجموعة `vite_env`)
+| متغير | القيمة |
+|---|---|
+| `VITE_CONVEX_URL` | `https://notable-shepherd-367.convex.cloud` |
+| `VITE_SUPABASE_URL` | `https://etgkhpasgfgeofifditu.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | مفتاح Supabase anon |
+| `VITE_GEMINI_KEY` | مفتاح Gemini |
+
+### د. خطوات الربط في Codemagic
+1. سجّل في https://codemagic.io بنفس بريد Apple Developer
+   (`vipservicesyemen@gmail.com`)
+2. **Teams → Environment variables** → أنشئ المجموعتين:
+   `app_store_credentials` (كل متغيرات أ + ب) و `vite_env` (أعلاه) —
+   وفعّل **Secure** لكل قيمة
+3. **Add application** → اختر `deltastars-com/ViPYemen-` →
+   **iOS workflow: `ios-release`**
+4. أول بناء: اضغط **Start new build** — وبعدها يُبنى تلقائياً مع كل وسم `v*`
+5. يشترط وجود سجل التطبيق مسبقاً: App Store Connect → **My Apps → +** →
+   Bundle ID `com.vip.yemen` واسم `ViP Yemen` (بالكود SKU: `vipyemen`)
+
+### هـ. ماذا يحدث بعد الربط
+- كل وسم `v*` جديد → IPA موقّع يُرفع تلقائياً إلى App Store Connect
+- البناء يصل إلى **TestFlight** للاختبار قبل المراجعة النهائية للنشر
+- ملفات IPA متاحة للتحميل من Codemagic → Builds → Artifacts
+
+---
+
+## 8️⃣ الحسابات الرسمية للتوثيق والملكية
 
 | العنصر | القيمة |
 |---|---|

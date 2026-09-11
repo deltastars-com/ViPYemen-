@@ -1034,6 +1034,54 @@ export const ensureSeedData = mutation({
       });
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // v6.5.0 — Full bilingual integration (AR + EN)
+    // ═══════════════════════════════════════════════════════════════
+    {
+      const existing = await ctx.db
+        .query("releases")
+        .filter((q) => q.eq(q.field("version"), "6.5.0"))
+        .first();
+      if (!existing) {
+        await ctx.db.insert("releases", {
+          version: "6.5.0",
+          title: "Full bilingual integration (AR/EN)",
+          description: "Complete translation of all platform sections: navigation, forms, cards, auth, settings, privacy policy, AI assistant, offers page, channels page. 300+ translation keys with RTL/LTR toggle.",
+          platform: "android",
+          fileUrl: "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.5.0/vip-yemen-android-v6.5.0.apk",
+          notes: "Signed Android APK",
+          createdAt: now,
+        });
+        await ctx.db.insert("releases", {
+          version: "6.5.0",
+          title: "Google Play Bundle",
+          description: "vip-yemen-android-v6.5.0.aab",
+          platform: "android",
+          fileUrl: "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.5.0/vip-yemen-android-v6.5.0.aab",
+          notes: "AAB bundle for Google Play",
+          createdAt: now,
+        });
+        await ctx.db.insert("releases", {
+          version: "6.5.0",
+          title: "Progressive Web App",
+          description: "vip-yemen-web-pwa-v6.5.0.zip",
+          platform: "web",
+          fileUrl: "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.5.0/vip-yemen-web-pwa-v6.5.0.zip",
+          notes: "PWA ready for install",
+          createdAt: now,
+        });
+        await ctx.db.insert("releases", {
+          version: "6.5.0",
+          title: "Full Source Code",
+          description: "vip-yemen-source-v6.5.0.zip",
+          platform: "docs",
+          fileUrl: "https://github.com/deltastars-com/ViPYemen-/releases/download/v6.5.0/vip-yemen-source-v6.5.0.zip",
+          notes: "Signing, docs, store files",
+          createdAt: now,
+        });
+      }
+    }
+
     return { ok: true };
   },
 });

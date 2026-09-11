@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -31,6 +31,7 @@ import { isBiometricEnrolled, verifyBiometric } from "@/lib/biometric";
 import { Fingerprint } from "lucide-react";
 import { Logo, LogoMark } from "@/components/Logo";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/lib/i18n";
 import { AdminOverview } from "@/components/admin/AdminOverview";
 import { AdminSubmissions } from "@/components/admin/AdminSubmissions";
 import { AdminAds } from "@/components/admin/AdminAds";
@@ -56,23 +57,32 @@ export type AdminTab =
   | "releases"
   | "settings";
 
-const TABS: { key: AdminTab; label: string; icon: any; category?: string }[] = [
-  { key: "overview", label: "نظرة عامة", icon: LayoutDashboard },
-  { key: "jobs", label: "طلبات التوظيف", icon: Briefcase, category: "jobs" },
-  { key: "real_estate", label: "طلبات العقارات", icon: Home, category: "real_estate" },
-  { key: "emarket", label: "طلبات التسويق الإلكتروني", icon: ShoppingBag, category: "emarket" },
-  { key: "software", label: "طلبات البرمجيات", icon: Code2, category: "software" },
-  { key: "archived", label: "الأرشيف", icon: Archive },
-  { key: "ads", label: "الإعلانات الترويجية", icon: Megaphone },
-  { key: "offers", label: "العروض", icon: Crown },
-  { key: "finance", label: "النظام المالي", icon: Wallet },
-  { key: "notifications", label: "الإشعارات", icon: Bell },
-  { key: "clients", label: "بيانات العملاء", icon: Users2 },
-  { key: "releases", label: "الإصدارات", icon: PackageOpen },
-  { key: "settings", label: "الإعدادات", icon: Settings },
-];
+function getTabs(lang: "ar" | "en") {
+  const L = {
+    ar: { overview: "نظرة عامة", jobs: "طلبات التوظيف", real_estate: "طلبات العقارات", emarket: "طلبات التسويق الإلكتروني", software: "طلبات البرمجيات", archived: "الأرشيف", ads: "الإعلانات الترويجية", offers: "العروض", finance: "النظام المالي", notifications: "الإشعارات", clients: "بيانات العملاء", releases: "الإصدارات", settings: "الإعدادات" },
+    en: { overview: "Overview", jobs: "Job Requests", real_estate: "Real Estate", emarket: "E-Marketing", software: "Software", archived: "Archive", ads: "Promotional Ads", offers: "Offers", finance: "Finance", notifications: "Notifications", clients: "Clients", releases: "Releases", settings: "Settings" },
+  };
+  const t = L[lang];
+  return [
+    { key: "overview" as AdminTab, label: t.overview, icon: LayoutDashboard },
+    { key: "jobs" as AdminTab, label: t.jobs, icon: Briefcase, category: "jobs" },
+    { key: "real_estate" as AdminTab, label: t.real_estate, icon: Home, category: "real_estate" },
+    { key: "emarket" as AdminTab, label: t.emarket, icon: ShoppingBag, category: "emarket" },
+    { key: "software" as AdminTab, label: t.software, icon: Code2, category: "software" },
+    { key: "archived" as AdminTab, label: t.archived, icon: Archive },
+    { key: "ads" as AdminTab, label: t.ads, icon: Megaphone },
+    { key: "offers" as AdminTab, label: t.offers, icon: Crown },
+    { key: "finance" as AdminTab, label: t.finance, icon: Wallet },
+    { key: "notifications" as AdminTab, label: t.notifications, icon: Bell },
+    { key: "clients" as AdminTab, label: t.clients, icon: Users2 },
+    { key: "releases" as AdminTab, label: t.releases, icon: PackageOpen },
+    { key: "settings" as AdminTab, label: t.settings, icon: Settings },
+  ];
+}
 
 export function AdminPage() {
+  const { lang, t } = useLang();
+  const TABS = useMemo(() => getTabs(lang), [lang]);
   const token = getAdminToken();
   const session = useQuery(api.users.getSession, { token });
   const [tab, setTab] = useState<AdminTab>("overview");
@@ -102,11 +112,9 @@ export function AdminPage() {
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="card-surface max-w-md p-8 text-center">
           <Logo compact className="justify-center" />
-          <h1 className="mt-4 text-lg font-black text-cream">لوحة التحكم</h1>
+          <h1 className="mt-4 text-lg font-black text-cream">{t("adminLabel")}</h1>
           <p className="mt-3 text-sm leading-relaxed text-ink-300">
-            خدمات البيانات غير مُفعّلة في هذا الإصدار بعد — تُفعَّل لوحة
-            التحكم تلقائياً بمجرد ربط المنصة بخادم البيانات السحابي
-            (VITE_CONVEX_URL في إعدادات البناء).
+            {lang === "ar" ? "خدمات البيانات غير مُفعّلة في هذا الإصدار بعد — تُفعَّل لوحة التحكم تلقائياً بمجرد ربط المنصة بخادم البيانات السحابي (VITE_CONVEX_URL في إعدادات البناء)." : "Data services not yet enabled — admin panel activates automatically once connected to the cloud database (VITE_CONVEX_URL in build settings)."}
           </p>
           <a
             href="https://wa.me/967711780999"
@@ -114,10 +122,10 @@ export function AdminPage() {
             rel="noopener noreferrer"
             className="btn-gold mt-6 w-full"
           >
-            تواصل مع الإدارة عبر واتساب
+            {t("whatsappContact")}
           </a>
           <button onClick={() => navigate("/")} className="btn-ghost mt-3 w-full">
-            العودة للرئيسية
+            {t("goHome")}
           </button>
         </div>
       </div>
@@ -143,10 +151,10 @@ export function AdminPage() {
   async function unlockWithBiometric() {
     setBioBusy(true);
     setBioError("");
-    const ok = await verifyBiometric("فتح لوحة التحكم");
+    const ok = await verifyBiometric(t("biometricOpenAdmin"));
     setBioBusy(false);
     if (ok) setBiometricUnlocked(true);
-    else setBioError("لم يتم التحقق — حاول مجدداً");
+    else setBioError(t("adminBiometricError"));
   }
 
   if (isBiometricEnrolled() && !biometricUnlocked) {
@@ -154,17 +162,17 @@ export function AdminPage() {
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="card-surface w-full max-w-sm p-8 text-center">
           <LogoMark className="mx-auto h-16 w-16" />
-          <h1 className="mt-4 text-lg font-black text-cream">حماية بالبصمة</h1>
+          <h1 className="mt-4 text-lg font-black text-cream">{t("adminBiometricTitle")}</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-300">
-            لوحة التحكم محمية بالتحقق الحيوي — ثبّت بصمتك أو أظهر وجهك للمتابعة.
+            {t("adminBiometricDesc")}
           </p>
           <Fingerprint className="mx-auto mt-5 h-10 w-10 text-gold-400" />
           {bioError && <p className="mt-3 text-xs font-bold text-rose-400">{bioError}</p>}
           <button onClick={unlockWithBiometric} disabled={bioBusy} className="btn-gold mt-5 w-full disabled:opacity-60">
-            {bioBusy ? "جارٍ التحقق..." : "تحقق بالبصمة / الوجه"}
+            {bioBusy ? t("adminBiometricVerifying") : t("adminBiometricBtn")}
           </button>
           <button onClick={handleLogout} className="btn-ghost mt-3 w-full text-xs">
-            تسجيل خروج
+            {t("adminLogout")}
           </button>
         </div>
       </div>
@@ -179,14 +187,14 @@ export function AdminPage() {
   // Supabase-powered admin operations (when env variables are available).
   async function verifyPhoneViaSupabase(phone: string) {
     const client = supabase.client;
-    if (!client) return { ok: false, error: "خدمة Supabase غير متاحة في هذا الإصدار." };
+    if (!client) return { ok: false, error: t("biometricSupabaseUnavailable") };
     // Send verification code through Supabase Auth (if configured).
     try {
       const { error } = await client.auth.signInWithOtp({ phone, options: { channel: "sms" } });
       if (error) return { ok: false, error: error.message };
       return { ok: true };
     } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : "خطأ غير متوقع" };
+      return { ok: false, error: err instanceof Error ? err.message : t("biometricErrorUnexpected") };
     }
   }
 
@@ -201,24 +209,23 @@ export function AdminPage() {
             <button
               className="rounded-lg border border-ink-600/60 p-2 lg:hidden"
               onClick={() => setMenuOpen((o) => !o)}
-              aria-label="قائمة لوحة التحكم"
+              aria-label={t("adminAriaLabel")}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Logo compact />
-            <span className="hidden rounded-lg border border-gold-500/30 bg-gold-500/10 px-2.5 py-1 text-[10px] font-black text-gold-300 sm:block">
-              لوحة التحكم
+            <Logo compact />              <span className="hidden rounded-lg border border-gold-500/30 bg-gold-500/10 px-2.5 py-1 text-[10px] font-black text-gold-300 sm:block">
+              {t("adminLabel")}
             </span>
           </div>
           <div className="flex items-center gap-2">
             {isBiometricEnrolled() && biometricUnlocked && (
               <button
                 onClick={() => setBiometricUnlocked(false)}
-                title="قفل لوحة التحكم — تتطلب البصمة/الوجه لإعادة الفتح"
+                title={t("adminLockTitle")}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/10 px-3 py-1.5 text-xs font-bold text-gold-300 transition-colors hover:bg-gold-500/20"
               >
                 <Lock className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">قفل بالبصمة</span>
+                <span className="hidden sm:inline">{t("adminLock")}</span>
               </button>
             )}
             <Link
@@ -226,7 +233,7 @@ export function AdminPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600/60 px-3 py-1.5 text-xs font-bold text-ink-200 transition-colors hover:border-gold-500/50 hover:text-gold-300"
             >
               <Globe className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">الموقع العام</span>
+              <span className="hidden sm:inline">{t("adminPublicSite")}</span>
             </Link>
             <span className="hidden text-xs font-bold text-ink-300 md:block">{session.name}</span>
             <button
@@ -234,7 +241,7 @@ export function AdminPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20"
             >
               <LogOut className="h-3.5 w-3.5" />
-              خروج
+              {t("logout")}
             </button>
           </div>
         </div>
@@ -248,7 +255,7 @@ export function AdminPage() {
             "hidden lg:block"
           )}
         >
-          <AdminSidebar tab={tab} setTab={goToTab} />
+          <AdminSidebar tabs={TABS} tab={tab} setTab={goToTab} />
         </aside>
 
         {menuOpen && (
@@ -258,7 +265,7 @@ export function AdminPage() {
               className="absolute right-0 top-0 h-full w-72 overflow-y-auto border-l border-ink-700/60 bg-ink-950 p-3"
               onClick={(e) => e.stopPropagation()}
             >
-              <AdminSidebar tab={tab} setTab={goToTab} />
+              <AdminSidebar tabs={TABS} tab={tab} setTab={goToTab} />
             </aside>
           </div>
         )}
@@ -270,11 +277,11 @@ export function AdminPage() {
             <button
               onClick={goBack}
               disabled={historyRef.current.length === 0}
-              title="العودة إلى القسم السابق"
+              title={t("adminBackTitle")}
               className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600/60 px-3 py-1.5 text-xs font-bold text-ink-200 transition-colors hover:border-gold-500/50 hover:text-gold-300 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Undo2 className="h-3.5 w-3.5" />
-              رجوع
+              {t("adminBack")}
             </button>
             <div className="hidden items-center gap-1 overflow-x-auto rounded-lg border border-ink-600/60 px-2 py-1.5 md:flex">
               <ArrowDownToLine className="h-3.5 w-3.5 shrink-0 text-ink-400" />
@@ -282,7 +289,7 @@ export function AdminPage() {
                 value={tab}
                 onChange={(e) => goToTab(e.target.value as AdminTab)}
                 className="bg-transparent text-xs font-bold text-ink-200 outline-none"
-                aria-label="الانتقال السريع بين الأقسام"
+                aria-label={t("adminSectionNav")}
               >
                 {TABS.map((t) => (
                   <option key={t.key} value={t.key} className="bg-ink-950">
@@ -341,10 +348,11 @@ export function AdminPage() {
   );
 }
 
-function AdminSidebar({ tab, setTab }: { tab: AdminTab; setTab: (t: AdminTab) => void }) {
+function AdminSidebar({ tabs, tab, setTab }: { tabs: { key: AdminTab; label: string; icon: any; category?: string }[]; tab: AdminTab; setTab: (t: AdminTab) => void }) {
+  const { t: tFn } = useLang();
   return (
     <nav className="space-y-1">
-      {TABS.map((t) => (
+      {tabs.map((t) => (
         <button
           key={t.key}
           onClick={() => setTab(t.key)}
@@ -365,7 +373,7 @@ function AdminSidebar({ tab, setTab }: { tab: AdminTab; setTab: (t: AdminTab) =>
           className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-right text-[13px] font-bold text-ink-200 transition-colors hover:bg-ink-800/70 hover:text-gold-300"
         >
           <Globe className="h-5 w-5 shrink-0 text-ink-400" />
-          العودة إلى الموقع العام
+          {tFn("adminBackToSite")}
         </Link>
       </div>
     </nav>

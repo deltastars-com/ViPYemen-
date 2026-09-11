@@ -93,17 +93,6 @@ export function Landing() {
                 {t("ctaMarket")}
               </Link>
             </div>
-            <div className="mx-auto mt-12 flex max-w-4xl items-end justify-center gap-4">
-              <HeroIllustration
-                className="hidden h-40 w-auto shrink-0 opacity-95 sm:block lg:h-48"
-                variant="survey"
-              />
-              <HeroIllustration className="h-44 w-auto lg:h-56" variant="store" />
-              <HeroIllustration
-                className="hidden h-40 w-auto shrink-0 opacity-95 sm:block lg:h-48"
-                variant="search"
-              />
-            </div>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] font-black text-gold-300/90">
               <VerifiedSeal className="h-5 w-5" />
               {t("verified")}
@@ -117,10 +106,10 @@ export function Landing() {
             className="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4"
           >
             {[
-              { icon: Users, label: "طلب مُسجّل", value: stats ? Object.values(stats.counts).reduce((a, b) => a + b, 0) : "—" },
-              { icon: ShieldCheck, label: "طلبات مراجعة وتدقيق", value: "100%" },
-              { icon: Home, label: "عقار مُسوَّق", value: stats?.counts.real_estate ?? "—" },
-              { icon: BadgeCheck, label: "تواصل موثوق", value: "واتساب" },
+              { icon: Users, label: t("statRegistered"), value: stats ? Object.values(stats.counts).reduce((a, b) => a + b, 0) : "—" },
+              { icon: ShieldCheck, label: t("statReviewed"), value: "100%" },
+              { icon: Home, label: t("statProperty"), value: stats?.counts.real_estate ?? "—" },
+              { icon: BadgeCheck, label: t("statTrusted"), value: t("statWhatsapp") },
             ].map((s) => (
               <div key={s.label} className="card-surface p-4">
                 <s.icon className="mx-auto mb-2 h-5 w-5 text-gold-400" />
@@ -264,16 +253,10 @@ export function Landing() {
           <div>
             <SectionHeading icon={ShieldCheck} title={t("whyTitle")} className="mb-6" />
             <ul className="mt-6 space-y-4">
-              {[
-                "مراجعة إدارية وتدقيق لكل طلب قبل النشر — ضمان الحقوق للجميع",
-                "التحقق من أرقام الهواتف وربطها بواتساب المنصة الرسمي",
-                "نشر تلقائي على واجهة المنصة وقنوات التواصل الاجتماعي",
-                "سرية تامة للبيانات الخاصة — لا تظهر إلا بعد الاعتماد",
-                "دعم كامل: توظيف، عقارات، تسويق إلكتروني، برمجيات",
-              ].map((t) => (
-                <li key={t} className="flex items-start gap-3 text-sm font-semibold text-ink-200">
+              {[t("whyReason1"), t("whyReason2"), t("whyReason3"), t("whyReason4"), t("whyReason5")].map((item) => (
+                <li key={item} className="flex items-start gap-3 text-sm font-semibold text-ink-200">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" />
-                  {t}
+                  {item}
                 </li>
               ))}
             </ul>
@@ -285,13 +268,13 @@ export function Landing() {
                   <MessageCircle className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-cream">تواصل مباشر عبر واتساب</p>
+                  <p className="text-sm font-black text-cream">{t("whatsappDirect")}</p>
                   <p className="text-xs text-ink-300" dir="ltr">{PLATFORM_WHATSAPP_DISPLAY}</p>
                 </div>
               </div>
               <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn-gold mt-4 w-full !py-2.5 text-xs">
                 <MessageCircle className="h-4 w-4" />
-                راسلنا الآن
+                {t("waSendMessage")}
               </a>
             </div>
             <div className="card-surface p-5">
@@ -300,12 +283,12 @@ export function Landing() {
                   <Lock className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-cream">لوحة تحكم مؤمنة</p>
-                  <p className="text-xs text-ink-300">لإدارة المنصة فقط — بمراجعة ونشر آمن</p>
+                  <p className="text-sm font-black text-cream">{t("adminSecure")}</p>
+                  <p className="text-xs text-ink-300">{t("adminSecureDesc")}</p>
                 </div>
               </div>
               <Link to="/admin" className="btn-ghost mt-4 w-full !py-2.5 text-xs">
-                دخول لوحة التحكم
+                {t("adminEnter")}
               </Link>
             </div>
           </div>

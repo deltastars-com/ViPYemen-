@@ -24,53 +24,30 @@ import { OfferCard, type PublicOffer } from "@/components/OfferCard";
 import { useLang } from "@/lib/i18n";
 import { PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
 
-/** Turn raw engine errors into short, human-friendly Arabic messages. */
-function friendlyAiError(raw: string): string {
+/** Turn raw engine errors into short, human-friendly messages. */
+function friendlyAiError(raw: string, t: (k: string) => string): string {
   const m = (raw || "").toLowerCase();
-  if (/vite_gemini_key|مفتاح/.test(m)) {
-    return "لم يتم تفعيل مفتاح محرك الذكاء الاصطناعي بعد — أضِفه من إعدادات المنصة ثم أعد المحاولة.";
-  }
-  if (/404|لم يعد متاحاً|no longer available/.test(m)) {
-    return "محرك الذكاء يحدّث نماذجه تلقائياً — أعد المحاولة الآن وسيعمل فوراً.";
-  }
-  if (/401|403|api key|خطأ من الخادم|permission/i.test(m)) {
-    return "تعذّر الاتصال بخدمة الذكاء الاصطناعي (راجع مفتاح Gemini) — استخدم البحث الموسوعي بالأسفل.";
-  }
-  if (/فشل الاتصال|failed to fetch|networkerror|internet|offline/.test(m)) {
-    return "لا يوجد اتصال بالإنترنت حالياً — استخدم البحث الموسوعي بالأسفل.";
-  }
-  return "تعذّر الحصول على إجابة ذكية حالياً — أعد المحاولة أو استخدم البحث الموسوعي بالأسفل.";
+  if (/vite_gemini_key|مفتاح/.test(m)) return t("aiErrorKey");
+  if (/404|لم يعد متاحاً|no longer available/.test(m)) return t("aiError404");
+  if (/401|403|api key|خطأ من الخادم|permission/i.test(m)) return t("aiErrorAuth");
+  if (/فشل الاتصال|failed to fetch|networkerror|internet|offline/.test(m)) return t("aiErrorOffline");
+  return t("aiErrorDefault");
 }
 
-const FAQS = [
-  {
-    q: "كيف أنشر إعلاني في المنصة؟",
-    a: "سجّل بياناتك في القسم المناسب (توظيف / عقارات / تسويق إلكتروني / برمجيات)، ثم تُراجع بياناتك من إدارة المنصة في لوحة التحكم، وبعد التدقيق والتعديل يُنشر إعلانك تلقائياً على واجهة المنصة وقنوات التواصل.",
-  },
-  {
-    q: "هل بياناتي تظهر للجميع فور التسجيل؟",
-    a: "لا — بياناتك تصل أولاً إلى لوحة التحكم بشكل خاص ومستقل وسري للمراجعة والتدقيق، ولا تظهر على الواجهة إلا بعد الاعتماد والنشر من الإدارة.",
-  },
-  {
-    q: "كيف أتواصل مع إدارة المنصة؟",
-    a: "عبر واتساب 00967711780999 أو البريد vipservicesyemen@gmail.com — وتتواصل معك الإدارة مباشرة عند الحاجة لضمان الجودة.",
-  },
-  {
-    q: "هل التحقق من رقم الهاتف إلزامي؟",
-    a: "نعم — في قسم التسويق الإلكتروني يتأكد النظام من صحة الرقم عبر رمز تحقق يُرسل عبر واتساب المنصة، ويُوثَّق الرقم في بياناتك.",
-  },
-  {
-    q: "كيف أعرف أن المنتج تم بيعه؟",
-    a: "أي منتج يُباع تضع عليه الإدارة إشارة «تم البيع» من داخل لوحة التحكم وتظهر فوراً على الإعلان في الواجهة.",
-  },
-  {
-    q: "هل يمكن تثبيت المنصة كتطبيق؟",
-    a: "نعم — المنصة تطبيق ويب تقدمي (PWA) يمكن تثبيته على هاتفك ويعمل حتى بدون إنترنت. لإصدارات Android وiOS تواصل مع إدارة المنصة عبر واتساب 00967711780999 لتزويدك بالنسخة المعتمدة.",
-  },
-];
+function useFaqs(t: (k: string) => string) {
+  return [
+    { q: t("faq1Q"), a: t("faq1A") },
+    { q: t("faq2Q"), a: t("faq2A") },
+    { q: t("faq3Q"), a: t("faq3A") },
+    { q: t("faq4Q"), a: t("faq4A") },
+    { q: t("faq5Q"), a: t("faq5A") },
+    { q: t("faq6Q"), a: t("faq6A") },
+  ];
+}
 
 export function AssistantPage() {
   const { t } = useLang();
+  const FAQS = useFaqs(t);
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [wikiResults, setWikiResults] = useState<{ title: string; snippet: string; url: string }[] | null>(null);
@@ -173,7 +150,7 @@ export function AssistantPage() {
         setAiProvider(result.provider);
       }
     } catch (err) {
-      setAiError(err instanceof Error ? err.message : "حدث خطأ غير متوقع");
+      setAiError(err instanceof Error ? err.message : t("aiErrorUnexpected"));
     } finally {
       setAiLoading(false);
     }
@@ -200,10 +177,7 @@ export function AssistantPage() {
             </h1>
             <div className="section-title-underline section-title-underline-center" />
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-ink-300">
-              ابحث في كل ما يخص المنصة: المنشورات، العروض، الإعلانات، والأسئلة
-              الشائعة — بإجابات ذكية من محرك المعرفة الاحترافي
-              <b className="mx-1 text-gold-300">Gemini AI</b>
-              بأحدث النماذج مع تحويل تلقائي عند تحديثها، وأي معلومة عامة عبر البحث الموسوعي.
+              {t("aiSearchDesc")} <b className="mx-1 text-gold-300">Gemini AI</b> {t("aiEngineLabel")}
             </p>
             <form
               onSubmit={(e) => {
@@ -258,10 +232,10 @@ export function AssistantPage() {
             <div>
               <h2 className="mb-4 flex items-center gap-2 text-lg font-extrabold text-cream">
                 <Megaphone className="h-5 w-5 text-gold-400" />
-                نتائج في المنصة ({listingResults.length + offerResults.length + adMatches.length})
+                {t("platformResults")} ({listingResults.length + offerResults.length + adMatches.length})
               </h2>
               {listingResults.length === 0 && offerResults.length === 0 && adMatches.length === 0 ? (
-                <EmptyState title="لا توجد نتائج مطابقة في المنصة" hint="جرّب كلمات أخرى أو ابحث في الموسوعة العامة أدناه" />
+                <EmptyState title={t("noPlatformResults")} hint={t("noPlatformResultsHint")} />
               ) : (
                 <>
                   {listingResults.length > 0 && (
@@ -299,22 +273,22 @@ export function AssistantPage() {
               {aiLoading && (
                 <div className="flex justify-center py-6 text-gold-400">
                   <Loader2 className="h-7 w-7 animate-spin" />
-                  <span className="ml-3 text-sm">جارٍ البحث في المعرفة الذكية...</span>
+                  <span className="ml-3 text-sm">{t("aiSearching")}</span>
                 </div>
               )}
               {aiError && (
                 <div className="card-surface rounded-xl border border-rose-500/30 p-4">
                   <p className="flex items-center gap-2 text-sm font-bold text-rose-300">
                     <Megaphone className="h-4 w-4 shrink-0" />
-                    {friendlyAiError(aiError)}
+                    {friendlyAiError(aiError, t)}
                   </p>
-                  <p className="mt-2 text-xs text-ink-300">يمكنك استخدام البحث الموسوعي العام أدناه كبديل.</p>
+                  <p className="mt-2 text-xs text-ink-300">{t("aiUseEncyclopedia")}</p>
                   <button
                     onClick={() => runAiAnswer()}
                     disabled={aiLoading}
                     className="btn-gold mt-3 !px-4 !py-2 text-xs"
                   >
-                    إعادة المحاولة
+                    {t("aiRetry")}
                   </button>
                 </div>
               )}
@@ -323,11 +297,11 @@ export function AssistantPage() {
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <h3 className="flex items-center gap-2 text-sm font-extrabold text-gold-300">
                       <Crown className="h-4 w-4" />
-                      إجابة المساعد الذكي
+                      {t("aiAnswerLabel")}
                     </h3>
                     {aiProvider && (
                       <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-black text-violet-300">
-                        المحرك: Gemini AI
+                        {t("aiEngine")} Gemini AI
                       </span>
                     )}
                   </div>
@@ -337,7 +311,7 @@ export function AssistantPage() {
 
               <h2 className="mb-4 flex items-center gap-2 text-lg font-extrabold text-cream">
                 <Globe className="h-5 w-5 text-gold-400" />
-                البحث الموسوعي العام (Wikipedia)
+                {t("encyclopediaSearch")}
               </h2>
               {wikiSearched ? (
                 wikiLoading ? (
@@ -360,11 +334,11 @@ export function AssistantPage() {
                     ))}
                   </div>
                 ) : (
-                  <EmptyState title="لا توجد نتائج في الموسوعة العامة" />
+                  <EmptyState title={t("encyclopediaEmpty")} />
                 )
               ) : (
                 <p className="text-sm text-ink-300">
-                  اضغط زر «بحث» أعلاه ليبحث المساعد في الموسوعة العامة أيضاً.
+                  {t("encyclopediaHint")}
                 </p>
               )}
             </div>
@@ -380,12 +354,11 @@ export function AssistantPage() {
             ))}
           </div>
           <p className="max-w-md text-sm leading-relaxed text-ink-300">
-            لم تجد ما تبحث عنه؟ تواصل مع فريق المنصة مباشرة — يسعدنا مساعدتك
-            في أي استفسار.
+            {t("notFoundSearch")}
           </p>
           <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn-gold">
             <MessageCircle className="h-4 w-4" />
-            تواصل معنا عبر واتساب
+            {t("contactViaWa")}
           </a>
         </div>
       </section>

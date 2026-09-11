@@ -18,13 +18,13 @@ import { PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
 import { TelegramIcon, WhatsAppIcon } from "./ChannelIcons";
 
 const SOCIALS = [
-  { icon: WhatsAppIcon, href: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x", label: "قناة واتساب" },
-  { icon: TelegramIcon, href: "https://t.me/VIPservices2", label: "قناة تيليجرام" },
-  { icon: Facebook, href: "https://www.facebook.com/ViPservicesYemen/", label: "فيسبوك" },
-  { icon: Instagram, href: "https://www.instagram.com/vipservicesyemen", label: "إنستغرام" },
-  { icon: Twitter, href: "https://twitter.com/ViPservicesYeme", label: "تويتر / X" },
-  { icon: Youtube, href: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw", label: "يوتيوب" },
-  { icon: Linkedin, href: "https://www.linkedin.com/in/ali-aldahan-57b5a2231", label: "لينكدإن" },
+  { icon: WhatsAppIcon, href: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x", labelAr: "قناة واتساب", labelEn: "WhatsApp Channel" },
+  { icon: TelegramIcon, href: "https://t.me/VIPservices2", labelAr: "قناة تيليجرام", labelEn: "Telegram Channel" },
+  { icon: Facebook, href: "https://www.facebook.com/ViPservicesYemen/", labelAr: "فيسبوك", labelEn: "Facebook" },
+  { icon: Instagram, href: "https://www.instagram.com/vipservicesyemen", labelAr: "إنستغرام", labelEn: "Instagram" },
+  { icon: Twitter, href: "https://twitter.com/ViPservicesYeme", labelAr: "تويتر / X", labelEn: "Twitter / X" },
+  { icon: Youtube, href: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw", labelAr: "يوتيوب", labelEn: "YouTube" },
+  { icon: Linkedin, href: "https://www.linkedin.com/in/ali-aldahan-57b5a2231", labelAr: "لينكدإن", labelEn: "LinkedIn" },
 ];
 
 const LINKTREES = [
@@ -36,26 +36,35 @@ const LINKTREES = [
 
 const TIKTOK_URL = "https://www.tiktok.com/@vipservicesyemen1";
 
+const SECTION_LINKS = [
+  { to: "/jobs", ar: "قسم التوظيف", en: "Jobs Section" },
+  { to: "/real-estate", ar: "قسم التسويق العقاري", en: "Real Estate Section" },
+  { to: "/emarket", ar: "قسم التسويق الإلكتروني", en: "E-Marketing Section" },
+  { to: "/software", ar: "قسم البرمجيات وتطوير التطبيقات", en: "Software & Development" },
+  { to: "/offers", ar: "قسم العروض الترويجية", en: "Promotional Offers" },
+  { to: "/channels", ar: "قنواتنا الرقمية", en: "Our Digital Channels" },
+  { to: "/assistant", ar: "المساعد — البحث الشامل", en: "Assistant — Smart Search" },
+];
+
 export function Footer() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   return (
     <footer className="mt-20 border-t border-ink-700/50 bg-ink-950">
       <div className="container-app grid gap-10 py-14 md:grid-cols-3">
         <div>
           <Logo />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-300">
-            منصة يمنية شاملة للتوظيف والتسويق العقاري والتسويق الإلكتروني والخدمات
-            البرمجية — بجودة عالية وتواصل مباشر وموثوق.
+            {t("footerDesc")}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {SOCIALS.map((s) => (
               <a
-                key={s.label}
+                key={lang === "ar" ? s.labelAr : s.labelEn}
                 href={s.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={s.label}
-                title={s.label}
+                aria-label={lang === "ar" ? s.labelAr : s.labelEn}
+                title={lang === "ar" ? s.labelAr : s.labelEn}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
               >
                 <s.icon className="h-4 w-4" />
@@ -65,8 +74,8 @@ export function Footer() {
               href={TIKTOK_URL}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="تيك توك"
-              title="تيك توك"
+              aria-label="TikTok"
+              title="TikTok"
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
@@ -92,13 +101,13 @@ export function Footer() {
         <div>
           <h4 className="mb-4 text-sm font-black text-gold-300">{t("footerSections")}</h4>
           <ul className="space-y-2.5 text-sm font-semibold text-ink-300">
-            <li><Link className="transition-colors hover:text-gold-300" to="/jobs">قسم التوظيف</Link></li>
-            <li><Link className="transition-colors hover:text-gold-300" to="/real-estate">قسم التسويق العقاري</Link></li>
-            <li><Link className="transition-colors hover:text-gold-300" to="/emarket">قسم التسويق الإلكتروني</Link></li>
-            <li><Link className="transition-colors hover:text-gold-300" to="/software">قسم البرمجيات وتطوير التطبيقات</Link></li>
-            <li><Link className="transition-colors hover:text-gold-300" to="/offers">قسم العروض الترويجية</Link></li>
-            <li><Link className="transition-colors hover:text-gold-300" to="/channels">قنواتنا الرقمية</Link></li>
-            <li><Link className="transition-colors hover:text-gold-300" to="/assistant">المساعد — البحث الشامل</Link></li>
+            {SECTION_LINKS.map((l) => (
+              <li key={l.to}>
+                <Link className="transition-colors hover:text-gold-300" to={l.to}>
+                  {lang === "ar" ? l.ar : l.en}
+                </Link>
+              </li>
+            ))}
             <li>
               <a
                 className="transition-colors hover:text-gold-300"
@@ -106,7 +115,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                الحصول على نسخة التطبيق
+                {t("footerGetApp")}
               </a>
             </li>
           </ul>
@@ -133,15 +142,16 @@ export function Footer() {
             </li>
             <li className="flex items-center gap-2.5">
               <MapPin className="h-4 w-4 shrink-0 text-gold-400" />
-              اليمن · صنعاء · حي شميلة
+              {t("footerSanaa")}
             </li>
           </ul>
           <a href={PLATFORM_WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn-gold mt-5 !py-2.5 text-xs">
             <MessageCircle className="h-4 w-4" />
-            تواصل عبر واتساب
+            {t("footerContactWa")}
           </a>
           <div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold text-ink-400">
-            <Link className="transition-colors hover:text-gold-300" to="/privacy-policy">سياسة الخصوصية</Link>
+            <Link className="transition-colors hover:text-gold-300" to="/privacy-policy">{t("footerPrivacy")}</Link>
+            <Link className="transition-colors hover:text-gold-300" to="/terms">{t("footerTerms")}</Link>
           </div>
         </div>
       </div>
@@ -149,7 +159,7 @@ export function Footer() {
       <div className="border-t border-ink-700/50 py-4">
         <div className="container-app flex flex-col items-center justify-between gap-4 text-xs text-ink-400 lg:flex-row">
           <p className="text-center lg:text-left">
-            © 2026 ViP Yemen — جميع الحقوق محفوظة. المهندس علي درهم الدحان
+            © 2026 ViP Yemen — {t("footerAllRights")} · {lang === "ar" ? "المهندس علي درهم الدحان" : "Eng. Ali Al-Dahan"}
           </p>
 
           {/* Quick direct contact — call + WhatsApp */}
@@ -157,35 +167,35 @@ export function Footer() {
             <a
               href="tel:+967773597404"
               dir="ltr"
-              aria-label="اتصال مباشر: 967773597404"
-              title="اتصال مباشر"
+              aria-label="Direct call: 967773597404"
+              title={t("footerDirectCall")}
               className="flex items-center gap-2 rounded-full border border-ink-600/60 bg-ink-900/60 px-3.5 py-2 font-bold text-ink-100 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
             >
               <Phone className="h-3.5 w-3.5 text-gold-400" />
-              <span>اتصال: +967 773 597 404</span>
+              <span>{lang === "ar" ? "اتصال:" : "Call:"} +967 773 597 404</span>
             </a>
             <a
               href="https://wa.me/967711780999?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D8%AA%D9%88%D8%A7%D8%B5%D9%84%20%D9%85%D8%B9%20%D9%85%D9%86%D8%B5%D8%A9%20ViP%20Yemen"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="واتساب: 967711780999"
-              title="تواصل عبر واتساب"
+              aria-label="WhatsApp: 967711780999"
+              title={t("footerContactWa")}
               className="flex items-center gap-2 rounded-full border border-[#25d366]/40 bg-[#25d366]/10 px-3.5 py-2 font-bold text-ink-100 transition-all hover:-translate-y-0.5 hover:border-[#25d366]/80 hover:text-[#4ade80]"
             >
               <WhatsAppIcon className="h-3.5 w-3.5 text-[#4ade80]" />
-              <span dir="ltr">واتساب: +967 711 780 999</span>
+              <span dir="ltr">{lang === "ar" ? "واتساب:" : "WhatsApp:"} +967 711 780 999</span>
             </a>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5">
               <LogoMark className="h-5 w-5" />
-              تطبيق ويب تقدمي — يعمل بدون إنترنت
+              {t("footerPwaDesc")}
             </span>
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-300"
-              aria-label="العودة للأعلى"
+              aria-label={t("footerBackToTop")}
             >
               <ArrowUp className="h-4 w-4" />
             </button>

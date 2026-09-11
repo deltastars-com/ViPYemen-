@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useLang } from "@/lib/i18n";
 
 // Official ViP Yemen seal — permanent, matches the generated app icons:
 // scalloped gold edge, polished disc, engraved seed-of-life pattern,
@@ -42,7 +43,6 @@ export function LogoMark({ className }: { className?: string }) {
           <stop offset="100%" stopColor="#8a6622" />
         </linearGradient>
       </defs>
-      <rect width="512" height="512" fill="#050505" />
       <path d={scallopPath()} fill="url(#medalGold)" />
       <circle cx={CX} cy={CY} r="214" fill="none" stroke="#684a12" strokeWidth="2.4" />
       <circle cx={CX} cy={CY} r="202" fill="none" stroke="#7c5c1a" strokeWidth="2" />
@@ -70,6 +70,10 @@ export function Logo({
   className?: string;
   compact?: boolean;
 }) {
+  const { lang } = useLang();
+  const subtitle = lang === "ar"
+    ? "توظيف · عقارات · تسويق · برمجيات"
+    : "Jobs · Real Estate · Marketing · Software";
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
       <LogoMark className="h-9 w-9 shrink-0" />
@@ -79,7 +83,7 @@ export function Logo({
             ViP <span className="gold-text">Yemen</span>
           </span>
           <span className="block text-[10px] font-semibold text-gold-400/80">
-            توظيف · عقارات · تسويق · برمجيات
+            {subtitle}
           </span>
         </span>
       )}

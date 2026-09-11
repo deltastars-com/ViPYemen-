@@ -55,11 +55,11 @@ export function Navbar() {
       )}
     >
       <div className="container-app flex h-16 items-center justify-between gap-4">
-        <Link to="/" aria-label="ViP Yemen الرئيسية">
+        <Link to="/" aria-label="ViP Yemen">
           <Logo />
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="أقسام المنصة">
+        <nav className="hidden items-center gap-1 lg:flex" aria-label={t("navAriaLabel")}>
           {LINKS.map((l) => (
             <NavLink
               key={l.to}
@@ -90,7 +90,7 @@ export function Navbar() {
           {signedIn && (
             <button
               onClick={handleLogout}
-              title="إنهاء الجلسة وتسجيل الخروج"
+              title={t("logout")}
               className="hidden items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20 md:inline-flex"
             >
               <LogOut className="h-3.5 w-3.5" />
@@ -100,7 +100,7 @@ export function Navbar() {
           <button
             className="rounded-lg border border-ink-600/70 p-2 text-cream lg:hidden"
             onClick={() => setOpen((o) => !o)}
-            aria-label={open ? "إغلاق القائمة" : "فتح القائمة"}
+            aria-label={open ? t("menuClose") : t("menuOpen")}
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -108,8 +108,7 @@ export function Navbar() {
       </div>
 
       {open && (
-        <div className="border-t border-ink-700/50 bg-ink-950/98 lg:hidden">
-          <nav className="container-app flex flex-col gap-1 py-3" aria-label="قائمة الجوال">
+        <div className="border-t border-ink-700/50 bg-ink-950/98 lg:hidden">            <nav className="container-app flex flex-col gap-1 py-3" aria-label={t("navMobileAria")}>
             {LINKS.map((l) => (
               <NavLink
                 key={l.to}

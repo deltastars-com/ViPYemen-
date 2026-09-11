@@ -13,9 +13,9 @@ export function TickerBar() {
   const items = ads && ads.length > 0
     ? ads.map((a) => `${a.title} — ${a.message}`)
     : [
-        "ViP Yemen — منصة التوظيف والتسويق العقاري والإلكتروني والخدمات البرمجية",
-        "للإعلان والتواصل: واتساب 00967711780999",
-        "عروض وخدمات بجودة عالية وبأسعار منافسة",
+        t("tickerLine1"),
+        t("tickerLine2"),
+        t("tickerLine3"),
       ];
 
   const strip = [...items, ...items, ...items, ...items];

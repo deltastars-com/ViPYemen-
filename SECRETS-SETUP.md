@@ -2,7 +2,7 @@
 # Copy-Paste Ready: Signing, Secrets & Integration Credentials
 
 **الحزمة / Package:** `com.vip.yemen`
-**الإصدار الحالي:** 6.7.0 · **versionCode:** 6070000
+**الإصدار الحالي:** 6.7.1 · **versionCode:** 6070001
 **آخر تحديث:** سبتمبر 2026
 
 > ⚠️ **هذا الملف يحتوي بيانات حساسة.** لا تنشره علناً ولا ترسله لأي طرف غير موثوق.
@@ -150,8 +150,8 @@ BFsbKHaJz8AJc8wxCdC0OMo4dHRIjNJzbg-IA2WlPijvoHhp2VEEaQmkr86fzv1qGWXuHvEZLiRoEI4h
 openssl pkcs12 -in android/keystore/vipyemen-release.p12 -passin pass:ViPYemen2026@Sign -nokeys -clcerts | openssl x509 -noout -fingerprint -sha1 -fingerprint -sha256
 
 # من APK جاهز
-keytool -printcert -jarfile vip-yemen-android-v6.7.0.apk
-apksigner verify --print-certs vip-yemen-android-v6.7.0.apk
+keytool -printcert -jarfile vip-yemen-android-v6.7.1.apk
+apksigner verify --print-certs vip-yemen-android-v6.7.1.apk
 ```
 
 النتيجة المتوقعة:

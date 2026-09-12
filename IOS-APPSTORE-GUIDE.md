@@ -1,6 +1,6 @@
 # ViP Yemen — دليل بناء ونشر تطبيق iOS | iOS Build & App Store Guide
 
-> الإصدار | Version: **6.7.5** · Bundle ID: `com.vip.yemen` · Xcode 16+ · iOS 15+
+> الإصدار | Version: **6.7.6** · Bundle ID: `com.vip.yemen` · Xcode 16+ · iOS 15+
 
 هذا الدليل يشرح كل ملفات iOS المطلوبة ومكانها، وكيفية رفع التطبيق إلى App Store Connect خطوة بخطوة.
 This guide documents every iOS file in the project and the exact steps to publish to the App Store.
@@ -34,8 +34,8 @@ This guide documents every iOS file in the project and the exact steps to publis
 
 | الملف | الوصف |
 |---|---|
-| `vip-yemen-ios-vX.Y.Z.ipa` | حزمة `Payload/App.app` — تُثبَّت جانبياً للتجربة (Xcode / Apple Configurator)، وتُعاد توقيعها قبل الرفع للمتجر |
-| `vip-yemen-ios-metadata-vX.Y.Z.zip` | `ExportOptions.plist` + `PrivacyInfo.xcprivacy` + `Info.plist` + أيقونة 1024 + سياسة الخصوصية + بيانات القائمة |
+| `vip-yemen-ios-v6.7.6.ipa` | حزمة `Payload/App.app` — تُثبَّت جانبياً للتجربة (Xcode / Apple Configurator)، وتُعاد توقيعها قبل الرفع للمتجر |
+| `vip-yemen-ios-metadata-v6.7.6.zip` | `ExportOptions.plist` + `PrivacyInfo.xcprivacy` + `Info.plist` + أيقونة 1024 + سياسة الخصوصية + بيانات القائمة |
 | `build.log` | سجل البناء الكامل للتشخيص |
 
 > **لماذا IPA غير موقّعة؟** لا توجد شهادات Apple في المستودع (ولا يجوز). التطبيق يُبنى بنجاح على كل إصدار لإثبات سلامة المشروع، ثم توقيعه استغلالياً يستغرق دقيقة واحدة (الخطوة 4).
@@ -56,7 +56,7 @@ This guide documents every iOS file in the project and the exact steps to publis
 
 ```bash
 # أ) حمّل IPA من صفحة الإصدار وفكّها
-unzip vip-yemen-ios-v6.7.5.ipa -d work && cd work
+unzip vip-yemen-ios-v6.7.6.ipa -d work && cd work
 
 # ب) افتح المشروع وحدّث Team
 open ios/App/App.xcodeproj   # من الكود المصدري

@@ -102,6 +102,7 @@ jobs:
       - name: Build PWA
         run: bun run build
         env:
+          VITE_APP_VERSION: ${{ github.ref_name }}
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -222,6 +223,7 @@ jobs:
       - name: Build web
         run: bun run build
         env:
+          VITE_APP_VERSION: ${{ github.ref_name }}
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -378,6 +380,7 @@ jobs:
       - name: Build web
         run: bun run build
         env:
+          VITE_APP_VERSION: ${{ github.ref_name }}
           # Same built-in live production URL as the other jobs — the iOS app
           # must connect to the real backend even when repo variables are absent.
           VITE_CONVEX_URL: https://notable-shepherd-367.convex.cloud

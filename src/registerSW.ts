@@ -10,7 +10,10 @@
 //   and old caches are purged on activate.
 // - Backend data (Convex) is network-only: when offline, published pages
 //   simply show cached shell + content that was already rendered.
-const CACHE_VERSION = "vip-yemen-v6.5.0";
+// Cache hygiene: vite-plugin-pwa's cleanupOutdatedCaches removes precache
+// caches whose cacheId no longer matches the current versioned build
+// (vip-yemen-<version>-…, set in vite.config.ts), so no manual version
+// tracking is needed here anymore.
 
 export async function registerServiceWorker(): Promise<void> {
   if (!("serviceWorker" in navigator)) return;
@@ -48,13 +51,7 @@ export async function registerServiceWorker(): Promise<void> {
     // PWA is an enhancement — never block boot
   }
 
-  // Purge caches from older app versions (different names)
-  try {
-    const keys = await caches.keys();
-    await Promise.all(
-      keys.filter((k) => k.startsWith("vip-yemen-") && k !== CACHE_VERSION).map((k) => caches.delete(k))
-    );
-  } catch {
-    // best-effort
-  }
+  // Old-version cache purge is handled inside the service worker itself
+  // (workbox cleanupOutdatedCaches on activate — see vite.config.ts), so no
+  // client-side cache bookkeeping is needed here.
 }

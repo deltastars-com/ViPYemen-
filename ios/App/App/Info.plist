@@ -3,11 +3,19 @@
 <plist version="1.0">
 <dict>
   <key>CAPACITOR_DEBUG</key>
-	<string>$(CAPACITOR_DEBUG)</string>
-	<key>CFBundleDevelopmentRegion</key>
+	<string>$(CAPACITOR_DEBUG)</string>  <key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleAllowMixedLocalizations</key>
+	<false/>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ar</string>
+		<string>en</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>ViP Yemen</string>
+	<key>GCSupportsRouterMenu</key>
+	<false/>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,6 +32,23 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>يُستخدم الكاميرا لإرفاق صور العقارات والمنتجات والمؤهلات في الطلبات — Camera is used to attach property, product and qualification photos to submissions.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يُستخدم معرض الصور لاختيار صور العقارات والمنتجات والمؤهلات ورفعها — Photo library access lets you pick property, product and qualification images to upload.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>يُستخدم لحفظ الصور إلى معرض الصور عند الحاجة — Saves images to your photo library when requested.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>يُستخدم Face ID لفتح لوحة تحكم الإدارة بشكل آمن — Face ID securely unlocks the admin dashboard.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>يُستخدم الميكروفون لتسجيل مقاطع فيديو قصيرة للعروض — The microphone records short offer videos.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -49,8 +74,10 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

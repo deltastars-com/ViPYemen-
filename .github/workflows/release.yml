@@ -330,3 +330,90 @@ jobs:
               release_id: rel.data.id,
               draft: false
             });
+
+  build-ios:
+    name: Build iOS app + App Store bundle
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Generate icons
+        run: bun run icons
+
+      - name: Build web
+        run: bun run build
+        env:
+          # Same built-in live production URL as the other jobs — the iOS app
+          # must connect to the real backend even when repo variables are absent.
+          VITE_CONVEX_URL: https://notable-shepherd-367.convex.cloud
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GEMINI_KEY: ${{ secrets.VITE_GEMINI_KEY }}
+
+      - name: Sync Capacitor iOS (web assets + plugins)
+        run: npx cap sync ios
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # Build the app UNIGNED on CI (no Apple certificates exist in the repo).
+      # An unsigned .app packages into a valid Payload IPA that:
+      #  - proves the native iOS project compiles end-to-end on every release,
+      #  - sideload-installs for testing via Xcode/Apple Configurator,
+      #  - re-signs in seconds with any Apple Developer account
+      #    (xcodebuild -exportArchive with ExportOptions.plist).
+      - name: Build iOS app (unsigned, arm64)
+        run: |
+          set -o pipefail
+          cd ios/App
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tee build.log | tail -20
+
+      - name: Package IPA + collect App Store files
+        run: |
+          set -e
+          mkdir -p release/ios/Payload release/ios/metadata
+          APP_PATH=$(find ios/App/build/Build/Products -type d -name 'App.app' | head -1)
+          if [[ -z "$APP_PATH" ]]; then
+            echo "::error::App.app was not produced by xcodebuild"; exit 1
+          fi
+          echo "Found app bundle: $APP_PATH"
+          cp -R "$APP_PATH" release/ios/Payload/
+          cd release/ios && zip -qry vip-yemen-ios-${{ github.ref_name }}.ipa Payload && cd ../..
+          # App Store upload bundle: metadata + privacy manifest + export options
+          cp ios/App/ExportOptions.plist release/ios/metadata/
+          cp ios/App/App/PrivacyInfo.xcprivacy release/ios/metadata/
+          cp ios/App/App/Info.plist release/ios/metadata/Info.plist
+          cp ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png release/ios/metadata/AppIcon-1024.png
+          cp PRIVACY-POLICY-APP.md release/ios/metadata/ || true
+          cp store-listing.json release/ios/metadata/ || true
+          cd release/ios && zip -qry vip-yemen-ios-metadata-${{ github.ref_name }}.zip metadata && cd ../..
+          # Keep the build log for troubleshooting
+          cp ios/App/build.log release/ios/ || true
+
+      - name: Upload iOS artifacts to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/ios/*.ipa
+            release/ios/*.zip
+            release/ios/build.log
+          append_body: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

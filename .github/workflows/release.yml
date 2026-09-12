@@ -312,6 +312,10 @@ jobs:
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/bundle/release/*.aab
           append_body: false
+          # Keep the release DRAFT here — a parallel iOS job may still be
+          # uploading its own assets. The final publish-release job flips
+          # the release to published only after every build job finishes.
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -423,5 +427,7 @@ jobs:
             release/ios/*.zip
             release/ios/build.log
           append_body: false
+          # Draft here too: publishing happens once, in publish-release.
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

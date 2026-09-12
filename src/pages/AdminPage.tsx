@@ -23,6 +23,7 @@ import {
   Globe,
   Lock,
   ArrowDownToLine,
+  KeyRound,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { getAdminToken, clearAdminToken, CONVEX_URL, CONVEX_DEPLOY_KEY } from "@/lib/convex";
@@ -41,6 +42,7 @@ import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { AdminReleases } from "@/components/admin/AdminReleases";
 import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminClients } from "@/components/admin/AdminClients";
+import { AdminSecureDocs } from "@/components/admin/AdminSecureDocs";
 
 export type AdminTab =
   | "overview"
@@ -55,12 +57,13 @@ export type AdminTab =
   | "notifications"
   | "clients"
   | "releases"
+  | "secureDocs"
   | "settings";
 
 function getTabs(lang: "ar" | "en") {
   const L = {
-    ar: { overview: "نظرة عامة", jobs: "طلبات التوظيف", real_estate: "طلبات العقارات", emarket: "طلبات التسويق الإلكتروني", software: "طلبات البرمجيات", archived: "الأرشيف", ads: "الإعلانات الترويجية", offers: "العروض", finance: "النظام المالي", notifications: "الإشعارات", clients: "بيانات العملاء", releases: "الإصدارات", settings: "الإعدادات" },
-    en: { overview: "Overview", jobs: "Job Requests", real_estate: "Real Estate", emarket: "E-Marketing", software: "Software", archived: "Archive", ads: "Promotional Ads", offers: "Offers", finance: "Finance", notifications: "Notifications", clients: "Clients", releases: "Releases", settings: "Settings" },
+    ar: { overview: "نظرة عامة", jobs: "طلبات التوظيف", real_estate: "طلبات العقارات", emarket: "طلبات التسويق الإلكتروني", software: "طلبات البرمجيات", archived: "الأرشيف", ads: "الإعلانات الترويجية", offers: "العروض", finance: "النظام المالي", notifications: "الإشعارات", clients: "بيانات العملاء", releases: "الإصدارات", secureDocs: "الخزنة — الوثائق والأسرار", settings: "الإعدادات" },
+    en: { overview: "Overview", jobs: "Job Requests", real_estate: "Real Estate", emarket: "E-Marketing", software: "Software", archived: "Archive", ads: "Promotional Ads", offers: "Offers", finance: "Finance", notifications: "Notifications", clients: "Clients", releases: "Releases", secureDocs: "Vault — Docs & Secrets", settings: "Settings" },
   };
   const t = L[lang];
   return [
@@ -76,6 +79,7 @@ function getTabs(lang: "ar" | "en") {
     { key: "notifications" as AdminTab, label: t.notifications, icon: Bell },
     { key: "clients" as AdminTab, label: t.clients, icon: Users2 },
     { key: "releases" as AdminTab, label: t.releases, icon: PackageOpen },
+    { key: "secureDocs" as AdminTab, label: t.secureDocs, icon: KeyRound },
     { key: "settings" as AdminTab, label: t.settings, icon: Settings },
   ];
 }
@@ -340,6 +344,7 @@ export function AdminPage() {
             {tab === "notifications" && <AdminNotifications token={token} />}
             {tab === "clients" && <AdminClients token={token} />}
             {tab === "releases" && <AdminReleases token={token} />}
+            {tab === "secureDocs" && <AdminSecureDocs token={token} />}
             {tab === "settings" && <AdminSettings token={token} />}
           </motion.div>
         </main>

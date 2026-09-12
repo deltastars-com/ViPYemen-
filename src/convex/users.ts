@@ -3,7 +3,6 @@ import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import {
   ADMIN_EMAIL,
-  DEFAULT_PASSWORD,
   createSession,
   hashPassword,
   newSalt,
@@ -31,12 +30,20 @@ export const seedAdmin = mutation({
       .withIndex("by_email", (q) => q.eq("email", ADMIN_EMAIL))
       .first();
     if (existing) return { ok: false, reason: "exists" };
+    const initialPassword = process.env.ADMIN_INITIAL_PASSWORD;
+    if (!initialPassword) {
+      return {
+        ok: false,
+        reason:
+          "missing ADMIN_INITIAL_PASSWORD — set it with: bunx convex env set ADMIN_INITIAL_PASSWORD '...' (القيمة محفوظة في الخزنة داخل لوحة التحكم)",
+      };
+    }
     const salt = newSalt();
     await ctx.db.insert("users", {
       email: ADMIN_EMAIL,
       name: "إدارة منصة ViP Yemen",
       passwordSalt: salt,
-      passwordHash: await hashPassword(DEFAULT_PASSWORD, salt),
+      passwordHash: await hashPassword(initialPassword, salt),
       role: "admin",
       mustChangePassword: true,
       createdAt: Date.now(),

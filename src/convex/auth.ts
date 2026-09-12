@@ -2,7 +2,10 @@ import { ConvexError } from "convex/values";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 
 export const ADMIN_EMAIL = "vipservicesyemen@gmail.com";
-export const DEFAULT_PASSWORD = "Ali711780999*$#@";
+// كلمة مرور التهيئة الأولى لا تُخزَّن في الكود — تُضبط كمتغير بيئة في Convex:
+//   bunx convex env set ADMIN_INITIAL_PASSWORD '...'
+// أو تُدار من «الخزنة» داخل لوحة التحكم. التهيئة تفشل بوضوح إن لم تُضبط.
+const BOOTSTRAP_PASSWORD_ENV = "ADMIN_INITIAL_PASSWORD";
 const PBKDF2_ITERATIONS = 120_000;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 

@@ -237,7 +237,7 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Configure release keystore (secrets override the committed one)
+      - name: Configure release keystore (secrets from the admin vault)
         id: keystore
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
@@ -245,15 +245,20 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          # The repo ships a stable keystore (android/keystore.properties +
-          # android/keystore/vipyemen-release.p12), so EVERY build is signed
-          # with the SAME key and new versions install over old ones without
-          # uninstalling. Repo secrets replace it when present.
+          # Signing credentials are NOT stored in the repository — they live in
+          # the admin dashboard vault (الخزنة) and are pasted into repo Secrets.
+          # The encrypted keystore file (android/keystore/vipyemen-release.p12)
+          # IS committed but is useless without the password.
           if [[ -n "$KS_B64" ]]; then
-            echo "$KS_B64" | base64 -d > android/keystore.jks
-            printf 'storeFile=keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > android/keystore.properties
+            echo "$KS_B64" | base64 -d > android/keystore/vipyemen-release.p12
           fi
-          test -f android/keystore.properties && echo "keystore configured"
+          if [[ -n "$KS_PASS" && -n "$KEY_ALIAS" && -n "$KEY_PASS" && -f android/keystore/vipyemen-release.p12 ]]; then
+            printf 'storeFile=keystore/vipyemen-release.p12\nstoreType=pkcs12\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > android/keystore.properties
+            echo "keystore configured from repo secrets"
+          else
+            echo "::error::Signing secrets are missing (ANDROID_KEYSTORE_B64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD). Copy them from the admin dashboard vault (لوحة التحكم → الخزنة) per SECRETS-SETUP.md, add them as repo Secrets, and re-run."
+            exit 1
+          fi
 
       - name: Build signed APK + AAB
         run: |
@@ -298,8 +303,6 @@ jobs:
           files: |
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/bundle/release/*.aab
-            android/keystore.properties
-            android/keystore/KEYSTORE-README.md
           append_body: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

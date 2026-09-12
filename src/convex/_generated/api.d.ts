@@ -21,6 +21,7 @@ import type * as internal_ from "../internal.js";
 import type * as notifications from "../notifications.js";
 import type * as offers from "../offers.js";
 import type * as releases from "../releases.js";
+import type * as secureDocs from "../secureDocs.js";
 import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
 import type * as storage from "../storage.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   offers: typeof offers;
   releases: typeof releases;
+  secureDocs: typeof secureDocs;
   seed: typeof seed;
   settings: typeof settings;
   storage: typeof storage;

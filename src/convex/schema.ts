@@ -173,4 +173,18 @@ export default defineSchema({
     .index("by_phone", ["phone"])
     .index("by_status", ["status"])
     .index("by_updated", ["updatedAt"]),
+
+  /**
+   * 🔐 الخزنة — الوثائق ومفاتيح التوقيع والأسرار (للإدارة فقط).
+   * Secure vault for signing keys, credentials, and secrets.
+   * All access is admin-gated through src/convex/secureDocs.ts.
+   */
+  secureDocs: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    category: v.string(), // signing | firebase | play | vercel | supabase | apple | general
+    isSecret: v.boolean(),
+    value: v.string(),
+    updatedAt: v.number(),
+  }).index("by_name", ["name"]),
 });

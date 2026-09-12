@@ -37,8 +37,8 @@ upload key that only you hold**. When you publish on Play:
    `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` in repo Secrets.
 3. Re-upload the same signed APK to Play (upload key ≠ app signing key in Play).
 
-Verify any build's signature locally:
+Verify any build's signature locally (password lives in the admin dashboard vault, not in the repo):
 ```bash
 keytool -printcert -jarfile app-release.apk   # shows the signing cert
-openssl pkcs12 -in keystore/vipyemen-release.p12 -clcerts -nokeys -passin pass:ViPYemen2026@Sign | openssl x509 -noout -fingerprint -sha256
+apksigner verify --print-certs app-release.apk
 ```

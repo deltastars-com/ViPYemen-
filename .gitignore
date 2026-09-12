@@ -53,6 +53,8 @@ ios/App/App.xcworkspace/xcuserdata/
 
 # Credentials files (keep local only)
 CREDENTIALS-AND-SIGNING.md
+SECRETS-SETUP.local.md
+vault-import.local.json
 release-build/
 
 # Firebase config (download your own copy from the Firebase console)

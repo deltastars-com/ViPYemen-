@@ -315,6 +315,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # Publishing is a separate final job so parallel build jobs (Android, iOS)
+  # never race on the release state: assets upload while it is still a draft,
+  # and only after ALL jobs finish does this job flip draft → published.
+  publish-release:
+    name: Publish release
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    steps:
       - name: Publish release
         uses: actions/github-script@v7
         with:

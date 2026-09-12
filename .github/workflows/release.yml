@@ -120,30 +120,24 @@ jobs:
           cp -r dist release/web-pwa
           zip -r release/vip-yemen-web-pwa-${{ github.ref_name }}.zip release/web-pwa
           zip -r release/vip-yemen-source-${{ github.ref_name }}.zip src index.html package.json bun.lock bun.lockb vite.config.ts capacitor.config.ts convex.json public scripts android ios .github "store-graphics" || true
-          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md README.md store-listing.json release/ || true
+          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md IOS-APPSTORE-GUIDE.md README.md store-listing.json release/ || true
           cp store-graphics/*.png release/ || true
 
-      - name: Create draft release with web + docs artifacts
-        uses: softprops/action-gh-release@v2
+      # Artifact hand-off pattern: every build job uploads its files as CI
+      # artifacts; the final publish-release job downloads them all and creates
+      # the GitHub release in ONE atomic call. This removes the draft/published
+      # races and duplicate-draft cleanup that previously dropped assets.
+      - name: Upload web + docs release artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: ViP Yemen ${{ github.ref_name }}
-          body: |
-            ## ViP Yemen — الإصدار ${{ github.ref_name }}
-
-            ### المحتويات
-            - **تطبيق الويب (PWA)**: مجلد `web-pwa` جاهز للاستضافة — يعمل بدون إنترنت
-            - **الكود المصدري الكامل**: الواجهة + الباك إند (Convex) + مشروعي Android/iOS (Capacitor)
-            - **APK/AAB**: موقّعة بمفتاح إصدار ثابت — تُثبَّت النسخ الجديدة مباشرة فوق السابقة بدون حذف
-            - **ملفات المتاجر**: أيقونة 512، صورة المتجر 1024×500، بيانات القائمة (AR/EN)، أدلة الرفع Google Play وApp Store
-            - **التوقيع والملكية**: ملف المفتاح (PKCS12)، بيانات الشهادة، بصمة SHA-256، وسجل الملكية في `SIGNING-AND-OWNERSHIP.md`
-            - **الوثائق**: سياسة الخصوصية (المنصة والتطبيقات)، دليل الإدارة والتشغيل، الكود المصدري الكامل
-          files: |
+          name: release-web
+          path: |
             release/*.zip
             release/*.md
             release/*.json
             release/*.png
-          draft: true
-          prerelease: false
+          if-no-files-found: error
+          retention-days: 7
 
   build-android:
     name: Build signed APK + AAB
@@ -305,43 +299,52 @@ jobs:
         env:
           EXPECTED_SIGNATURE_SHA1: ${{ secrets.EXPECTED_SIGNATURE_SHA1 }}
 
-      - name: Upload APK/AAB to draft release
-        uses: softprops/action-gh-release@v2
+      - name: Upload Android release artifacts
+        uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: release-android
+          path: |
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/bundle/release/*.aab
-          append_body: false
-          # Keep the release DRAFT here — a parallel iOS job may still be
-          # uploading its own assets. The final publish-release job flips
-          # the release to published only after every build job finishes.
-          draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if-no-files-found: error
+          retention-days: 7
 
   # Publishing is a separate final job so parallel build jobs (Android, iOS)
-  # never race on the release state: assets upload while it is still a draft,
-  # and only after ALL jobs finish does this job flip draft → published.
+  # never race on the release state. It downloads every artifact and creates
+  # the release with ALL assets in a single atomic call.
   publish-release:
     name: Publish release
-    needs: [build-android, build-ios]
+    needs: [build-web, build-android, build-ios]
     runs-on: ubuntu-latest
     steps:
-      - name: Publish release
-        uses: actions/github-script@v7
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
         with:
-          script: |
-            const rel = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: context.ref.replace('refs/tags/', '')
-            });
-            await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: rel.data.id,
-              draft: false
-            });
+          pattern: release-*
+          merge-multiple: true
+          path: release-final
+
+      - name: Publish release with all assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ViP Yemen ${{ github.ref_name }}
+          body: |
+            ## ViP Yemen — الإصدار ${{ github.ref_name }}
+
+            ### المحتويات
+            - **تطبيق Android (APK/AAB)**: موقّعة بمفتاح الإصدار الثابت — تُثبَّت النسخ الجديدة مباشرة فوق السابقة
+            - **تطبيق iOS (IPA + ملفات المتجر)**: حزمة iOS جاهزة للتوقيع والرفع إلى App Store Connect مع دليل IOS-APPSTORE-GUIDE
+            - **تطبيق الويب (PWA)**: مجلد `web-pwa` جاهز للاستضافة — يعمل بدون إنترنت
+            - **الكود المصدري الكامل**: الواجهة + الباك إند (Convex) + مشروعي Android/iOS (Capacitor)
+            - **ملفات المتاجر**: أيقونة 512، صورة المتجر 1024×500، بيانات القائمة (AR/EN)، أدلة Google Play وApp Store
+            - **التوقيع والملكية**: بصمة SHA-256/SHA-1 وسجل الملكية في `SIGNING-AND-OWNERSHIP.md`
+            - **الوثائق**: سياسة الخصوصية (المنصة والتطبيقات)، أدلة النشر والإدارة والتشغيل
+          files: release-final/*
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-ios:
     name: Build iOS app + App Store bundle
@@ -419,15 +422,13 @@ jobs:
           # Keep the build log for troubleshooting
           cp ios/App/build.log release/ios/ || true
 
-      - name: Upload iOS artifacts to release
-        uses: softprops/action-gh-release@v2
+      - name: Upload iOS release artifacts
+        uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: release-ios
+          path: |
             release/ios/*.ipa
             release/ios/*.zip
             release/ios/build.log
-          append_body: false
-          # Draft here too: publishing happens once, in publish-release.
-          draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if-no-files-found: error
+          retention-days: 7

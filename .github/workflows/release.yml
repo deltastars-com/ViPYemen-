@@ -324,6 +324,17 @@ jobs:
           merge-multiple: true
           path: release-final
 
+      # upload-artifact preserves directory structure relative to each
+      # artifact's common ancestor, so Android files arrive as
+      # apk/release/*.apk and bundle/release/*.aab. Flatten everything to the
+      # top level (file names are unique across artifacts) so the release
+      # step's `release-final/*` glob attaches every file.
+      - name: Flatten artifacts for upload
+        run: |
+          cd release-final
+          find . -mindepth 2 -type f -exec mv -n {} . \;
+          ls -la
+
       - name: Publish release with all assets
         uses: softprops/action-gh-release@v2
         with:

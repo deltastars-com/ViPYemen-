@@ -61,23 +61,41 @@
 > سير عمل الإصدار يوقّع APK/AAB بمفتاح المستودع المدمج عند غياب هذه الأسرار،
 > ويستخدمها تلقائياً فور إضافتها — مع تحقق إجباري من بصمة التوقيع في الحالتين.
 
-## 3️⃣ Vercel — Environment Variables
+## 3️⃣ Convex Dashboard — متغيرات قنوات النشر
+
+أضِفها في: **Convex Dashboard → Project → Settings → Environment Variables**
+
+| المتغير | القيمة |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | `8876814738:AAFEpkzzC0g__-xGz9JE_sqvq0JMM1kHVWM` |
+| `TELEGRAM_CHAT_ID` | `@vipyemen77` |
+| `FACEBOOK_ACCESS_TOKEN` | *(رمز الصفحة الدائم — من developers.facebook.com)* |
+| `FACEBOOK_PAGE_ID` | `vipyemen1` |
+| `FACEBOOK_GROUP_ID` | `346010664332427` |
+| `WHATSAPP_ACCESS_TOKEN` | *(رمز WhatsApp Cloud API)* |
+| `WHATSAPP_PHONE_NUMBER_ID` | *(رقم هاتف الأعمال)* |
+| `WHATSAPP_BROADCAST_TO` | *(أرقامフザل مفصولة بفواصل)* |
+
+> **قنوات النشر التلقائي:** عند نشر أي إعلان أو عرض من لوحة التحكم،
+> ينشر تلقائياً إلى: تليجرام (@vipyemen77) · فيسبوك (صفحة + جروب) · واتساب.
+
+## 4️⃣ Vercel — Environment Variables
 
 أضِف نفس المتغيرات `VITE_*` من الخزنة في Project → Settings → Environment Variables
 (بيئة Production). تكامل Supabase ← Vercel موجود في حسابك ويضيف مفاتيحه تلقائياً.
 
-## 4️⃣ Google Play Console
+## 5️⃣ Google Play Console
 
 - مفتاح الرفع: `android/keystore/vipyemen-release.p12` — كلمة المرور من الخزنة.
 - أضف بصمة SHA-1 وSHA-256 من الخزنة في Firebase وPlay App Signing.
 
-## 5️⃣ Firebase (vipyemen-c715b)
+## 6️⃣ Firebase (vipyemen-c715b)
 
 - سجّل تطبيق Android بالحزمة `com.vip.yemen` وأضف بصمتي SHA-1 وSHA-256 من الخزنة.
 - حمّل `google-services.json` وضعه في `android/app/` (متجاهل في Git).
 - App ID وبريد حساب الخدمة وKey Pair محفوظة في الخزنة → تصنيف Firebase.
 
-## 6️⃣ Codemagic (iOS)
+## 7️⃣ Codemagic (iOS)
 
 المجموعتان في Codemagic → Teams → Environment variables:
 - `app_store_credentials`: متغيرات Apple من الخزنة → تصنيف Apple/iOS
@@ -85,7 +103,7 @@
 
 خطوات الربط الكاملة: قسم Codemagic في `PUBLISHING-GUIDE.md`.
 
-## 7️⃣ استيراد المستندات إلى الخزنة
+## 8️⃣ استيراد المستندات إلى الخزنة
 
 الملف `vault-import.local.json` في جذر المشروع (متجاهل في Git ولا يُرفع أبداً)
 يحتوي كل المستندات المعيارية بقيمها. لاستيرادها دفعة واحدة:
@@ -100,7 +118,7 @@ sh scripts/vault-import.sh
 
 ---
 
-## 8️⃣ الحسابات الرسمية للتوثيق والملكية
+## 9️⃣ الحسابات الرسمية للتوثيق والملكية
 
 | العنصر | القيمة |
 |---|---|

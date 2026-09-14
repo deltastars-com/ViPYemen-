@@ -1,7 +1,7 @@
 # ViP Yemen Platform — Environment Variables Reference
 # ====================================================
 # This file documents all required environment variables.
-# Actual values are set in Vercel, GitHub Secrets, and Supabase Dashboard.
+# Actual values are set in Vercel, GitHub Secrets, Supabase, and Convex Dashboard.
 # NEVER commit actual secrets to the repository.
 
 ## CONVEX (Primary Backend)
@@ -16,14 +16,27 @@
 ## AI ENGINE
 - `VITE_GEMINI_KEY` — Google Gemini API key for assistant
 
-## TELEGRAM (Channel Auto-Publishing)
-- `TELEGRAM_BOT_TOKEN` — Bot token from @BotFather
-- `TELEGRAM_CHAT_ID` — Channel/group ID(s), comma-separated
+## TELEGRAM (Channel Auto-Publishing) — Bot: @vipyemen_bot
+- `TELEGRAM_BOT_TOKEN` — Bot token (default: built-in for @vipyemen_bot)
+- `TELEGRAM_CHAT_ID` — Channel: `@vipyemen77` (comma-separated for several chats)
 
 ## WHATSAPP (Channel Auto-Publishing)
 - `WHATSAPP_ACCESS_TOKEN` — Cloud API access token
 - `WHATSAPP_PHONE_NUMBER_ID` — Business phone number ID
 - `WHATSAPP_BROADCAST_TO` — Recipient phone numbers, comma-separated
+
+## FACEBOOK (Page + Group Auto-Publishing)
+- `FACEBOOK_ACCESS_TOKEN` — Permanent Page Access Token with `pages_manage_posts` + `publish_to_groups` permissions
+- `FACEBOOK_PAGE_ID` — Page identifier: `vipyemen1` (https://facebook.com/vipyemen1)
+- `FACEBOOK_GROUP_ID` — Group identifier: `346010664332427` (https://facebook.com/groups/346010664332427/)
+
+### How to get the Facebook Access Token:
+1. Go to https://developers.facebook.com/apps → Create App → Business type
+2. Add Product: Facebook Login + Pages
+3. Permissions needed: `pages_manage_posts` + `pages_read_engagement` + `publish_to_groups`
+4. Open Graph API Explorer → Select your app → Get Page Access Token → Select page `vipyemen1`
+5. Check all permissions → Generate token
+6. Extend token: paste into https://developers.facebook.com/tools/debug/accesstoken → Extend Access Token
 
 ## ANDROID SIGNING (CI/CD)
 - `ANDROID_KEYSTORE_B64` — Base64-encoded keystore
@@ -38,3 +51,19 @@
 - `CERTIFICATE_PRIVATE_KEY` — Distribution certificate (.p12, base64)
 - `CERTIFICATE_PASSWORD` — Certificate password
 - `PROVISIONING_PROFILE_DATA` — Provisioning profile (base64)
+
+---
+
+## Convex Dashboard Setup
+Set these in **Convex Dashboard → Settings → Environment Variables**:
+
+| Variable | Value |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | `8876814738:AAFEpkzzC0g__-xGz9JE_sqvq0JMM1kHVWM` |
+| `TELEGRAM_CHAT_ID` | `@vipyemen77` |
+| `FACEBOOK_ACCESS_TOKEN` | *(your permanent page token — see above)* |
+| `FACEBOOK_PAGE_ID` | `vipyemen1` |
+| `FACEBOOK_GROUP_ID` | `346010664332427` |
+| `WHATSAPP_ACCESS_TOKEN` | *(your WhatsApp Cloud API token)* |
+| `WHATSAPP_PHONE_NUMBER_ID` | *(your WhatsApp phone number ID)* |
+| `WHATSAPP_BROADCAST_TO` | *(comma-separated phone numbers)* |

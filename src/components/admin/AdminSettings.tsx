@@ -253,13 +253,13 @@ export function AdminSettings({ token }: { token: string }) {
 
 function ChannelSetupCard() {
   const getSetup = useAction(api.channels.getChannelSetup);
-  const [setup, setSetup] = useState<{ telegram: boolean; whatsapp: boolean } | null>(null);
+  const [setup, setSetup] = useState<{ telegram: boolean; whatsapp: boolean; facebook: boolean; facebookGroup: boolean } | null>(null);
 
   useEffect(() => {
     let live = true;
     getSetup()
       .then((s) => live && setSetup(s))
-      .catch(() => live && setSetup({ telegram: false, whatsapp: false }));
+      .catch(() => live && setSetup({ telegram: false, whatsapp: false, facebook: false, facebookGroup: false }));
     return () => {
       live = false;
     };
@@ -268,10 +268,10 @@ function ChannelSetupCard() {
   const channels = [
     {
       key: "telegram" as const,
-      name: "تيليجرام",
+      name: "تيليجرام @vipyemen77",
       ready: setup?.telegram ?? false,
       vars: "TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID",
-      hint: "توكن البوت و معرف القناة (عدة قنوات مفصولة بفواصل)",
+      hint: "بوت @vipyemen_bot → قناة @vipyemen77",
     },
     {
       key: "whatsapp" as const,
@@ -279,6 +279,20 @@ function ChannelSetupCard() {
       ready: setup?.whatsapp ?? false,
       vars: "WHATSAPP_ACCESS_TOKEN + WHATSAPP_PHONE_NUMBER_ID + WHATSAPP_BROADCAST_TO",
       hint: "توكن واتساب أعمال، معرّف الرقم، وأرقام البث المستهدفة",
+    },
+    {
+      key: "facebook" as const,
+      name: "فيسبوك — صفحة VIP YEMEN",
+      ready: setup?.facebook ?? false,
+      vars: "FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID",
+      hint: "صفحة vipyemen1 — نشر تلقائي بالصور والنص",
+    },
+    {
+      key: "facebookGroup" as const,
+      name: "فيسبوك — جروب VIP YEMEN",
+      ready: setup?.facebookGroup ?? false,
+      vars: "FACEBOOK_ACCESS_TOKEN + FACEBOOK_GROUP_ID",
+      hint: "جروب 346010664332427 — نشر تلقائي بالنص والرابط",
     },
   ];
 

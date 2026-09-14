@@ -60,7 +60,7 @@ Set these in **Convex Dashboard → Settings → Environment Variables**:
 
 | Variable | Value |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` | `8876814738:AAFEpkzzC0g__-xGz9JE_sqvq0JMM1kHVWM` |
+| `TELEGRAM_BOT_TOKEN` | `8876814738:AAFepkzzC0g__-xGz9JE_sqvq0JMM1kHVWM` |
 | `TELEGRAM_CHAT_ID` | `@vipyemen77` |
 | `FACEBOOK_ACCESS_TOKEN` | *(your permanent PAGE token — see above. Must be Page Token, not User Token!)* |
 | `FACEBOOK_PAGE_ID` | `102672588647591` (numeric ID for Vipservicesyemen page) |

@@ -30,6 +30,9 @@ const PrivacyPolicyPage = lazy(() =>
 const TermsPage = lazy(() =>
   import("./pages/TermsPage").then((m) => ({ default: m.TermsPage }))
 );
+const PaymentPage = lazy(() =>
+  import("./pages/PaymentPage").then((m) => ({ default: m.PaymentPage }))
+);
 const AuthPage = lazy(() => import("./pages/AuthPage").then((m) => ({ default: m.AuthPage })));
 const AdminPage = lazy(() => import("./pages/AdminPage").then((m) => ({ default: m.AdminPage })));
 const NotFoundPage = lazy(() =>
@@ -137,6 +140,7 @@ export default function App() {
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/terms" element={<TermsPage />} />
+              <Route path="/payment" element={<PaymentPage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFoundPage />} />

@@ -32,7 +32,7 @@ export const CHANNELS: Channel[] = [
     name: "قناة تيليجرام",
     description:
       "أخبار المنصة والعروض الحصرية وكل ما يخص التوظيف والعقارات والتسويق الإلكتروني أولاً بأول.",
-    href: "https://t.me/VIPservices2",
+    href: "https://t.me/vipyemen77",
     color: "text-sky-300",
     bg: "bg-[#229ed9]/15",
     hover: "hover:border-[#229ed9]/50",

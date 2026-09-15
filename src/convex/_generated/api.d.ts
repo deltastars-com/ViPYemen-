@@ -20,6 +20,7 @@ import type * as followups from "../followups.js";
 import type * as internal_ from "../internal.js";
 import type * as notifications from "../notifications.js";
 import type * as offers from "../offers.js";
+import type * as payments from "../payments.js";
 import type * as releases from "../releases.js";
 import type * as secureDocs from "../secureDocs.js";
 import type * as seed from "../seed.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   internal: typeof internal_;
   notifications: typeof notifications;
   offers: typeof offers;
+  payments: typeof payments;
   releases: typeof releases;
   secureDocs: typeof secureDocs;
   seed: typeof seed;

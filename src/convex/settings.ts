@@ -20,6 +20,8 @@ export const PUBLIC_KEYS = [
   "linkfly",
   "taplink",
   "allmylinks",
+  "androidDownloadUrl",
+  "iosDownloadUrl",
 ] as const;
 
 export const getPublicSettings = query({
@@ -77,11 +79,15 @@ export const ensureDefaults = mutation({
       twitter: "https://twitter.com/ViPservicesYeme",
       linkedin: "https://www.linkedin.com/in/ali-aldahan-57b5a2231",
       youtube: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw",
-      telegram: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x",
+      telegram: "https://t.me/vipyemen77",
       beacons: "https://beacons.ai/vipservicesyemen",
       linkfly: "https://linkfly.to/vipservicesyemen",
       taplink: "https://taplink.cc/vipservicesyemen",
       allmylinks: "https://allmylinks.com/vipservicesyemen",
+      // Android: APKPure (live). iOS: empty until the App Store link is added
+      // from the Developer dashboard section — the footer icon waits silently.
+      androidDownloadUrl: "https://apkpure.com/vipyemen/com.vip.yemen/download",
+      iosDownloadUrl: "",
     };
     for (const [key, value] of Object.entries(defaults)) {
       const existing = await ctx.db

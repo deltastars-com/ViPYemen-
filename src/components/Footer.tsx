@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
 import { LogoMark } from "@/components/Logo";
 import {
   Facebook,
@@ -11,15 +13,75 @@ import {
   MapPin,
   MessageCircle,
   ArrowUp,
+  Landmark,
+  Smartphone,
+  Apple,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { useLang } from "@/lib/i18n";
-import { PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
+import { PLATFORM_WHATSAPP_LINK, openExternal } from "@/lib/utils";
 import { TelegramIcon, WhatsAppIcon } from "./ChannelIcons";
+
+const APKPURE_URL = "https://apkpure.com/vipyemen/com.vip.yemen/download";
+
+/**
+ * Store badges: Android links to APKPure live; iOS waits for the App Store URL
+ * saved from the Developer dashboard section — once saved, the icon activates
+ * automatically (no code change needed).
+ */
+function StoreBadges() {
+  const { t, lang } = useLang();
+  const publicSettings = useQuery(
+    api.settings.getPublicSettings,
+    process.env.VITE_CONVEX_URL || (import.meta as any).env?.VITE_CONVEX_URL ? {} : "skip"
+  );
+  const iosUrl = (publicSettings?.iosDownloadUrl as string | undefined)?.trim() || "";
+  const androidUrl = (publicSettings?.androidDownloadUrl as string | undefined)?.trim() || APKPURE_URL;
+  const storeLink = (url: string | null) => {
+    if (!url) return undefined;
+    return {
+      href: "#",
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        openExternal(url);
+      },
+    };
+  };
+  const android = storeLink(androidUrl);
+  const ios = storeLink(iosUrl || null);
+  const badge =
+    "flex items-center gap-2 rounded-xl border border-gold-500/40 bg-gold-500/10 px-3.5 py-2 text-xs font-bold text-gold-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/70 hover:bg-gold-500/15 disabled:cursor-not-allowed disabled:opacity-40";
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2.5">
+      <a
+        {...(android ?? { href: "#" })}
+        onClick={android?.onClick}
+        aria-label={t("footerDownloadAndroid")}
+        title={t("footerDownloadAndroid")}
+        className={badge}
+      >
+        <Smartphone className="h-4 w-4" />
+        <span>{lang === "ar" ? "Android — APK" : "Android — APK"}</span>
+      </a>
+      <a
+        {...(ios ? { ...ios } : { href: undefined })}
+        onClick={ios?.onClick}
+        aria-label={ios ? t("footerDownloadIos") : t("footerIosSoon")}
+        title={ios ? t("footerDownloadIos") : t("footerIosSoon")}
+        aria-disabled={!ios}
+        className={badge}
+        style={!ios ? { pointerEvents: "none" as const } : undefined}
+      >
+        <Apple className="h-4 w-4" />
+        <span>{lang === "ar" ? "iOS — App Store" : "iOS — App Store"}</span>
+      </a>
+    </div>
+  );
+}
 
 const SOCIALS = [
   { icon: WhatsAppIcon, href: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x", labelAr: "قناة واتساب", labelEn: "WhatsApp Channel" },
-  { icon: TelegramIcon, href: "https://t.me/VIPservices2", labelAr: "قناة تيليجرام", labelEn: "Telegram Channel" },
+  { icon: TelegramIcon, href: "https://t.me/vipyemen77", labelAr: "قناة تيليجرام", labelEn: "Telegram Channel" },
   { icon: Facebook, href: "https://www.facebook.com/ViPservicesYemen/", labelAr: "فيسبوك", labelEn: "Facebook" },
   { icon: Instagram, href: "https://www.instagram.com/vipservicesyemen", labelAr: "إنستغرام", labelEn: "Instagram" },
   { icon: Twitter, href: "https://twitter.com/ViPservicesYeme", labelAr: "تويتر / X", labelEn: "Twitter / X" },
@@ -149,6 +211,15 @@ export function Footer() {
             <MessageCircle className="h-4 w-4" />
             {t("footerContactWa")}
           </a>
+          <Link
+            to="/payment"
+            className="mt-3 flex w-fit items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-300 transition-all hover:-translate-y-0.5 hover:border-emerald-500/70"
+            aria-label={t("footerPayments")}
+          >
+            <Landmark className="h-4 w-4" />
+            {t("footerPayments")}
+          </Link>
+          <StoreBadges />
           <div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold text-ink-400">
             <Link className="transition-colors hover:text-gold-300" to="/privacy-policy">{t("footerPrivacy")}</Link>
             <Link className="transition-colors hover:text-gold-300" to="/terms">{t("footerTerms")}</Link>

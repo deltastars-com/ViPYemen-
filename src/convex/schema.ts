@@ -187,4 +187,31 @@ export default defineSchema({
     value: v.string(),
     updatedAt: v.number(),
   }).index("by_name", ["name"]),
+
+  /**
+   * 💳 سندات الدفع — أرشيف كامل للإيصالات البنكية والمحافظ.
+   * Payment receipts archive: bank transfer (Al-Kuraimi), Jawali & Jaib wallets.
+   * Status: pending → confirmed → settled (or rejected). Admin-gated review.
+   */
+  payments: defineTable({
+    method: v.string(), // kuraimi | jawali | jaib
+    amount: v.number(),
+    currency: v.string(),
+    payerName: v.string(),
+    payerPhone: v.string(),
+    reference: v.string(), // receipt / transfer reference number
+    purpose: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    proofStorageId: v.optional(v.string()),
+    status: v.string(), // pending | confirmed | settled | rejected
+    adminNote: v.optional(v.string()),
+    reviewedAt: v.optional(v.number()),
+    settledAt: v.optional(v.number()),
+    financeId: v.optional(v.id("finance")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_payer_phone", ["payerPhone"])
+    .index("by_created", ["createdAt"]),
 });

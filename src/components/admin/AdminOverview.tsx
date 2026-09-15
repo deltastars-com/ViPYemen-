@@ -133,7 +133,7 @@ export function AdminOverview({ token, setTab }: { token: string; setTab: (t: Ad
           </div>
         </button>
         <button
-          onClick={() => setTab("finance")}
+          onClick={() => setTab("developer")}
           className="card-surface card-surface-hover flex items-center gap-3 p-4 text-right"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">

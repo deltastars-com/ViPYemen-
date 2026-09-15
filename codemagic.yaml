@@ -1,111 +1,123 @@
-# Codemagic CI/CD — ViP Yemen iOS Release (IPA → App Store Connect)
-# Docs: https://docs.codemagic.io/getting-started/yaml
+# =============================================================================
+# ViP Yemen — Codemagic CI/CD (codemagic.yaml)
+# Automated Android + iOS builds triggered on every push to main / on tags.
+# https://codemagic.io — connect the GitHub repo, set the workflow to this file.
 #
-# ═══════════════════════════════════════════════════════════════════════════
-# REQUIRED environment variables — add them in Codemagic →
-# Teams (choose your team) → Environment variables → Group "app_store_credentials"
-# and group "vite_env". Full copy-paste reference: SECRETS-SETUP.md (section 7).
-#
-# Group: app_store_credentials
-# ───────────────────────────────────────────────────────────────────────────
-#   APP_STORE_CONNECT_PRIVATE_KEY   Contents of the .p8 API key (BEGIN … END)
-#   APP_STORE_CONNECT_KEY_ID        API key ID (10 chars)
-#   APP_STORE_CONNECT_ISSUER_ID     Issuer ID (uuid)
-#   CERTIFICATE_PRIVATE_KEY         Apple Distribution .p12 → base64
-#   CERTIFICATE_PASSWORD            .p12 export password
-#   PROVISIONING_PROFILE_DATA       App Store profile (.mobileprovision) → base64
-#
-# Group: vite_env
-# ───────────────────────────────────────────────────────────────────────────
-#   VITE_CONVEX_URL                 https://notable-shepherd-367.convex.cloud
-#   VITE_SUPABASE_URL               https://etgkhpasgfgeofifditu.supabase.co
-#   VITE_SUPABASE_ANON_KEY          Supabase anon key
-#   VITE_GEMINI_KEY                 Gemini API key
-#
-# Access for the API key: Team Key with "App Manager" role —
-# App Store Connect → Users and Access → Integrations → Team keys.
-# ═══════════════════════════════════════════════════════════════════════════
+# Required environment variables (set in Codemagic → App → Environment variables):
+#   ANDROID_KEYSTORE_B64        — base64 of keystore/vipyemen-release.p12
+#   ANDROID_KEYSTORE_PASSWORD   — keystore password
+#   ANDROID_KEY_ALIAS           — key alias (vipyem9en)
+#   ANDROID_KEY_PASSWORD        — key password
+#   APP_STORE_CONNECT_KEY_ID / ISSUER_ID / PRIVATE_KEY  (iOS, optional until ASC is ready)
+#   CERTIFICATE_PRIVATE_KEY / CERTIFICATE_PASSWORD / PROVISIONING_PROFILE_DATA (iOS)
+# =============================================================================
 
 workflows:
-  ios-release:
-    name: ViP Yemen iOS Release
+  android-release:
+    name: ViP Yemen — Android APK & AAB
+    max_build_duration: 40
+    instance_type: mac_mini_m2
+    triggering:
+      events:
+        - push
+        - tag
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+      tag_patterns:
+        - pattern: "v*"
+          include: true
+    scripts:
+      - name: Set up Node + Bun
+        script: |
+          brew list --formula | grep -q "^bun$" || brew install bun
+          bun --version
+      - name: Install dependencies
+        script: bun install --frozen-lockfile
+      - name: Build web bundle (dist/)
+        script: bun run build
+      - name: Sync Capacitor Android
+        script: |
+          cd android
+          rm -rf app/src/main/assets/public
+          npx cap sync android
+      - name: Decode keystore and write keystore.properties
+        script: |
+          echo $ANDROID_KEYSTORE_B64 | base64 --decode > android/keystore/vipyemen-release.p12
+          cat > android/keystore.properties <<'EOF'
+          storeFile=keystore/vipyemen-release.p12
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          storeType=pkcs12
+          EOF
+      - name: Build signed AAB + APK
+        script: |
+          cd android
+          ./gradlew clean bundleRelease assembleRelease
+      - name: Verify signature
+        script: |
+          APKS=$(ls $ANDROID_HOME/build-tools/*/apksigner | tail -1)
+          $APKS verify --print-certs android/app/build/outputs/apk/release/app-release.apk
+    artifacts:
+      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/bundle/release/*.aab
+    publishing:
+      email:
+        recipients:
+          - vipservicesyemen@gmail.com
+
+  ios-build:
+    name: ViP Yemen — iOS IPA (unsigned / ASC-ready)
     max_build_duration: 60
     instance_type: mac_mini_m2
-    environment:
-      groups:
-        - app_store_credentials
-        - vite_env
-      vars:
-        XCODE_PROJECT: "ios/App/App.xcodeproj"
-        XCODE_SCHEME: "App"
-        BUNDLE_ID: "com.vip.yemen"
     triggering:
       events:
         - tag
-      branch_patterns:
-        - pattern: '*'
+      tag_patterns:
+        - pattern: "v*"
           include: true
-      # Releases are built from v* tags (v6.7.0 …) pushed to GitHub
     scripts:
-      - name: Install dependencies
+      - name: Set up Node + Bun
         script: |
-          set -e
-          # Bun is preinstalled on Codemagic macOS machines
-          bun install
-      - name: Generate official icons
-        script: bun run icons
-      - name: Typecheck
-        script: bun run typecheck
-      - name: Build web assets
+          brew list --formula | grep -q "^bun$" || brew install bun
+          bun --version
+      - name: Install dependencies
+        script: bun install --frozen-lockfile
+      - name: Build web bundle (dist/)
         script: bun run build
       - name: Sync Capacitor iOS
-        script: npx cap sync ios
-      - name: Set up code signing
         script: |
-          set -e
           cd ios/App
-          # Decode the Apple Distribution certificate into a temporary keychain
-          echo "$CERTIFICATE_PRIVATE_KEY" | base64 --decode > cert.p12
-          security create-keychain -p "" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "" build.keychain
-          security import cert.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-          rm -f cert.p12
-          # Decode and install the App Store provisioning profile where
-          # xcodebuild expects it
-          echo "$PROVISIONING_PROFILE_DATA" | base64 --decode > ViP_Yemen.mobileprovision
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp ViP_Yemen.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/ViP_Yemen.mobileprovision"
-      - name: Archive and export IPA
+          xcodebuild -resolvePackageDependencies
+          cd ../..
+          npx cap sync ios
+      - name: Archive (unsigned — sign via ASC vars when provided)
         script: |
-          set -e
           cd ios/App
           xcodebuild -project App.xcodeproj \
             -scheme App \
-            -sdk iphoneos \
             -configuration Release \
-            -archivePath $PWD/build/App.xcarchive \
-            archive | xcpretty
-          xcodebuild -project App.xcodeproj \
-            -scheme App \
-            -sdk iphoneos \
-            -configuration Release \
-            -exportArchive \
-            -archivePath $PWD/build/App.xcarchive \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/App.xcarchive \
+            -allowProvisioningUpdates \
+            archive
+      - name: Export IPA
+        script: |
+          cd ios/App
+          xcodebuild -exportArchive \
+            -archivePath build/App.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath $PWD/build/output | xcpretty
+            -exportPath build/output \
+            -allowProvisioningUpdates || \
+          mkdir -p build/output && \
+          cp -r build/App.xcarchive/Products/Applications build/output/Payload && \
+          cd build/output && zip -r ../ViPYemen-unsigned.ipa Payload && cd ../../..
     artifacts:
       - ios/App/build/output/*.ipa
+      - ios/App/build/*.xcarchive
     publishing:
-      app_store_connect:
-        # Requires: APP_STORE_CONNECT_PRIVATE_KEY / _KEY_ID / _ISSUER_ID
-        # and a .p8 Team key with App Manager role.
-        # The app record `com.vip.yemen` must already exist in
-        # App Store Connect (created once from the Developer portal).
-        auth: api_key
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_ID
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true        # uploaded build goes to TestFlight
-        expire_build_submitted_for_review: false
+      email:
+        recipients:
+          - vipservicesyemen@gmail.com

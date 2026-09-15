@@ -1,37 +1,36 @@
+# ViP Yemen — Netlify auto-deploy configuration
+# Drop-in: connect the GitHub repo in Netlify and this file drives the build.
+
 [build]
-  command = "bun run build"
+  command = "npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
-  BUN_VERSION = "latest"
+  # VITE_CONVEX_URL is set in Netlify UI → Site settings → Environment variables.
 
+# SPA fallback — all routes serve index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
+# Security headers (mirror vercel.json)
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https: blob:; connect-src 'self' https: wss: http://127.0.0.1:3210; media-src 'self' https: blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
-
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/icons/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=(self), payment=()"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    Cross-Origin-Opener-Policy = "same-origin"
 
 [[headers]]
   for = "/sw.js"
   [headers.values]
     Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

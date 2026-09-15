@@ -207,6 +207,24 @@ const DICT: Record<string, { ar: string; en: string }> = {
   menuClose: { ar: "إغلاق القائمة", en: "Close menu" },
   menuOpen: { ar: "فتح القائمة", en: "Open menu" },
   exit: { ar: "خروج", en: "Exit" },
+  exitAppTitle: { ar: "إنهاء التطبيق والخروج", en: "Exit the app" },
+  exitConfirmTitle: { ar: "تأكيد الخروج", en: "Confirm exit" },
+  exitConfirmBody: {
+    ar: "هل تريد إنهاء الجلسة والخروج من التطبيق؟ سيتم إغلاق المنصة بالكامل.",
+    en: "End your session and exit the app? The platform will close completely.",
+  },
+  exitCancel: { ar: "إلغاء", en: "Cancel" },
+  exitConfirmYes: { ar: "نعم، خروج", en: "Yes, exit" },
+  farewellTitle: { ar: "تم الخروج بنجاح", en: "Session ended" },
+  farewellBody: {
+    ar: "شكراً لاستخدامك منصة ViP Yemen — تأكد إغلاق التبويب للخروج الكامل، أو عد في أي وقت لن يكون حسابك بحاجة لتسجيل جديد.",
+    en: "Thank you for using ViP Yemen — you can close this tab for a full exit, or return anytime.",
+  },
+  farewellReopen: { ar: "فتح المنصة من جديد", en: "Reopen platform" },
+  backExitHint: {
+    ar: "اضغط رجوع مرة أخرى للخروج من التطبيق",
+    en: "Press back again to exit the app",
+  },
 
   /* ── Assistant ── */
   searchPlaceholder: {

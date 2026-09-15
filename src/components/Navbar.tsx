@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, LayoutDashboard, LogOut } from "lucide-react";
+import { Menu, X, LayoutDashboard, LogOut, Power } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
 import { getAdminToken, clearAdminToken } from "@/lib/convex";
 import { LanguageToggle, useLang } from "@/lib/i18n";
+import { exitApp } from "@/lib/exit";
 
 const LINKS = [
   { to: "/", key: "home" },
@@ -98,6 +99,15 @@ export function Navbar() {
             </button>
           )}
           <button
+            onClick={exitApp}
+            title={t("exitAppTitle")}
+            aria-label={t("exitAppTitle")}
+            className="hidden items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20 md:inline-flex"
+          >
+            <Power className="h-3.5 w-3.5" />
+            {t("exit")}
+          </button>
+          <button
             className="rounded-lg border border-ink-600/70 p-2 text-cream lg:hidden"
             onClick={() => setOpen((o) => !o)}
             aria-label={open ? t("menuClose") : t("menuOpen")}
@@ -140,6 +150,13 @@ export function Navbar() {
                   {t("logout")}
                 </button>
               )}
+              <button
+                onClick={exitApp}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-xs font-extrabold text-rose-200 transition-colors hover:bg-rose-500/20"
+              >
+                <Power className="h-3.5 w-3.5" />
+                {t("exit")}
+              </button>
             </div>
           </nav>
         </div>

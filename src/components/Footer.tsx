@@ -18,6 +18,7 @@ import {
   Apple,
 } from "lucide-react";
 import { Logo } from "./Logo";
+import { ExitButton } from "./ExitButton";
 import { useLang } from "@/lib/i18n";
 import { PLATFORM_WHATSAPP_LINK, openExternal } from "@/lib/utils";
 import { TelegramIcon, WhatsAppIcon } from "./ChannelIcons";
@@ -259,6 +260,7 @@ export function Footer() {
           </div>
 
           <div className="flex items-center gap-3">
+            <ExitButton compact />
             <span className="flex items-center gap-1.5">
               <LogoMark className="h-5 w-5" />
               {t("footerPwaDesc")}

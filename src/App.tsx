@@ -1,4 +1,4 @@
-import { Component, Suspense, lazy, useEffect, type ReactNode } from "react";
+import { Component, Suspense, lazy, useEffect, useState, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { useLang } from "./lib/i18n";
 import { Analytics } from "@vercel/analytics/react";
@@ -6,6 +6,7 @@ import { AppLayout } from "./components/AppLayout";
 import { LogoMark } from "./components/Logo";
 import { useExternalLinkGuard } from "./lib/utils";
 import { initNativeShell } from "./lib/native";
+import { FarewellScreen } from "./components/ExitButton";
 import { markAppReady, reportFatal } from "./lib/autoRecovery";
 
 const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
@@ -107,6 +108,21 @@ function NativeShell() {
   return null;
 }
 
+/**
+ * Farewell screen after a web/PWA exit (native apps terminate for real).
+ * Listens for the `vipyemen:exit` event dispatched by lib/exit.ts.
+ */
+function ExitFarewell() {
+  const [exited, setExited] = useState(false);
+  useEffect(() => {
+    const onExit = () => setExited(true);
+    window.addEventListener("vipyemen:exit", onExit);
+    return () => window.removeEventListener("vipyemen:exit", onExit);
+  }, []);
+  if (!exited) return null;
+  return <FarewellScreen />;
+}
+
 // GitHub Pages serves this repo under /ViPYemen-/ (base set in the Pages
 // workflow build), while the main site is hosted at the domain root. Vite's
 // BASE_URL reflects the build base, so routing adapts automatically to both.
@@ -127,6 +143,7 @@ export default function App() {
         <ScrollToTop />
         <ExternalLinkGuard />
         <NativeShell />
+        <ExitFarewell />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route element={<AppLayout />}>

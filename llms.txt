@@ -1,0 +1,32 @@
+# ViP Yemen — منصة التوظيف والتسويق العقاري والإلكتروني والخدمات البرمجية
+
+> منصة يمنية شاملة بمعايير عالمية: توظيف · عقارات · تسويق إلكتروني · برمجة وتطوير تطبيقات. كل طلب يُراجع ويُدقَّق من الإدارة قبل النشر لضمان الحقوق والجودة.
+
+ViP Yemen is a comprehensive Yemeni platform for jobs, real estate, e-marketing, and software services. Every submission is reviewed and verified by the platform administration before publishing.
+
+## الأقسام | Sections
+
+- [الرئيسية | Home](https://vi-p-yemen.vercel.app/): نظرة عامة على المنصة وخدماتها — Platform overview and services.
+- [التوظيف | Jobs](https://vi-p-yemen.vercel.app/jobs): وظائف وفرص عمل مُدققة في جميع المجالات — Verified job opportunities.
+- [العقارات | Real Estate](https://vi-p-yemen.vercel.app/real-estate): أراضي، منازل، عمارات، وفيلات للبيع والشراء — Land, houses, buildings and villas.
+- [التسويق الإلكتروني | E-Market](https://vi-p-yemen.vercel.app/emarket): بيع وشراء السلع والأجهزة والمعدات — Buy and sell goods and equipment.
+- [البرمجيات | Software](https://vi-p-yemen.vercel.app/software): خدمات برمجة المواقع وتطوير التطبيقات — Web and app development services.
+- [العروض | Offers](https://vi-p-yemen.vercel.app/offers): عروض ترويجية حصرية من الإدارة — Exclusive promotional offers.
+- [قنواتنا | Channels](https://vi-p-yemen.vercel.app/channels): تواصل عبر تيليجرام وواتساب وفيسبوك — Our social channels.
+- [المساعد الذكي | Assistant](https://vi-p-yemen.vercel.app/assistant): بحث شامل في كل أقسام المنصة — Smart search across all sections.
+- [سياسة الخصوصية | Privacy Policy](https://vi-p-yemen.vercel.app/privacy-policy): كيف نجمع بياناتك ونحميها — How we collect and protect your data.
+- [الشروط والأحكام | Terms](https://vi-p-yemen.vercel.app/terms): شروط استخدام المنصة — Platform terms of use.
+
+## التواصل | Contact
+
+- واتساب | WhatsApp: [00967711780999](https://wa.me/967711780999)
+- البريد | Email: vipservicesyemen@gmail.com
+- الموقع | Website: https://vi-p-yemen.vercel.app
+- تيليجرام | Telegram: https://t.me/vipyemen77
+- فيسبوك | Facebook: https://www.facebook.com/vipyemen1
+
+## لغة المحتوى | Content Language
+
+المحتوى متاح بالعربية والإنجليزية — المحتوى الأساسي بالعربية.
+
+Content is available in Arabic and English — primary content is Arabic.

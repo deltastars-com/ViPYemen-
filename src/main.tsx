@@ -1,6 +1,9 @@
 // Self error-detector + auto-restart watchdog. MUST be the first import so its
 // listeners are live before any app module evaluates (catches boot crashes too).
 import "./lib/autoRecovery";
+// Boot polyfills + boot-error overlay + native-SW purge (moved out of
+// index.html so the production CSP can be script-src 'self' — no unsafe-inline).
+import "./lib/boot";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexProvider } from "convex/react";

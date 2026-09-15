@@ -99,7 +99,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-sm font-black text-gold-300">{t("footerSections")}</h4>
+          <h3 className="mb-4 text-sm font-black text-gold-300">{t("footerSections")}</h3>
           <ul className="space-y-2.5 text-sm font-semibold text-ink-300">
             {SECTION_LINKS.map((l) => (
               <li key={l.to}>
@@ -122,7 +122,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-sm font-black text-gold-300">{t("footerContact")}</h4>
+          <h3 className="mb-4 text-sm font-black text-gold-300">{t("footerContact")}</h3>
           <ul className="space-y-3 text-sm text-ink-300">
             <li className="flex items-center gap-2.5">
               <Phone className="h-4 w-4 shrink-0 text-gold-400" />

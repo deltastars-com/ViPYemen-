@@ -18,8 +18,10 @@ workflows:
           include: true
           source: true
     scripts:
-      - name: Install dependencies
-        script: npm ci
+      - name: Setup Node 22 (Capacitor 8 requires >=22)
+        script: |
+          if command -v nvm >/dev/null 2>&1; then nvm install 22 && nvm use 22; fi
+          node -v
       - name: Generate icons
         script: npm run icons
       - name: Build web assets
@@ -70,8 +72,10 @@ workflows:
           include: true
           source: true
     scripts:
-      - name: Install dependencies
-        script: npm ci
+      - name: Setup Node 22 (Capacitor 8 requires >=22)
+        script: |
+          if command -v nvm >/dev/null 2>&1; then nvm install 22 && nvm use 22; fi
+          node -v
       - name: Generate icons
         script: npm run icons
       - name: Build web assets

@@ -154,6 +154,19 @@ export const reviewPayment = mutation({
       reviewedAt: Date.now(),
       updatedAt: Date.now(),
     });
+    // Internal notification — the decision is logged for the audit trail
+    await ctx.db.insert("notifications", {
+      title:
+        status === "confirmed"
+          ? "💳 تم تأكيد سند دفع"
+          : "❌ تم رفض سند دفع",
+      message:
+        status === "confirmed"
+          ? `تم تأكيد سند ${doc.payerName} بمبلغ ${doc.amount.toLocaleString("en-US")} ${doc.currency} (مرجع: ${doc.reference})`
+          : `تم رفض سند ${doc.payerName} (مرجع: ${doc.reference})${adminNote ? ` — السبب: ${adminNote}` : ""}`,
+      category: "payments",
+      createdAt: Date.now(),
+    });
     return { ok: true as const };
   },
 });
@@ -183,6 +196,13 @@ export const settlePayment = mutation({
       settledAt: now,
       financeId,
       updatedAt: now,
+    });
+    // Internal notification — settlement recorded in the finance ledger
+    await ctx.db.insert("notifications", {
+      title: "💰 تمت تسوية سند وأرشفته مالياً",
+      message: `سند ${doc.payerName} (${doc.amount.toLocaleString("en-US")} ${doc.currency}) — سُجل كإيراد في النظام المالي`,
+      category: "payments",
+      createdAt: now,
     });
     return { ok: true as const };
   },

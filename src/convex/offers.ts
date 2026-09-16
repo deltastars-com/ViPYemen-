@@ -54,6 +54,13 @@ export const createOffer = mutation({
     });
     // Auto-publish published offers to the platform channels
     if (args.status === "published") {
+      // Internal notification — instantly visible in the dashboard
+      await ctx.db.insert("notifications", {
+        title: "عرض جديد منشور",
+        message: `تم نشر العرض "${args.title.trim()}" على قسم العروض وقنوات المنصة`,
+        category: "offers",
+        createdAt: Date.now(),
+      });
       await ctx.scheduler.runAfter(0, api.channels.publishToChannels, {
         kind: "offer",
         itemId: id,
@@ -94,6 +101,13 @@ export const updateOffer = mutation({
     await ctx.db.patch(id, patch);
     // Auto-publish whenever the offer becomes published
     if (nextStatus === "published" && existing.status !== "published") {
+      // Internal notification — instantly visible in the dashboard
+      await ctx.db.insert("notifications", {
+        title: "عرض جديد منشور",
+        message: `تم نشر العرض "${existing.title}" على قسم العروض وقنوات المنصة`,
+        category: "offers",
+        createdAt: Date.now(),
+      });
       await ctx.scheduler.runAfter(0, api.channels.publishToChannels, {
         kind: "offer",
         itemId: id,

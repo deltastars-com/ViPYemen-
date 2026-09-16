@@ -7,9 +7,67 @@ import { requireAdmin, normalizePhone, isValidYemeniPhone } from "./auth";
  * 💳 سندات الدفع — بنك الكريمي / محفظة جوالي / محفظة جيب
  * Payment receipt archive. Public: submit + attach proof image.
  * Admin: list, review (confirm/reject), settle (auto income in finance ledger), delete.
+ * Admin can also upload the OFFICIAL QR images per method — they replace the
+ * generated placeholders on /payment instantly.
  */
 
 export const PAYMENT_METHODS = ["kuraimi", "jawali", "jaib"] as const;
+
+const QR_SETTING_KEYS: Record<string, string> = {
+  kuraimi: "paymentQrKuraimi",
+  jawali: "paymentQrJawali",
+  jaib: "paymentQrJaib",
+};
+
+/** Public: official per-method QR image URLs (empty when the generated placeholder is in use). */
+export const getQrUrls = query({
+  args: {},
+  handler: async (ctx) => {
+    const out: Record<string, string | null> = {};
+    for (const [method, key] of Object.entries(QR_SETTING_KEYS)) {
+      const row = await ctx.db
+        .query("settings")
+        .withIndex("by_key", (q) => q.eq("key", key))
+        .first();
+      const storageId = row?.value as string | undefined;
+      out[method] = storageId ? await ctx.storage.getUrl(storageId) : null;
+    }
+    return out;
+  },
+});
+
+/** Admin: upload/replace the official QR image for a payment method. */
+export const setOfficialQr = mutation({
+  args: { token: v.string(), method: v.string(), storageId: v.string() },
+  handler: async (ctx, { token, method, storageId }) => {
+    await requireAdmin(ctx, token);
+    const key = QR_SETTING_KEYS[method];
+    if (!key) throw new ConvexError("طريقة دفع غير معروفة");
+    const existing = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .first();
+    if (existing) await ctx.db.patch(existing._id, { value: storageId });
+    else await ctx.db.insert("settings", { key, value: storageId });
+    return { ok: true as const };
+  },
+});
+
+/** Admin: remove the official QR override (falls back to the generated placeholder). */
+export const clearOfficialQr = mutation({
+  args: { token: v.string(), method: v.string() },
+  handler: async (ctx, { token, method }) => {
+    await requireAdmin(ctx, token);
+    const key = QR_SETTING_KEYS[method];
+    if (!key) throw new ConvexError("طريقة دفع غير معروفة");
+    const existing = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .first();
+    if (existing) await ctx.db.delete(existing._id);
+    return { ok: true as const };
+  },
+});
 
 export const submitPayment = mutation({
   args: {
@@ -73,7 +131,13 @@ export const listPayments = query({
           .withIndex("by_status", (q) => q.eq("status", status))
           .collect()
       : await ctx.db.query("payments").withIndex("by_created").order("desc").collect();
-    return rows.sort((a, b) => b.createdAt - a.createdAt);
+    return Promise.all(
+      rows.sort((a, b) => b.createdAt - a.createdAt).map(async (p) => ({
+        ...p,
+        // Resolvable URL for the proof image (null when absent or deleted).
+        proofUrl: p.proofStorageId ? await ctx.storage.getUrl(p.proofStorageId) : undefined,
+      }))
+    );
   },
 });
 

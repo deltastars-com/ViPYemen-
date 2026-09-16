@@ -20,19 +20,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Generate official icons
-        run: bun run icons
+        run: npm run icons
 
       - name: Typecheck
-        run: bun run typecheck
+        run: npm run typecheck
 
       # Deploy the Convex backend with the deploy key and use the real
       # deployment URL from Convex's own output, so the deployed PWA always
@@ -96,7 +97,7 @@ jobs:
       # vipyemen.com) keeps the default root base — only this build is
       # re-based for the /ViPYemen-/ subpath.
       - name: Build (Pages base)
-        run: bunx tsc -b && bunx vite build --base=/ViPYemen-/
+        run: npx tsc -b && npx vite build --base=/ViPYemen-/
         env:
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}

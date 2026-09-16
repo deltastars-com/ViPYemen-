@@ -1,4 +1,3 @@
 {
-  "functions": "src/convex",
-  "generated": "src/convex/_generated"
+  "functions": "src/convex"
 }

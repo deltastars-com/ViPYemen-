@@ -25,19 +25,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Generate icons
-        run: bun run icons
+        run: npm run icons
 
       - name: Typecheck
-        run: bun run typecheck
+        run: npm run typecheck
 
       # Deploy the Convex backend with the deploy key and derive the
       # production URL from Convex's own output. This guarantees the live
@@ -100,7 +101,7 @@ jobs:
           fi
 
       - name: Build PWA
-        run: bun run build
+        run: npm run build
         env:
           VITE_APP_VERSION: ${{ github.ref_name }}
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
@@ -147,10 +148,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 20
+          cache: npm
 
       - name: Setup Java 21
         uses: actions/setup-java@v4
@@ -169,10 +171,10 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0" "platforms;android-35" 2>/dev/null || true
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Generate icons
-        run: bun run icons
+        run: npm run icons
 
       # Same Convex deployment as the web job: push the backend with the
       # deploy key and use the deployment URL Convex prints, so the APK/AAB
@@ -228,7 +230,7 @@ jobs:
           fi
 
       - name: Build web
-        run: bun run build
+        run: npm run build
         env:
           VITE_APP_VERSION: ${{ github.ref_name }}
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
@@ -373,19 +375,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Generate icons
-        run: bun run icons
+        run: npm run icons
 
       - name: Build web
-        run: bun run build
+        run: npm run build
         env:
           VITE_APP_VERSION: ${{ github.ref_name }}
           # Same built-in live production URL as the other jobs — the iOS app

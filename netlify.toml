@@ -1,36 +1,27 @@
-# ViP Yemen — Netlify auto-deploy configuration
-# Drop-in: connect the GitHub repo in Netlify and this file drives the build.
-
 [build]
-  command = "npm run build"
+  command = "npm ci && npm run build"
   publish = "dist"
 
-[build.environment]
-  NODE_VERSION = "22"
-  # VITE_CONVEX_URL is set in Netlify UI → Site settings → Environment variables.
-
-# SPA fallback — all routes serve index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  conditions = {Path = ["!/**/*.{js,css,png,jpg,jpeg,gif,svg,ico,webp,woff,woff2,ttf,eot,otf,map}"]}
 
-# Security headers (mirror vercel.json)
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(self), microphone=(), geolocation=(self), payment=()"
-    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
-    Cross-Origin-Opener-Policy = "same-origin"
-
-[[headers]]
-  for = "/sw.js"
-  [headers.values]
-    Cache-Control = "no-cache"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

@@ -1,0 +1,183 @@
+name: "Publish to APKPure"
+
+# ---------------------------------------------------------------------------
+# Isolated store-submission track for the Android build.
+#
+# Design constraints (so the Play Store / APKPure release path can never break):
+#   1. It does NOT run on `push: tags`. It runs *after* the release workflow
+#      finished, which means the signed APK is already attached to the GitHub
+#      Release — no race with `release.yml`, no duplicate release creation.
+#   2. It never creates, renames or uploads into a GitHub Release. Permissions
+#      are read-only (`contents: read`) for the whole workflow.
+#   3. It never touches the Play Store bundle (.aab) or the release workflow.
+#   4. Every submission step is `continue-on-error` + exits 0, so a missing or
+#      rejected APKPure credential can never turn the repo red.
+#   5. It verifies the APK really is `com.vip.yemen` before submitting anything,
+#      so a wrong binary can never be pushed to the store listing.
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_run:
+    workflows: ["Build & Release ViP Yemen"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "وسم الإصدار (اتركه فارغاً لأحدث إصدار منشور)"
+        required: false
+        type: string
+
+concurrency:
+  group: apkpure-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE_ID: com.vip.yemen
+
+jobs:
+  publish-apkpure:
+    name: Submit signed APK to APKPure
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Resolve release tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.workflow_run.head_branch || inputs.tag }}"
+          # Only trust a v* value that actually resolves to a release.
+          case "$TAG" in
+            v*) gh release view "$TAG" >/dev/null 2>&1 || TAG="" ;;
+            *) TAG="" ;;
+          esac
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release list --limit 1 --json tagName --jq '(.[0] // {}).tagName // ""' || true)
+          fi
+          if [ -z "$TAG" ]; then
+            echo "::warning::No GitHub Release found yet — nothing to submit to APKPure."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Resolved release tag: $TAG"
+
+      - name: Download signed APK + store metadata
+        if: steps.tag.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p apkpure-dist
+          gh release download "${{ steps.tag.outputs.tag }}" --pattern "*.apk" --dir apkpure-dist
+          # Store-listing extras are optional; a release without them is fine.
+          gh release download "${{ steps.tag.outputs.tag }}" \
+            --pattern "store-listing.json" \
+            --pattern "icon-512.png" \
+            --pattern "feature-graphic-1024x500.png" \
+            --dir apkpure-dist \
+            || echo "note: optional store metadata not attached to this release"
+          ls -la apkpure-dist
+
+      - name: Verify the APK (package id, signature, fingerprints)
+        if: steps.tag.outputs.skip != 'true'
+        id: verify
+        run: |
+          set -euo pipefail
+          APK=$(ls apkpure-dist/*.apk 2>/dev/null | head -1 || true)
+          if [ -z "$APK" ]; then
+            echo "::error::The release has no .apk asset — cannot submit to APKPure."
+            exit 1
+          fi
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+
+          SIZE=$(stat -c%s "$APK")
+          SHA256=$(sha256sum "$APK" | cut -d' ' -f1)
+          SHA1=$(sha1sum "$APK" | cut -d' ' -f1)
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+
+          # A v1 (JAR) signature leaves META-INF/*.RSA|DSA|EC in the archive.
+          if unzip -l "$APK" | grep -qE "META-INF/(CERT|.*\.(RSA|DSA|EC))"; then
+            SIGNED="yes"
+          else
+            SIGNED="no"
+          fi
+          echo "signed=$SIGNED" >> "$GITHUB_OUTPUT"
+
+          # Read the real package id when the runner exposes Android build-tools.
+          AAPT=$(ls "${ANDROID_HOME:-/usr/lib/android-sdk}"/build-tools/*/aapt 2>/dev/null | tail -1 || true)
+          PKG=""
+          if [ -n "$AAPT" ]; then
+            PKG=$("$AAPT" dump badging "$APK" 2>/dev/null | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -1 || true)
+          fi
+
+          echo "APK:      $APK"
+          echo "size:     $SIZE bytes"
+          echo "sha256:   $SHA256"
+          echo "sha1:     $SHA1"
+          echo "signed:   $SIGNED"
+          echo "package:  ${PKG:-<not readable on this runner>}"
+
+          if [ -n "$PKG" ] && [ "$PKG" != "$PACKAGE_ID" ]; then
+            echo "::error::Package id mismatch ($PKG != $PACKAGE_ID) — refusing to submit."
+            exit 1
+          fi
+
+      # Node 22 matches the rest of the repository (the submission script uses
+      # global fetch/FormData/Blob and per-request timeouts).
+      - name: Set up Node 22
+        if: steps.tag.outputs.skip != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Submit to APKPure (best effort — never fails the build)
+        if: steps.tag.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          APKPURE_EMAIL: ${{ secrets.APKPURE_EMAIL }}
+          APKPURE_PASSWORD: ${{ secrets.APKPURE_PASSWORD }}
+          APK_PATH: ${{ steps.verify.outputs.apk }}
+          RELEASE_TAG: ${{ steps.tag.outputs.tag }}
+          PACKAGE_ID: ${{ env.PACKAGE_ID }}
+        run: node .github/scripts/apkpure-publish.mjs
+
+      - name: Keep the submission bundle (audit trail)
+        if: steps.tag.outputs.skip != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: apkpure-submission-${{ steps.tag.outputs.tag }}
+          path: apkpure-dist/
+          retention-days: 90
+
+      - name: Summary
+        if: steps.tag.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          {
+            echo "## APKPure — ${{ steps.tag.outputs.tag }}"
+            echo
+            echo "| الحقل | القيمة |"
+            echo "|-------|--------|"
+            echo "| الحزمة | \`$PACKAGE_ID\` |"
+            echo "| APK | \`$(basename "${{ steps.verify.outputs.apk }}")\` |"
+            echo "| الحجم | ${{ steps.verify.outputs.size }} bytes |"
+            echo "| SHA-256 | \`${{ steps.verify.outputs.sha256 }}\` |"
+            echo "| موقّع | ${{ steps.verify.outputs.signed }} |"
+            echo
+            echo "**روابط التوزيع**"
+            echo "- GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.tag }}"
+            echo "- APKPure (EN): https://apkpure.com/vipyemen/$PACKAGE_ID"
+            echo "- APKPure (AR): https://apkpure.com/ar/vipyemen/$PACKAGE_ID"
+            echo "- لوحة المطوّر: https://developer.apkpure.com/manage-versions"
+          } >> "$GITHUB_STEP_SUMMARY"

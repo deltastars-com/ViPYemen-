@@ -128,6 +128,15 @@ jobs:
           mkdir -p dist/privacy-policy
           cp dist/privacy-policy.html dist/privacy-policy/index.html
 
+      # Vercel previews every branch push by default, including this
+      # generated gh-pages branch. That branch holds only build output (no
+      # package.json), so Vercel's install step fails there and paints the
+      # repo's Deployments panel with a red ❌ Preview entry. Shipping a
+      # branch-level vercel.json that disables deployments for this branch
+      # keeps the panel green without touching the real site.
+      - name: Skip Vercel previews for this generated branch
+        run: printf '%s\n' '{"git":{"deploymentEnabled":false}}' > dist/vercel.json
+
       # Publish to the gh-pages branch — the repo's Pages site is served from
       # this branch ("Deploy from a branch" source), which GitHub auto-builds
       # on every push. This path is not subject to the github-pages

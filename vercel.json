@@ -3,6 +3,11 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
+  "git": {
+    "deploymentEnabled": {
+      "gh-pages": false
+    }
+  },
   "rewrites": [
     { "source": "/((?!assets/|icons/|qr/|llms.txt|robots.txt|sitemap.xml|privacy-policy.html).*)", "destination": "/index.html" }
   ],

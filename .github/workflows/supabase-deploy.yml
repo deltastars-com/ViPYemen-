@@ -19,6 +19,10 @@ jobs:
   check-and-deploy:
     name: Check & Deploy migrations
     runs-on: ubuntu-latest
+    # Tracking the job against an environment makes GitHub record a deployment
+    # status for it. Without this the environment keeps the red ❌ of an old
+    # failed run even after the workflow starts passing again.
+    environment: github-actions
     steps:
       - name: Check if secrets are configured
         id: check

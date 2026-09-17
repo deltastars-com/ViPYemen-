@@ -1,0 +1,52 @@
+# Dependabot — automatic dependency updates for ViP Yemen
+#
+# Weekly scan of npm packages and GitHub Actions versions. Outdated
+# dependencies open automatic Pull Requests, so no task/service ever stalls
+# because a library or workflow action went stale. Grouped minor/patch bumps
+# keep PRs small and reviewable.
+
+version: 2
+
+updates:
+  # Application dependencies (React, Vite, Tailwind, Capacitor, Convex, ...)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "06:00"
+      timezone: "Asia/Aden"
+    # Group minor+patch together: fewer, safer PRs. Major bumps stay separate
+    # so a breaking release never slips through silently.
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+    reviewers:
+      - "deltastars-com"
+
+  # GitHub Actions used by the CI/CD workflows (checkout, setup-node, ...)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "06:00"
+      timezone: "Asia/Aden"
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci(deps)"

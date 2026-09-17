@@ -1,8 +1,8 @@
 {
   "framework": "vite",
-  "buildCommand": "bun run build",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "bun install",
+  "installCommand": "npm ci",
   "rewrites": [
     { "source": "/((?!assets/|icons/|qr/|llms.txt|robots.txt|sitemap.xml|privacy-policy.html).*)", "destination": "/index.html" }
   ],

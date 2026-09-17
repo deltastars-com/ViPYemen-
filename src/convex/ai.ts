@@ -88,6 +88,39 @@ export const answer = action({
           if (isKeyRevokedError(res.status, body)) {
             return { ok: false as const, reason: "KEY_REVOKED" as const };
           }
+          // Transient server conditions (503 overloaded, 429 quota burst,
+          // 500 blips) — retry the SAME model once after a short backoff
+          // before giving up; these usually clear within seconds.
+          if (res.status === 503 || res.status === 429 || res.status === 500) {
+            await new Promise((r) => setTimeout(r, 1500));
+            try {
+              const retry = await fetch(
+                `${GEMINI_API_BASE}/${modelName}:generateContent?key=${apiKey}`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { maxOutputTokens: 1024 },
+                  }),
+                  signal: controller.signal,
+                }
+              );
+              if (retry.ok) {
+                const rjson = (await retry.json()) as {
+                  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+                };
+                const rtext = rjson.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (rtext) {
+                  return { ok: true as const, text: rtext, model: modelName };
+                }
+              }
+            } catch {
+              // retry failed → fall through
+            }
+            lastError = `model ${modelName} transient error (${res.status})`;
+            continue;
+          }
           return { ok: false as const, reason: `SERVER_${res.status}` as const };
         }
 

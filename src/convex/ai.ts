@@ -19,10 +19,17 @@ import { v } from "convex/values";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const REQUEST_TIMEOUT_MS = 20_000;
 
+// Current stable Gemini model lineup (per ai.google.dev/gemini-api/docs/models).
+// The list tries the newest Flash first and falls forward on 404/400 when
+// Google rotates/deprecates a name — so the engine self-heals over time.
 const GEMINI_MODELS = [
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
-  "gemini-2.0-flash",
 ];
 
 function readKey(): string {

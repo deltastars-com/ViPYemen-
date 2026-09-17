@@ -42,8 +42,17 @@ jobs:
         id: convex
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          GEMINI_KEY_SECRET: ${{ secrets.VITE_GEMINI_KEY }}
           VITE_CONVEX_URL_VAR: ${{ vars.VITE_CONVEX_URL }}
         run: |
+          # Keep the Gemini key in the Convex SERVER environment (never in the
+          # client bundle). The client AI engine calls the server action, so a
+          # repo secret is propagated to the deployment on every backend push.
+          if [[ -n "$GEMINI_KEY_SECRET" && -n "$CONVEX_DEPLOY_KEY" ]]; then
+            npx convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" >/dev/null 2>&1 && \
+              echo "GEMINI_KEY synced to Convex server env" || \
+              echo "::warning::Could not sync GEMINI_KEY to Convex env (deploy key missing?) — AI falls back to the free engine until the key is set in the Convex dashboard."
+          fi
           if [[ -n "$VITE_CONVEX_URL_VAR" && "$VITE_CONVEX_URL_VAR" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
             echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
             echo "using repo variable VITE_CONVEX_URL"

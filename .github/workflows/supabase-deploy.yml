@@ -10,6 +10,9 @@ on:
     paths:
       - 'supabase/migrations/**'
       - 'backend/sql/**'
+      # Validate the workflow itself whenever it changes, so a bad edit can
+      # never sit here untested until the next unrelated migration push.
+      - '.github/workflows/supabase-deploy.yml'
   workflow_dispatch:
 
 permissions:

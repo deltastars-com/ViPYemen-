@@ -137,7 +137,7 @@ jobs:
       # the GitHub release in ONE atomic call. This removes the draft/published
       # races and duplicate-draft cleanup that previously dropped assets.
       - name: Upload web + docs release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-web
           path: |
@@ -325,7 +325,7 @@ jobs:
           EXPECTED_SIGNATURE_SHA1: ${{ secrets.EXPECTED_SIGNATURE_SHA1 }}
 
       - name: Upload Android release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-android
           path: |
@@ -460,7 +460,7 @@ jobs:
           cp ios/App/build.log release/ios/ || true
 
       - name: Upload iOS release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-ios
           path: |

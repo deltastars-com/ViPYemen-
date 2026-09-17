@@ -9,6 +9,7 @@
  */
 
 import type * as ads from "../ads.js";
+import type * as ai from "../ai.js";
 import type * as auth from "../auth.js";
 import type * as automation from "../automation.js";
 import type * as channelPush from "../channelPush.js";
@@ -37,6 +38,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   ads: typeof ads;
+  ai: typeof ai;
   auth: typeof auth;
   automation: typeof automation;
   channelPush: typeof channelPush;

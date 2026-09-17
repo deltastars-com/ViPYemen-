@@ -1,17 +1,22 @@
 // Knowledge AI client for ViP Yemen assistant.
 //
-// Single professional knowledge engine: Gemini (Google Generative Language
+// Primary professional knowledge engine: Gemini (Google Generative Language
 // REST API, generativelanguage.googleapis.com). Plain REST fetch — no SDKs,
 // so no internal SDK credentials ever ship in the built JS bundle.
 //
-// Model resilience: Google rotates model names (old models like
-// gemini-2.0-flash return HTTP 404 once deprecated). The client therefore
-// tries the models in GEMINI_MODELS order and automatically falls forward
-// to the next available model when the current one is gone — so the
-// assistant keeps working as Google evolves its lineup.
+// ZERO-DOWNTIME RESILIENCE: the assistant NEVER dies with the API key.
+// - When VITE_GEMINI_KEY is missing → a free keyless engine (Pollinations)
+//   answers instantly, so users always get a smart reply.
+// - When the key is revoked/leaked/expired (403 PERMISSION_DENIED) → the
+//   free engine takes over automatically. Google flags keys that appeared
+//   in public text as "leaked" and disables them; this is expected and
+//   handled gracefully instead of showing a dead-end error.
+// - Model resilience: Google rotates model names (old models like
+//   gemini-2.0-flash return HTTP 404 once deprecated). The client tries the
+//   models in GEMINI_MODELS order and automatically falls forward.
 //
 // Usage: import { knowledgeAI } from "@/lib/gemini";
-// Requires: VITE_GEMINI_KEY in the build environment.
+// Optional: VITE_GEMINI_KEY in the build environment for premium quality.
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -25,12 +30,15 @@ const GEMINI_MODELS = [
   "gemini-2.5-flash-lite",
 ];
 
+/** Free keyless engine used when Gemini is unavailable (no key / revoked key). */
+const FREE_ENGINE_URL = "https://text.pollinations.ai/";
+
 export type GeminiResult =
   | { text: string }
   | { error: string };
 
 export type KnowledgeAnswer =
-  | { text: string; provider: "gemini" }
+  | { text: string; provider: "gemini" | "free" }
   | { error: string };
 
 // IMPORTANT: env vars are read via DYNAMIC keys. Vite statically replaces
@@ -57,6 +65,41 @@ function geminiModelOverride(): string {
 function modelCandidates(): string[] {
   const override = geminiModelOverride();
   return override ? [override, ...GEMINI_MODELS] : GEMINI_MODELS;
+}
+
+/**
+ * Free keyless knowledge engine (Pollinations). Always available — used
+ * directly when no Gemini key exists, and as automatic fallback when the
+ * Gemini key is revoked/leaked/expired. Never throws; returns null on
+ * network failure so the caller can show its friendly offline message.
+ */
+async function freeEngineGenerate(prompt: string, maxTokens?: number): Promise<string | null> {
+  try {
+    const res = await fetch(FREE_ENGINE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: prompt }],
+        model: "openai",
+        max_tokens: maxTokens ?? 1024,
+      }),
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    const trimmed = text.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Detect a revoked/leaked/disabled Gemini key so we fall back instead of erroring. */
+function isKeyRevokedError(status: number, body: string): boolean {
+  const b = (body || "").toLowerCase();
+  return (
+    status === 403 ||
+    /permission_denied|api key .*leaked|reported as leaked|api_key_invalid|api key not valid/.test(b)
+  );
 }
 
 export async function geminiGenerate(prompt: string, options?: { model?: string; maxTokens?: number }): Promise<GeminiResult> {
@@ -96,7 +139,13 @@ export async function geminiGenerate(prompt: string, options?: { model?: string;
           lastError = `[gemini] النموذج ${modelName} لم يعد متاحاً (${res.status}) — جارٍ التبديل إلى نموذج أحدث.`;
           continue;
         }
-        // Anything else (invalid key, quota…) is a real failure — surface it.
+        // Revoked / leaked / disabled key → fall through to the free engine
+        // instead of dead-ending (this is what Google does to keys that
+        // appeared in public text — a routine, expected condition).
+        if (isKeyRevokedError(res.status, body)) {
+          return { error: "[gemini] KEY_REVOKED" };
+        }
+        // Anything else (quota, transient server error…) is a real failure.
         return { error: `[gemini] خطأ من الخادم ${res.status}: ${body.slice(0, 200)}` };
       }
 
@@ -124,7 +173,12 @@ export async function geminiGenerate(prompt: string, options?: { model?: string;
   return { error: lastError || "[gemini] تعذر الوصول إلى محرك المعرفة" };
 }
 
-/** Unified knowledge engine — Gemini only, with automatic model fallback. */
+/**
+ * Unified knowledge engine — Gemini first (premium quality when a valid key
+ * exists), free keyless engine as guaranteed fallback. The assistant never
+ * dead-ends: missing key, revoked key, deprecated models or quota errors all
+ * fall through to the free engine automatically.
+ */
 export const knowledgeAI = {
   async answer(question: string): Promise<KnowledgeAnswer> {
     const prompt =
@@ -132,6 +186,12 @@ export const knowledgeAI = {
 
     const gm = await geminiGenerate(prompt, { maxTokens: 1024 });
     if ("text" in gm) return { text: gm.text, provider: "gemini" };
+
+    // Every engine-level failure (no key / revoked key / quota / server error)
+    // → free keyless engine. Returns an error only when BOTH engines fail,
+    // which then surfaces as the offline message.
+    const free = await freeEngineGenerate(prompt, 1024);
+    if (free) return { text: free, provider: "free" };
     return { error: gm.error };
   },
 };

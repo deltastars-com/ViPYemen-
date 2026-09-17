@@ -241,7 +241,8 @@ const DICT: Record<string, { ar: string; en: string }> = {
   /* ── Assistant page ── */
   aiErrorKey: { ar: "لم يتم تفعيل مفتاح محرك الذكاء الاصطناعي بعد — أضِفه من إعدادات المنصة ثم أعد المحاولة.", en: "AI engine key not yet activated — add it in platform settings and try again." },
   aiError404: { ar: "محرك الذكاء يحدّث نماذجه تلقائياً — أعد المحاولة الآن وسيعمل فوراً.", en: "The AI engine is updating its models — try again now and it should work." },
-  aiErrorAuth: { ar: "تعذّر الاتصال بخدمة الذكاء الاصطناعي (راجع مفتاح Gemini) — استخدم البحث الموسوعي بالأسفل.", en: "Could not connect to AI service (check Gemini key) — use encyclopedia search below." },
+  aiErrorAuth: { ar: "مفتاح الذكاء الاصطناعي يحتاج تجديداً (أعطله جوجل مؤقتاً) — تم التحويل تلقائياً للمحرك المجاني.", en: "The AI key needs renewal (temporarily disabled by Google) — automatically switched to the free engine." },
+  aiEngineFree: { ar: "المحرك المجاني", en: "Free engine" },
   aiErrorOffline: { ar: "لا يوجد اتصال بالإنترنت حالياً — استخدم البحث الموسوعي بالأسفل.", en: "No internet connection — use encyclopedia search below." },
   aiErrorDefault: { ar: "تعذّر الحصول على إجابة ذكية حالياً — أعد المحاولة أو استخدم البحث الموسوعي بالأسفل.", en: "Could not get an AI answer — try again or use encyclopedia search below." },
   aiErrorUnexpected: { ar: "حدث خطأ غير متوقع", en: "An unexpected error occurred" },

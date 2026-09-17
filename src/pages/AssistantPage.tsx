@@ -56,7 +56,7 @@ export function AssistantPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const runWikiSearchRef = useRef(runWikiSearch);
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
-  const [aiProvider, setAiProvider] = useState<"gemini" | null>(null);
+  const [aiProvider, setAiProvider] = useState<"gemini" | "free" | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
@@ -301,7 +301,7 @@ export function AssistantPage() {
                     </h3>
                     {aiProvider && (
                       <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-black text-violet-300">
-                        {t("aiEngine")} Gemini AI
+                        {t("aiEngine")} {aiProvider === "gemini" ? "Gemini AI" : t("aiEngineFree")}
                       </span>
                     )}
                   </div>

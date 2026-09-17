@@ -75,6 +75,8 @@ function modelCandidates(): string[] {
  */
 async function freeEngineGenerate(prompt: string, maxTokens?: number): Promise<string | null> {
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     const res = await fetch(FREE_ENGINE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -83,7 +85,8 @@ async function freeEngineGenerate(prompt: string, maxTokens?: number): Promise<s
         model: "openai",
         max_tokens: maxTokens ?? 1024,
       }),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
     if (!res.ok) return null;
     const text = await res.text();
     const trimmed = text.trim();
@@ -102,6 +105,26 @@ function isKeyRevokedError(status: number, body: string): boolean {
   );
 }
 
+// Network timeout for slow mobile connections (Yemen networks): a hung
+// request must never freeze the assistant UI. 20s covers slow 3G round-trips
+// plus generation time; beyond that we fail fast to the free engine.
+const REQUEST_TIMEOUT_MS = 20_000;
+
+// Performance: remember which model last answered successfully. Subsequent
+// requests go straight to it instead of re-trying deprecated names (each dead
+// name costs a full network round-trip before falling forward).
+let workingModel: string | null = null;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function geminiGenerate(prompt: string, options?: { model?: string; maxTokens?: number }): Promise<GeminiResult> {
   const apiKey = geminiKey();
   if (!apiKey) {
@@ -109,30 +132,33 @@ export async function geminiGenerate(prompt: string, options?: { model?: string;
   }
 
   const requested = options?.model ?? "";
-  const candidates = requested
+  const base = requested
     ? [requested, ...modelCandidates()]
     : modelCandidates();
+  // The last-known-working model goes first — zero wasted round-trips.
+  const candidates = workingModel && !requested
+    ? [workingModel, ...base.filter((m) => m !== workingModel)]
+    : base;
 
   let lastError = "";
-  for (const modelName of candidates) {
-    const url = `${GEMINI_API_BASE}/${modelName}:generateContent?key=${apiKey}`;
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
+  for (const modelName of candidates) {      const url = `${GEMINI_API_BASE}/${modelName}:generateContent?key=${apiKey}`;
+      try {
+        const res = await fetchWithTimeout(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              maxOutputTokens: options?.maxTokens ?? 1024,
             },
-          ],
-          generationConfig: {
-            maxOutputTokens: options?.maxTokens ?? 1024,
-          },
-        }),
-      });
+          }),
+        });
 
-      if (!res.ok) {
+        if (!res.ok) {
         const body = await res.text().catch(() => "");
         // 400/404 for a deprecated/unknown model → try the next candidate.
         if (res.status === 400 || res.status === 404) {
@@ -163,6 +189,7 @@ export async function geminiGenerate(prompt: string, options?: { model?: string;
         return { error: "[gemini] استجابة فارغة من النموذج" };
       }
 
+      workingModel = modelName;
       return { text: candidate.content.parts[0].text };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

@@ -23,10 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -137,7 +137,7 @@ jobs:
       # the GitHub release in ONE atomic call. This removes the draft/published
       # races and duplicate-draft cleanup that previously dropped assets.
       - name: Upload web + docs release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-web
           path: |
@@ -153,10 +153,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -325,7 +325,7 @@ jobs:
           EXPECTED_SIGNATURE_SHA1: ${{ secrets.EXPECTED_SIGNATURE_SHA1 }}
 
       - name: Upload Android release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-android
           path: |
@@ -361,7 +361,7 @@ jobs:
           ls -la
 
       - name: Publish release with all assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ViP Yemen ${{ github.ref_name }}
           body: |
@@ -387,10 +387,10 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -460,7 +460,7 @@ jobs:
           cp ios/App/build.log release/ios/ || true
 
       - name: Upload iOS release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-ios
           path: |

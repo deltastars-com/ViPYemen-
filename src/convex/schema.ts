@@ -214,4 +214,31 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_payer_phone", ["payerPhone"])
     .index("by_created", ["createdAt"]),
+
+  /**
+   * 📁 ملفات الانتظار — طابور توجيه الملفات إلى Telegram + Facebook.
+   * Status: pending → forwarding → forwarded → cleaned | failed
+   * يضمن عدم تثقل التطبيق: الملفات تُوجَّه بشكل غير متزامن ثم تُحذف من التخزين المحلي.
+   */
+  fileQueue: defineTable({
+    storageId: v.string(),
+    fileName: v.string(),
+    fileKind: v.string(), // image | document | video | audio | other
+    fileSize: v.number(),
+    mimeType: v.string(),
+    // Which submission/ad/offer this belongs to
+    entityType: v.string(), // submission | ad | offer
+    entityId: v.string(),
+    // Forwarding targets
+    forwardedTo: v.optional(v.array(v.string())), // ["telegram", "facebook"]
+    remoteUrls: v.optional(v.any()), // { telegram: "...", facebook: "..." }
+    status: v.string(), // pending | forwarding | forwarded | cleaned | failed
+    error: v.optional(v.string()),
+    retryCount: v.number(),
+    createdAt: v.number(),
+    forwardedAt: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_entity", ["entityType", "entityId"])
+    .index("by_created", ["createdAt"]),
 });

@@ -133,6 +133,28 @@ export const submit = mutation({
       category: args.category,
       createdAt: now,
     });
+    // Auto-enqueue all attachments for forwarding to Telegram + Facebook
+    // This moves files off Convex storage to external channels asynchronously,
+    // keeping the platform lightweight even with thousands of uploads.
+    if (args.attachments && args.attachments.length > 0) {
+      for (const att of args.attachments) {
+        await ctx.db.insert("fileQueue", {
+          storageId: att.storageId,
+          fileName: att.name,
+          fileKind: att.kind,
+          fileSize: 0,
+          mimeType: att.kind === "image" ? "image/jpeg"
+            : att.kind === "video" ? "video/mp4"
+            : att.kind === "audio" ? "audio/mpeg"
+            : "application/octet-stream",
+          entityType: "submission",
+          entityId: id,
+          status: "pending",
+          retryCount: 0,
+          createdAt: now,
+        });
+      }
+    }
     return { id };
   },
 });

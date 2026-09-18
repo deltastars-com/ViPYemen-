@@ -1,0 +1,27 @@
+# ViP Yemen — Cross-device browser targeting
+# Supports Android 6.0.1+ (Chrome 87 WebView), iOS 15+, and modern desktop browsers.
+# Future-proof: accepts any browser with >0.5% global usage.
+
+# Latest versions
+last 2 Chrome versions
+last 2 Firefox versions
+last 2 Safari versions
+last 2 Edge versions
+last 2 Samsung versions
+last 2 Opera versions
+
+# Android WebView — critical for APK/AAB compatibility (Android 6.0.1+)
+ChromeAndroid >= 87
+Android >= 6
+
+# iOS Safari
+iOS >= 15
+
+# Older devices with >0.5% global usage
+> 0.5%
+
+# Dead browsers (no updates in 24 months) — exclude
+not dead
+
+# Node.js for build tooling
+node >= 18

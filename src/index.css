@@ -160,3 +160,72 @@
 .marquee-track:hover {
   animation-play-state: paused;
 }
+
+/* ── Progressive Enhancement: Device-Tier CSS ──────────────────────
+ * Applied by applyDeviceTier() in main.tsx → <html class="tier-low"> etc.
+ * Ensures graceful degradation on Android 6.0.1+ and older iOS devices.
+ */
+
+/* Low-tier devices: disable heavy effects, simplify layout */
+html.tier-low .card-surface {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.tier-low .card-surface-hover {
+  transition: none;
+}
+
+html.tier-low .marquee-track {
+  animation: none;
+}
+
+html.tier-low [style*="gradient"] {
+  background-image: none !important;
+  background-color: var(--color-ink-900) !important;
+}
+
+/* Medium-tier: lighter effects */
+html.tier-medium .card-surface {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Reduced motion: respect user preference */
+html.reduced-motion .marquee-track,
+html.reduced-motion [style*="transition"],
+html.reduced-motion [style*="animation"] {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Save-data mode: hide decorative backgrounds, reduce images */
+html.save-data body {
+  background-image: none !important;
+}
+
+html.save-data img[loading="lazy"] {
+  display: none;
+}
+
+/* Slow network: simpler loading states */
+html.slow-network .animate-marquee {
+  animation: none;
+}
+
+/* ── Backdrop Filter Fallback (Android 6-8 WebView) ────────────── */
+@supports not (backdrop-filter: blur(1px)) {
+  .card-surface {
+    background-color: rgba(18, 22, 133, 0.95) !important;
+  }
+}
+
+/* ── Container Query Fallback (old browsers) ──────────────────── */
+@supports not (container-type: inline-size) {
+  .container-app {
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

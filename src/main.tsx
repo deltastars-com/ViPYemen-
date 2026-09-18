@@ -6,6 +6,8 @@ import "./lib/autoRecovery";
 import "./lib/boot";
 // 🔐 Anti-copy, anti-scraping, anti-devtools security layer.
 import { initSecurity } from "./lib/security";
+// 📱 Device compatibility — progressive enhancement for all devices
+import { applyDeviceTier } from "./lib/compatibility";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexProvider } from "convex/react";
@@ -22,6 +24,8 @@ import App from "./App";
 
 // Initialize security protections (anti-copy, anti-devtools, anti-scraping)
 initSecurity();
+// Apply device-tier classes to <html> for CSS-based progressive enhancement
+applyDeviceTier();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

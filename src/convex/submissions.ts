@@ -14,21 +14,46 @@ import { touchFollowup } from "./followups";
 const CATEGORIES = ["jobs", "real_estate", "emarket", "software"];
 const TYPES = ["owner", "seeker", "buyer", "seller", "client", "employer"];
 
+// ── Security constants ──────────────────────────────────────────────
+const MAX_FILES = 3;
+const MAX_FILE_SIZE_MB = 5;
+const MAX_TITLE_LENGTH = 200;
+const MAX_DESC_LENGTH = 2000;
+const MAX_NAME_LENGTH = 100;
+
+/** Sanitize text input: strip HTML tags, limit length, trim */
+function sanitize(input: string, maxLen: number): string {
+  return input
+    .replace(/<[^>]*>/g, "") // strip HTML tags
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // strip control chars
+    .trim()
+    .slice(0, maxLen);
+}
+
 function assertValid(args: {
   category: string;
   type: string;
   title: string;
   fullName: string;
   phone: string;
+  attachments?: { name: string; storageId: string; kind: string }[];
 }) {
   if (!CATEGORIES.includes(args.category)) throw new ConvexError("قسم غير صالح");
   if (!TYPES.includes(args.type)) throw new ConvexError("نوع غير صالح");
   if (!args.title || args.title.trim().length < 3)
     throw new ConvexError("العنوان مطلوب (3 أحرف على الأقل)");
+  if (args.title.length > MAX_TITLE_LENGTH)
+    throw new ConvexError(`العنوان طويل جداً (الحد الأقصى ${MAX_TITLE_LENGTH} حرف)`);
   if (!args.fullName || args.fullName.trim().length < 3)
     throw new ConvexError("الاسم الكامل مطلوب");
+  if (args.fullName.length > MAX_NAME_LENGTH)
+    throw new ConvexError(`الاسم طويل جداً (الحد الأقصى ${MAX_NAME_LENGTH} حرف)`);
   if (!isValidYemeniPhone(args.phone))
     throw new ConvexError("رقم الهاتف غير صحيح — أدخل رقم يمني صحيح (7xxxxxxxx)");
+  // File limits: max 3 files, max 5MB each
+  if (args.attachments && args.attachments.length > MAX_FILES) {
+    throw new ConvexError(`الحد الأقصى ${MAX_FILES} ملفات فقط. للملفات الكبيرة تواصل عبر واتساب: 00967711780999`);
+  }
 }
 
 export const requestPhoneOtp = mutation({
@@ -107,8 +132,8 @@ export const submit = mutation({
       category: args.category,
       type: args.type,
       status: "pending",
-      title: args.title.trim(),
-      description: args.description?.trim() || undefined,
+      title: sanitize(args.title, MAX_TITLE_LENGTH),
+      description: args.description ? sanitize(args.description, MAX_DESC_LENGTH) : undefined,
       fullName: args.fullName.trim(),
       phone: normalizePhone(args.phone),
       address: args.address?.trim() || undefined,

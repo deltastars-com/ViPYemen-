@@ -62,12 +62,30 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
     }
   }
 
+  const MAX_FILES = 3;
+  const MAX_FILE_SIZE_MB = 5;
+  const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
+
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
+    const remaining = MAX_FILES - attachments.length;
+    if (remaining <= 0) {
+      setError(`الحد الأقصى ${MAX_FILES} ملفات. للملفات الكبيرة أو الإضافية، تواصل عبر واتساب: ${PLATFORM_WHATSAPP_DISPLAY}`);
+      return;
+    }
+    const toUpload = Array.from(files).slice(0, remaining);
+    if (toUpload.length < files.length) {
+      setError(`تم تحديد ${files.length} ملف لكن يُسمح بـ ${MAX_FILES} فقط. للملفات الإضافية، تواصل عبر واتساب: ${PLATFORM_WHATSAPP_DISPLAY}`);
+    }
     setUploading(true);
     setError("");
     try {
-      for (const file of Array.from(files)) {
+      for (const file of toUpload) {
+        if (file.size > MAX_FILE_SIZE) {
+          setError(`الملف "${file.name}" كبير جداً (${(file.size / 1024 / 1024).toFixed(1)}MB). الحد الأقصى ${MAX_FILE_SIZE_MB}MB. للملفات الكبيرة، تواصل عبر واتساب: ${PLATFORM_WHATSAPP_DISPLAY}`);
+          setUploading(false);
+          return;
+        }
         const url = await generateUploadUrl();
         const result = await fetch(url, {
           method: "POST",
@@ -297,16 +315,25 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
             <UploadCloud className="h-7 w-7" />
           )}
           <span className="text-xs font-bold">
-            {uploading ? t("uploadingFiles") : t("chooseFiles")}
+            {uploading ? t("uploadingFiles") : `${t("chooseFiles")} (${attachments.length}/${MAX_FILES})`}
           </span>
+          <span className="text-[10px] text-ink-400">حد أقصى {MAX_FILES} ملفات — كل ملف حتى {MAX_FILE_SIZE_MB}MB</span>
+          {attachments.length >= MAX_FILES && (
+            <span className="text-[10px] text-gold-400 font-bold">✓ تم الوصول للحد الأقصى</span>
+          )}
           <input
             type="file"
             multiple
-            accept="image/*,.pdf,.doc,.docx"
+            accept="image/*,.pdf,.doc,.docx,video/*"
             className="hidden"
+            disabled={attachments.length >= MAX_FILES}
             onChange={(e) => handleFiles(e.target.files)}
           />
         </label>
+        <div className="mt-2 flex items-start gap-2 rounded-lg border border-gold-500/20 bg-gold-500/5 p-2.5 text-[10px] text-ink-300">
+          <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+          <p>لإرفاق ملفات كبيرة أو أكثر من {MAX_FILES} ملفات، أرسلها مباشرة عبر واتساب: <a href={whatsappLink(PLATFORM_WHATSAPP_DISPLAY, "مرحباً، أريد إرسال ملفات")} target="_blank" rel="noopener noreferrer" className="font-bold text-emerald-300 underline">{PLATFORM_WHATSAPP_DISPLAY}</a></p>
+        </div>
         {attachments.length > 0 && (
           <ul className="mt-2 space-y-1.5">
             {attachments.map((a, i) => (

@@ -18,10 +18,10 @@
   --color-ink-50: #eef0fb;
   --color-ink-100: #e0e3f8;
   --color-ink-200: #c6cbf1;
-  --color-ink-300: #9ba3e5;
-  /* Lightened from #717bd2 so muted text passes WCAG AA (≥4.5:1) on the
-     royal-blue background — PageSpeed accessibility audit fix. */
-  --color-ink-400: #8f97e0;
+  --color-ink-300: #b0b8f0;
+  /* Lightened for WCAG AA (≥4.5:1) on royal-blue background —
+     improved for crisp readability on all devices. */
+  --color-ink-400: #9aa3e8;
   --color-ink-500: #545dba;
   --color-ink-600: #434ba0;
   --color-ink-700: #363c84;

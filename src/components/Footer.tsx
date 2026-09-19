@@ -117,7 +117,7 @@ export function Footer() {
       <div className="container-app grid gap-10 py-14 md:grid-cols-3">
         <div>
           <Logo />
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-300">
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-cream/80">
             {t("footerDesc")}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -163,18 +163,18 @@ export function Footer() {
         </div>
 
         <div>
-          <h3 className="mb-4 text-sm font-black text-gold-300">{t("footerSections")}</h3>
-          <ul className="space-y-2.5 text-sm font-semibold text-ink-300">
+          <h3 className="mb-4 text-sm font-black text-gold-200">{t("footerSections")}</h3>
+          <ul className="space-y-2.5 text-sm font-semibold text-ink-100">
             {SECTION_LINKS.map((l) => (
               <li key={l.to}>
-                <Link className="transition-colors hover:text-gold-300" to={l.to}>
+                <Link className="text-cream/90 transition-colors hover:text-gold-300" to={l.to}>
                   {lang === "ar" ? l.ar : l.en}
                 </Link>
               </li>
             ))}
             <li>
               <a
-                className="transition-colors hover:text-gold-300"
+                className="text-cream/90 transition-colors hover:text-gold-300"
                 href={PLATFORM_WHATSAPP_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -186,8 +186,8 @@ export function Footer() {
         </div>
 
         <div>
-          <h3 className="mb-4 text-sm font-black text-gold-300">{t("footerContact")}</h3>
-          <ul className="space-y-3 text-sm text-ink-300">
+          <h3 className="mb-4 text-sm font-black text-gold-200">{t("footerContact")}</h3>
+          <ul className="space-y-3 text-sm text-ink-100">
             <li className="flex items-center gap-2.5">
               <Phone className="h-4 w-4 shrink-0 text-gold-400" />
               <a href="tel:00967711780999" className="transition-colors hover:text-gold-300" dir="ltr">
@@ -231,7 +231,7 @@ export function Footer() {
 
       <div className="border-t border-ink-700/50 py-4">
         <div className="container-app flex flex-col items-center justify-between gap-4 text-xs text-ink-400 lg:flex-row">
-          <p className="text-center lg:text-left">
+          <p className="text-center text-cream/70 lg:text-left">
             © 2026 ViP Yemen — {t("footerAllRights")} · {lang === "ar" ? "المهندس علي درهم الدحان" : "Eng. Ali Al-Dahan"}
           </p>
 

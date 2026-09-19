@@ -359,14 +359,38 @@ function ChannelSetupCard() {
           </summary>
           <div className="mt-2 rounded-lg border border-ink-600/50 bg-ink-950/40 p-3 text-[10px] leading-relaxed text-ink-300" dir="ltr">
             <pre className="whitespace-pre-wrap">{JSON.stringify(setup._diag, null, 2)}</pre>
+            {setup._diag && !(setup._diag as Record<string, unknown>).fbTokenPresent && (
+              <p className="mt-2 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-[10px] font-bold text-amber-200">
+                ❌ FACEBOOK_ACCESS_TOKEN غير موجود في بيئة Convex الإنتاجية.<br/>
+                أضفه في: Production → Settings → Environment Variables<br/>
+                (وليس Development → Environment Variables)
+              </p>
+            )}
+            {setup._diag && !!(setup._diag as Record<string, unknown>).fbTokenPresent && (
+              <p className="mt-2 rounded border border-emerald-500/30 bg-emerald-500/10 p-2 text-[10px] font-bold text-emerald-200">
+                ✅ التوكن موجود ومُحمَّل من: {String((setup._diag as Record<string, unknown>).fbTokenSource)}
+              </p>
+            )}
           </div>
         </details>
       )}
-      <p className="mt-3 rounded-lg border border-ink-600/50 bg-ink-950/40 p-3 text-[11px] leading-relaxed text-ink-300">
-        أضف هذه المتغيرات في <b className="text-gold-300">Convex Dashboard → Project Settings → Environment Variables</b>.
-        بدون مفاتيح تبقى المنصة تعمل بالكامل وتنشر الإعلانات على الواجهة، وعند ضبط المفاتيح
-        يبدأ النشر التلقائي للقنوات فوراً — مع زر «إعادة نشر للقنوات» على كل عنصر منشور.
-      </p>
+      <div className="mt-3 space-y-2">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+          <p className="text-[11px] font-bold text-amber-200">
+            ⚠️ مهم: المتغيرات يجب أن تكون على بيئة <b>Production</b> وليس <b>Development</b>
+          </p>
+          <p className="mt-1 text-[10px] leading-relaxed text-amber-300/80">
+            1. افتح <b className="text-cream">dashboard.convex.dev</b> → مشروع VIPYemen<br/>
+            2. في الشريط العلوي اختر <b className="text-cream">Production</b> (وليس Development)<br/>
+            3. اذهب إلى <b className="text-cream">Settings → Environment Variables</b><br/>
+            4. أضف: <code className="text-[9px] text-cream" dir="ltr">FACEBOOK_ACCESS_TOKEN</code>
+          </p>
+        </div>
+        <p className="rounded-lg border border-ink-600/50 bg-ink-950/40 p-3 text-[11px] leading-relaxed text-ink-300">
+          بدون مفاتيح تبقى المنصة تعمل بالكامل وتنشر الإعلانات على الواجهة، وعند ضبط المفاتيح
+          يبدأ النشر التلقائي للقنوات فوراً — مع زر «إعادة نشر للقنوات» على كل عنصر منشور.
+        </p>
+      </div>
     </Card>
   );
 }

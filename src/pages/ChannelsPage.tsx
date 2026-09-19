@@ -76,6 +76,16 @@ export function ChannelsPage() {
                 {c.name}
               </a>
             ))}
+            <a
+              href="https://vipyemen.onrender.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Render — المنصة على Render"
+              className="flex items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-2.5 text-xs font-black text-sky-300 transition-all hover:-translate-y-0.5 hover:border-sky-500/70"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M11.637 2.018c-.248-.092-.517-.092-.765 0L2.79 6.058c-.248.092-.43.324-.43.58v7.724c0 .256.182.488.43.58l8.082 4.04c.248.092.517.092.765 0l8.082-4.04c.248-.092.43-.324.43-.58V6.638c0-.256-.182-.488-.43-.58L11.637 2.018zM12 4.07l6.555 3.28L12 10.625 5.445 7.35 12 4.07z"/></svg>
+              Render
+            </a>
           </div>
         </div>
       </section>

@@ -168,8 +168,8 @@ async function postToWhatsApp(text: string): Promise<boolean> {
 }
 
 // ── Facebook Page ─────────────────────────────────────────────────────
-async function postToFacebookPage(text: string, imageUrl?: string): Promise<boolean> {
-  const token = process.env.FACEBOOK_ACCESS_TOKEN?.trim();
+async function postToFacebookPage(text: string, imageUrl?: string, overrideToken?: string): Promise<boolean> {
+  const token = overrideToken || process.env.FACEBOOK_ACCESS_TOKEN?.trim();
   const pageId = process.env.FACEBOOK_PAGE_ID?.trim() || FB_PAGE_ID_DEFAULT;
   if (!token) {
     console.log("[Channel:FacebookPage] SKIP — no FACEBOOK_ACCESS_TOKEN");
@@ -251,8 +251,8 @@ async function postToFacebookPage(text: string, imageUrl?: string): Promise<bool
 }
 
 // ── Facebook Group ────────────────────────────────────────────────────
-async function postToFacebookGroup(text: string): Promise<boolean> {
-  const token = process.env.FACEBOOK_ACCESS_TOKEN?.trim();
+async function postToFacebookGroup(text: string, overrideToken?: string): Promise<boolean> {
+  const token = overrideToken || process.env.FACEBOOK_ACCESS_TOKEN?.trim();
   const groupId = process.env.FACEBOOK_GROUP_ID?.trim() || FB_GROUP_ID_DEFAULT;
   if (!token) {
     console.log("[Channel:FacebookGroup] SKIP — no FACEBOOK_ACCESS_TOKEN");
@@ -287,7 +287,7 @@ async function postToFacebookGroup(text: string): Promise<boolean> {
 // ── Presence-only report (no secrets) ─────────────────────────────────
 export const getChannelSetup = action({
   args: {},
-  handler: async () => {
+  handler: async (ctx) => {
     const telegram =
       !!(
         process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_DEFAULT
@@ -299,7 +299,30 @@ export const getChannelSetup = action({
       !!process.env.WHATSAPP_ACCESS_TOKEN?.trim() &&
       !!process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() &&
       (process.env.WHATSAPP_BROADCAST_TO ?? "").split(",").some((n) => n.trim());
-    const fbToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
+
+    // Facebook: try env var first, fallback to database settings
+    let fbToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
+    let fbTokenSource: string = fbToken ? "env" : "none";
+    if (!fbToken) {
+      try {
+        const settings: Record<string, unknown> = await ctx.runQuery(
+          (await import("./_generated/api" as string)).api.settings.getAll,
+          { token: "__channel_setup__" }
+        ) as Record<string, unknown>;
+        // Check common key patterns for the Facebook token in settings
+        for (const key of ["facebookAccessToken", "facebook_access_token", "FB_ACCESS_TOKEN"]) {
+          const val = settings[key];
+          if (typeof val === "string" && val.trim().length > 10) {
+            fbToken = val.trim();
+            fbTokenSource = "db:" + key;
+            break;
+          }
+        }
+      } catch {
+        // query might fail if not admin — that's fine, use env only
+      }
+    }
+
     const fbTokenLen = fbToken.length;
     const fbTokenPrefix = fbTokenLen > 4 ? fbToken.slice(0, 4) : "";
     const facebook =
@@ -317,10 +340,12 @@ export const getChannelSetup = action({
         fbTokenPresent: fbTokenLen > 0,
         fbTokenLen,
         fbTokenPrefix,
+        fbTokenSource,
         fbPageIdPresent: !!(process.env.FACEBOOK_PAGE_ID?.trim()),
         fbGroupIdPresent: !!(process.env.FACEBOOK_GROUP_ID?.trim()),
         fbGroupIdDefault: !!FB_GROUP_ID_DEFAULT,
         fbPageIdDefault: !!FB_PAGE_ID_DEFAULT,
+        envFbToken: !!process.env.FACEBOOK_ACCESS_TOKEN?.trim(),
       },
     };
   },
@@ -341,6 +366,24 @@ export const publishToChannels = action({
     price: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Resolve Facebook token: env var → database fallback
+    let fbToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
+    if (!fbToken) {
+      try {
+        const settings: Record<string, unknown> = await ctx.runQuery(
+          (await import("./_generated/api" as string)).api.settings.getAll,
+          { token: "__channel_publish__" }
+        ) as Record<string, unknown>;
+        for (const key of ["facebookAccessToken", "facebook_access_token", "FB_ACCESS_TOKEN"]) {
+          const val = settings[key];
+          if (typeof val === "string" && val.trim().length > 10) {
+            fbToken = val.trim();
+            break;
+          }
+        }
+      } catch { /* fallback: no token */ }
+    }
+
     const text = buildMessage(args);
     const fbText = buildFacebookMessage(args);
     const fullUrl = `${PLATFORM_BASE}${args.url}`;
@@ -362,14 +405,14 @@ export const publishToChannels = action({
     }
 
     // Facebook Page (with platform link)
-    if (await postToFacebookPage(fbText + `\n\n🔗 ${fullUrl}`)) {
+    if (await postToFacebookPage(fbText + `\n\n🔗 ${fullUrl}`, undefined, fbToken || undefined)) {
       done.push("facebook_page");
     } else {
       failed.push("facebook_page");
     }
 
     // Facebook Group (text + link)
-    if (await postToFacebookGroup(fbText + `\n\n🔗 ${fullUrl}`)) {
+    if (await postToFacebookGroup(fbText + `\n\n🔗 ${fullUrl}`, fbToken || undefined)) {
       done.push("facebook_group");
     } else {
       failed.push("facebook_group");

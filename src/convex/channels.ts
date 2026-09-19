@@ -299,13 +299,30 @@ export const getChannelSetup = action({
       !!process.env.WHATSAPP_ACCESS_TOKEN?.trim() &&
       !!process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() &&
       (process.env.WHATSAPP_BROADCAST_TO ?? "").split(",").some((n) => n.trim());
+    const fbToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
+    const fbTokenLen = fbToken.length;
+    const fbTokenPrefix = fbTokenLen > 4 ? fbToken.slice(0, 4) : "";
     const facebook =
-      !!process.env.FACEBOOK_ACCESS_TOKEN?.trim() &&
+      fbTokenLen > 0 &&
       (!!process.env.FACEBOOK_PAGE_ID?.trim() || !!FB_PAGE_ID_DEFAULT);
     const facebookGroup =
-      !!process.env.FACEBOOK_ACCESS_TOKEN?.trim() &&
+      fbTokenLen > 0 &&
       (!!process.env.FACEBOOK_GROUP_ID?.trim() || !!FB_GROUP_ID_DEFAULT);
-    return { telegram, whatsapp, facebook, facebookGroup };
+    return {
+      telegram,
+      whatsapp,
+      facebook,
+      facebookGroup,
+      _diag: {
+        fbTokenPresent: fbTokenLen > 0,
+        fbTokenLen,
+        fbTokenPrefix,
+        fbPageIdPresent: !!(process.env.FACEBOOK_PAGE_ID?.trim()),
+        fbGroupIdPresent: !!(process.env.FACEBOOK_GROUP_ID?.trim()),
+        fbGroupIdDefault: !!FB_GROUP_ID_DEFAULT,
+        fbPageIdDefault: !!FB_PAGE_ID_DEFAULT,
+      },
+    };
   },
 });
 

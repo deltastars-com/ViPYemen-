@@ -253,13 +253,18 @@ export function AdminSettings({ token }: { token: string }) {
 
 function ChannelSetupCard() {
   const getSetup = useAction(api.channels.getChannelSetup);
-  const [setup, setSetup] = useState<{ telegram: boolean; whatsapp: boolean; facebook: boolean; facebookGroup: boolean } | null>(null);
+  const [setup, setSetup] = useState<{ telegram: boolean; whatsapp: boolean; facebook: boolean; facebookGroup: boolean; _diag?: Record<string, unknown> } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
     getSetup()
-      .then((s) => live && setSetup(s))
-      .catch(() => live && setSetup({ telegram: false, whatsapp: false, facebook: false, facebookGroup: false }));
+      .then((s) => { if (live) { setSetup(s); setError(null); } })
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("[ChannelSetup] Action failed:", msg);
+        if (live) { setSetup({ telegram: false, whatsapp: false, facebook: false, facebookGroup: false }); setError(msg); }
+      });
     return () => {
       live = false;
     };
@@ -309,6 +314,13 @@ function ChannelSetupCard() {
           </p>
         </div>
       </div>
+      {error && (
+        <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+          <p className="text-[11px] font-bold text-red-300">⚠️ خطأ في الاتصال بالخادم:</p>
+          <p className="mt-1 text-[10px] text-red-400" dir="ltr">{error}</p>
+          <p className="mt-1 text-[10px] text-ink-400">تأكد من أن المتصفح مسجّل الدخول كمدير.</p>
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         {channels.map((c) => (
           <div
@@ -340,6 +352,16 @@ function ChannelSetupCard() {
           </div>
         ))}
       </div>
+      {setup?._diag && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-[10px] font-bold text-ink-400 hover:text-cream">
+            🔍 معلومات التشخيص (اضغط للفتح)
+          </summary>
+          <div className="mt-2 rounded-lg border border-ink-600/50 bg-ink-950/40 p-3 text-[10px] leading-relaxed text-ink-300" dir="ltr">
+            <pre className="whitespace-pre-wrap">{JSON.stringify(setup._diag, null, 2)}</pre>
+          </div>
+        </details>
+      )}
       <p className="mt-3 rounded-lg border border-ink-600/50 bg-ink-950/40 p-3 text-[11px] leading-relaxed text-ink-300">
         أضف هذه المتغيرات في <b className="text-gold-300">Convex Dashboard → Project Settings → Environment Variables</b>.
         بدون مفاتيح تبقى المنصة تعمل بالكامل وتنشر الإعلانات على الواجهة، وعند ضبط المفاتيح

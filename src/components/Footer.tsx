@@ -21,6 +21,7 @@ import { Logo } from "./Logo";
 import { ExitButton } from "./ExitButton";
 import { useLang } from "@/lib/i18n";
 import { PLATFORM_WHATSAPP_LINK, openExternal } from "@/lib/utils";
+import { isNativeApp } from "@/lib/native";
 import { TelegramIcon, WhatsAppIcon } from "./ChannelIcons";
 
 const APKPURE_URL = "https://apkpure.com/vipyemen/com.vip.yemen/download";
@@ -261,10 +262,12 @@ export function Footer() {
 
           <div className="flex items-center gap-3">
             <ExitButton compact />
-            <span className="flex items-center gap-1.5">
-              <LogoMark className="h-5 w-5" />
-              {t("footerPwaDesc")}
-            </span>
+            {!isNativeApp() && (
+              <span className="flex items-center gap-1.5">
+                <LogoMark className="h-5 w-5" />
+                {t("footerPwaDesc")}
+              </span>
+            )}
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-300"

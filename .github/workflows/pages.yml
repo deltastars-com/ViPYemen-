@@ -54,7 +54,7 @@ jobs:
           # client bundle). The client AI engine calls the server action, so a
           # repo secret is propagated to the deployment on every backend push.
           if [[ -n "$GEMINI_KEY_SECRET" && -n "$CONVEX_DEPLOY_KEY" ]]; then
-            npx convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" >/dev/null 2>&1 && \
+            npx convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" --prod >/dev/null 2>&1 && \
               echo "GEMINI_KEY synced to Convex server env" || \
               echo "::warning::Could not sync GEMINI_KEY to Convex env (deploy key missing?) — AI falls back to the free engine until the key is set in the Convex dashboard."
           fi
@@ -63,11 +63,11 @@ jobs:
           # the deploy key actually targets — regardless of where the values
           # were set in the dashboard.
           if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-            [[ -n "$FB_TOKEN_SECRET" ]] && npx convex env set FACEBOOK_ACCESS_TOKEN "$FB_TOKEN_SECRET" >/dev/null 2>&1 && echo "FACEBOOK_ACCESS_TOKEN synced" || true
-            [[ -n "$FB_PAGE_SECRET" ]] && npx convex env set FACEBOOK_PAGE_ID "$FB_PAGE_SECRET" >/dev/null 2>&1 && echo "FACEBOOK_PAGE_ID synced" || true
-            [[ -n "$FB_GROUP_SECRET" ]] && npx convex env set FACEBOOK_GROUP_ID "$FB_GROUP_SECRET" >/dev/null 2>&1 && echo "FACEBOOK_GROUP_ID synced" || true
-            [[ -n "$TG_TOKEN_SECRET" ]] && npx convex env set TELEGRAM_BOT_TOKEN "$TG_TOKEN_SECRET" >/dev/null 2>&1 || true
-            [[ -n "$TG_CHAT_SECRET" ]] && npx convex env set TELEGRAM_CHAT_ID "$TG_CHAT_SECRET" >/dev/null 2>&1 || true
+            [[ -n "$FB_TOKEN_SECRET" ]] && npx convex env set FACEBOOK_ACCESS_TOKEN "$FB_TOKEN_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_ACCESS_TOKEN synced (prod)" || true
+            [[ -n "$FB_PAGE_SECRET" ]] && npx convex env set FACEBOOK_PAGE_ID "$FB_PAGE_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_PAGE_ID synced (prod)" || true
+            [[ -n "$FB_GROUP_SECRET" ]] && npx convex env set FACEBOOK_GROUP_ID "$FB_GROUP_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_GROUP_ID synced (prod)" || true
+            [[ -n "$TG_TOKEN_SECRET" ]] && npx convex env set TELEGRAM_BOT_TOKEN "$TG_TOKEN_SECRET" --prod >/dev/null 2>&1 || true
+            [[ -n "$TG_CHAT_SECRET" ]] && npx convex env set TELEGRAM_CHAT_ID "$TG_CHAT_SECRET" --prod >/dev/null 2>&1 || true
           fi
           if [[ -n "$VITE_CONVEX_URL_VAR" && "$VITE_CONVEX_URL_VAR" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
             echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"

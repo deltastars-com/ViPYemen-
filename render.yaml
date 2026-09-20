@@ -1,0 +1,37 @@
+# Render — ViP Yemen static site (PWA)
+#
+# Deploys the Vite build as a static site with proper SPA routing.
+# Create/reconnect the site once via Render Blueprint pointing at this
+# repository — Render reads this file and applies the settings below.
+#
+# The build bakes the production Convex URL so the deployed site talks to
+# the live backend without needing any dashboard configuration.
+
+services:
+  - type: web
+    name: vipyemen
+    runtime: static
+    buildCommand: npm ci && npm run build
+    outputDir: dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: VITE_CONVEX_URL
+        value: https://notable-shepherd-367.convex.cloud
+    headers:
+      # SPA fallback: serve index.html for any unknown path so client-side
+      # routes (/jobs, /real-estate, /privacy-policy, …) work on refresh.
+      - pattern: /*
+        headers:
+          - key: X-Frame-Options
+            value: DENY
+          - key: X-Content-Type-Options
+            value: nosniff
+          - key: Referrer-Policy
+            value: strict-origin-when-cross-origin
+    routes:
+      # Send everything that is not a real file to index.html (SPA)
+      - type: rewrite
+        source: /*
+        destination: /index.html

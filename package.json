@@ -5,6 +5,7 @@
   "type": "module",
   "description": "ViP Yemen — منصة التوظيف والتسويق العقاري والإلكتروني والخدمات البرمجية",
   "scripts": {
+    "postinstall": "node scripts/postinstall-build.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",

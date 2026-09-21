@@ -15,6 +15,14 @@ import { resolve } from "node:path";
 const root = process.cwd();
 const hasIndex = (dir) => existsSync(resolve(root, dir, "index.html"));
 
+// Skip on Vercel — it runs its own build command and reports the postinstall
+// build as a failed deployment. The postinstall hook exists purely to
+// self-heal Render services whose build command doesn't build.
+if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.NOW_BUILDER) {
+  console.log("[postinstall] Vercel detected — skipping (Vercel runs its own build).");
+  process.exit(0);
+}
+
 // Skip during development installs if a fresh build already exists.
 if (hasIndex("dist") || hasIndex("build") || hasIndex("e.g.build")) {
   console.log("[postinstall] Build output already present — skipping build.");

@@ -16,7 +16,7 @@ const root = process.cwd();
 const hasIndex = (dir) => existsSync(resolve(root, dir, "index.html"));
 
 // Skip during development installs if a fresh build already exists.
-if (hasIndex("dist") || hasIndex("build")) {
+if (hasIndex("dist") || hasIndex("build") || hasIndex("e.g.build")) {
   console.log("[postinstall] Build output already present — skipping build.");
   process.exit(0);
 }
@@ -30,8 +30,11 @@ if (!hasIndex("dist")) {
 }
 
 // Mirror dist → build so a Render service created with publish dir "build"
-// also succeeds without any dashboard change.
-rmSync(resolve(root, "build"), { recursive: true, force: true });
-mkdirSync(resolve(root, "build"), { recursive: true });
-cpSync(resolve(root, "dist"), resolve(root, "build"), { recursive: true });
-console.log("[postinstall] ✔ Built and mirrored to dist/ and build/");
+// also succeeds without any dashboard change. Also covers the common typo
+// "e.g.build" (the placeholder text pasted literally into the field).
+for (const alt of ["build", "e.g.build"]) {
+  rmSync(resolve(root, alt), { recursive: true, force: true });
+  mkdirSync(resolve(root, alt), { recursive: true });
+  cpSync(resolve(root, "dist"), resolve(root, alt), { recursive: true });
+}
+console.log("[postinstall] ✔ Built and mirrored to dist/, build/, e.g.build/");

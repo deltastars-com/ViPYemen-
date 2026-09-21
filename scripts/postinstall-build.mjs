@@ -10,9 +10,20 @@
  */
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, cpSync, rmSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = process.cwd();
+// Always anchor to the script's own directory — never the process cwd — so
+// `npm ci` cache layouts or changed workdirs can never make this file
+// "not found". If anything is off, exit 0 silently: a failed install hook
+// must never block a hosting deployment.
+const here = dirname(fileURLToPath(import.meta.url));
+const scriptName = "postinstall-build.mjs";
+if (!existsSync(resolve(here, scriptName))) {
+  console.log("[postinstall] Script location unclear — skipping safely.");
+  process.exit(0);
+}
+const root = resolve(here, "..");
 const hasIndex = (dir) => existsSync(resolve(root, dir, "index.html"));
 
 // Skip on Vercel — it runs its own build command and reports the postinstall
@@ -22,6 +33,12 @@ if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.NOW_BUILDER) {
   console.log("[postinstall] Vercel detected — skipping (Vercel runs its own build).");
   process.exit(0);
 }
+
+// Any unexpected error must never fail the install/deploy.
+process.on("uncaughtException", (err) => {
+  console.log("[postinstall] Non-fatal:", err.message);
+  process.exit(0);
+});
 
 // Skip during development installs if a fresh build already exists.
 if (hasIndex("dist") || hasIndex("build") || hasIndex("e.g.build")) {

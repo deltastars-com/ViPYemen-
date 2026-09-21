@@ -138,7 +138,87 @@ export const tick = internalMutation({
       }
     }
 
-    // ── 7. Notifications for automated events ────────────────────────
+    // ── 7. Sessions: delete expired sessions (>30 days old) ─────────
+    const sessionCutoff = now - 30 * 24 * 60 * 60 * 1000;
+    const oldSessions = await ctx.db.query("sessions").collect();
+    let sessionCount = 0;
+    for (const session of oldSessions) {
+      if (session.expiresAt < now || session.createdAt < sessionCutoff) {
+        await ctx.db.delete(session._id);
+        sessionCount++;
+      }
+    }
+    if (sessionCount > 0) events.push(`تم حذف ${sessionCount} جلسة منتهية الصلاحية`);
+
+    // ── 8. Password resets: delete used/expired codes ───────────────
+    const oldResets = await ctx.db.query("passwordResets").collect();
+    let resetCount = 0;
+    for (const reset of oldResets) {
+      if (reset.used || reset.expiresAt < now) {
+        await ctx.db.delete(reset._id);
+        resetCount++;
+      }
+    }
+    if (resetCount > 0) events.push(`تم حذف ${resetCount} رمز استعادة مستخدم/منتهٍ`);
+
+    // ── 9. File queue: delete old completed/failed rows (>7 days) ───
+    // Metadata stays in Telegram/Facebook channels — queue rows are only
+    // bookkeeping, so removing old ones keeps the table lean.
+    const queueCutoff = now - 7 * 24 * 60 * 60 * 1000;
+    const doneQueue = await ctx.db
+      .query("fileQueue")
+      .withIndex("by_status", (q) => q.eq("status", "cleaned"))
+      .order("asc")
+      .take(200);
+    let queueCount = 0;
+    for (const row of doneQueue) {
+      if (row.createdAt < queueCutoff) {
+        await ctx.db.delete(row._id);
+        queueCount++;
+      }
+    }
+    const failedQueue = await ctx.db
+      .query("fileQueue")
+      .withIndex("by_status", (q) => q.eq("status", "failed"))
+      .order("asc")
+      .take(50);
+    for (const row of failedQueue) {
+      if (row.createdAt < queueCutoff) {
+        await ctx.db.delete(row._id);
+        queueCount++;
+      }
+    }
+    // Requeue files stuck in "forwarding" for >10 minutes (crashed run)
+    const stuckCutoff = now - 10 * 60 * 1000;
+    const forwarding = await ctx.db
+      .query("fileQueue")
+      .withIndex("by_status", (q) => q.eq("status", "forwarding"))
+      .order("asc")
+      .take(50);
+    for (const row of forwarding) {
+      if (row.createdAt < stuckCutoff) {
+        await ctx.db.patch(row._id, { status: "pending" });
+      }
+    }
+    if (queueCount > 0) events.push(`تم تنظيف ${queueCount} صف قائمة ملفات قديم`);
+
+    // ── 10. Notifications: delete system notifications older than 90d ─
+    const notifCutoff = now - 90 * 24 * 60 * 60 * 1000;
+    const oldNotifs = await ctx.db
+      .query("notifications")
+      .withIndex("by_created")
+      .order("asc")
+      .take(100);
+    let notifCount = 0;
+    for (const notif of oldNotifs) {
+      if (notif.createdAt < notifCutoff) {
+        await ctx.db.delete(notif._id);
+        notifCount++;
+      }
+    }
+    if (notifCount > 0) events.push(`تم حذف ${notifCount} إشعار قديم`);
+
+    // ── 11. Notifications for automated events ──────────────────────
     for (const message of events.slice(0, 10)) {
       await ctx.db.insert("notifications", {
         title: "أتمتة النظام",

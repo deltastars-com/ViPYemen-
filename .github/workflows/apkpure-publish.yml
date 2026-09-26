@@ -105,13 +105,24 @@ jobs:
           echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
 
-          # A v1 (JAR) signature leaves META-INF/*.RSA|DSA|EC in the archive.
-          if unzip -l "$APK" | grep -qE "META-INF/(CERT|.*\.(RSA|DSA|EC))"; then
+          # Signature check. Only a v1 (JAR) signature leaves
+          # META-INF/*.RSA|DSA|EC in the archive, so that test alone reports
+          # every v2/v3-signed APK as unsigned. Prefer apksigner (authoritative
+          # for all schemes), then the v2/v3 APK Signing Block, then v1.
+          APKSIGNER=$(ls "${ANDROID_HOME:-/usr/lib/android-sdk}"/build-tools/*/apksigner 2>/dev/null | tail -1 || true)
+          SIGNED="no"
+          FP256=""
+          if [ -n "$APKSIGNER" ] && "$APKSIGNER" verify "$APK" >/dev/null 2>&1; then
             SIGNED="yes"
-          else
-            SIGNED="no"
+            FP256=$("$APKSIGNER" verify --print-certs "$APK" \
+              | sed -n 's/.*SHA-256 digest: *//p' | head -1 | tr -d ':' | tr '[:lower:]' '[:upper:]' || true)
+          elif grep -aq "APK Sig Block 42" "$APK"; then
+            SIGNED="yes"
+          elif unzip -l "$APK" | grep -qE "META-INF/(CERT|.*\.(RSA|DSA|EC))"; then
+            SIGNED="yes"
           fi
           echo "signed=$SIGNED" >> "$GITHUB_OUTPUT"
+          echo "fingerprint=$FP256" >> "$GITHUB_OUTPUT"
 
           # Read the real package id when the runner exposes Android build-tools.
           AAPT=$(ls "${ANDROID_HOME:-/usr/lib/android-sdk}"/build-tools/*/aapt 2>/dev/null | tail -1 || true)
@@ -124,6 +135,7 @@ jobs:
           echo "size:     $SIZE bytes"
           echo "sha256:   $SHA256"
           echo "signed:   $SIGNED"
+          echo "cert sha256 fingerprint: ${FP256:-<apksigner unavailable>}"
           echo "package:  ${PKG:-<not readable on this runner>}"
 
           if [ -n "$PKG" ] && [ "$PKG" != "$PACKAGE_ID" ]; then
@@ -175,6 +187,7 @@ jobs:
             echo "| الحجم | ${{ steps.verify.outputs.size }} bytes |"
             echo "| SHA-256 | \`${{ steps.verify.outputs.sha256 }}\` |"
             echo "| موقّع | ${{ steps.verify.outputs.signed }} |"
+            echo "| بصمة الشهادة (SHA-256) | \`${{ steps.verify.outputs.fingerprint || '—' }}\` |"
             echo
             echo "**روابط التوزيع**"
             echo "- GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.tag }}"

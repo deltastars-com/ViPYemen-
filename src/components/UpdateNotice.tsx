@@ -32,7 +32,7 @@ function parseVersion(value: string): number[] {
     .trim()
     .replace(/^v/i, "")
     .split(/[.\-+]/)
-    .map((part) => parseInt(part, 10) || 0);
+    .map((part) => Number.parseInt(part, 10) || 0);
 }
 
 /** True when `candidate` is a strictly newer version than `current`. */

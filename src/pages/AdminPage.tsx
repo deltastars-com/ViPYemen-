@@ -251,12 +251,16 @@ export function AdminPage() {
         </aside>
 
         {menuOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden" onClick={() => setMenuOpen(false)}>
-            <div className="absolute inset-0 bg-ink-950/80 backdrop-blur-sm" />
-            <aside
-              className="absolute right-0 top-0 h-full w-72 overflow-y-auto border-l border-ink-700/60 bg-ink-950 p-3"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="fixed inset-0 z-50 lg:hidden">
+            {/* Click-away scrim as a real button: closing the drawer works
+                with Enter/Space too, not only with a pointer tap. */}
+            <button
+              type="button"
+              aria-label={t("menuClose")}
+              onClick={() => setMenuOpen(false)}
+              className="absolute inset-0 cursor-default bg-ink-950/80 backdrop-blur-sm"
+            />
+            <aside className="absolute right-0 top-0 h-full w-72 overflow-y-auto border-l border-ink-700/60 bg-ink-950 p-3">
               <AdminSidebar tabs={TABS} tab={tab} setTab={goToTab} />
             </aside>
           </div>

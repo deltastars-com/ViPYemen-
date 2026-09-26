@@ -205,6 +205,7 @@ const DICT: Record<string, { ar: string; en: string }> = {
   previewMode: { ar: "وضع المعاينة — المحتوى الحي يظهر بعد ضبط رابط الخادم", en: "Preview mode — live content shows after setting the server URL" },
   offlineMode: { ar: "وضع دون اتصال — التطبيق يعمل من الذاكرة، ويتحدث المحتوى تلقائياً عند عودة الشبكة", en: "Offline mode — app runs from cache, content updates automatically when back online" },
   menuClose: { ar: "إغلاق القائمة", en: "Close menu" },
+  close: { ar: "إغلاق", en: "Close" },
   menuOpen: { ar: "فتح القائمة", en: "Open menu" },
   exit: { ar: "خروج", en: "Exit" },
   exitAppTitle: { ar: "إنهاء التطبيق والخروج", en: "Exit the app" },

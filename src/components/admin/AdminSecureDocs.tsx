@@ -316,7 +316,13 @@ function DocForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-ink-950/80 backdrop-blur-sm" onClick={onClose} />
+      {/* Click-away scrim as a real button so it is keyboard-operable too. */}
+      <button
+        type="button"
+        aria-label={t("close")}
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-ink-950/80 backdrop-blur-sm"
+      />
       <div className="card-surface relative z-10 w-full max-w-lg p-6">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-black text-cream">

@@ -173,7 +173,30 @@ function blockDragAndDrop(): void {
   });
 }
 
-/** Block view-source: protocol */
+/**
+ * Protocols that window.open is allowed to reach. Everything else
+ * (view-source:, javascript:, data:, file:, blob:…) is refused, so a crafted
+ * link or crafted query string can never turn this hook into an open redirect
+ * or a script-execution gadget.
+ */
+const SAFE_OPEN_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
+
+/**
+ * True when `url` is safe to open (http/https/mailto/tel, or same-origin
+ * relative — the empty/about:blank case used by feature code stays allowed).
+ * Anything unparseable or using another scheme is rejected.
+ */
+export function isSafeOpenUrl(url: string): boolean {
+  const value = url.trim();
+  if (value === "" || value === "about:blank") return true;
+  try {
+    return SAFE_OPEN_PROTOCOLS.has(new URL(value, window.location.origin).protocol);
+  } catch {
+    return false;
+  }
+}
+
+/** Block view-source: and any other unsafe protocol from being opened */
 function blockViewSource(): void {
   const originalOpen = window.open;
   window.open = function (
@@ -182,7 +205,7 @@ function blockViewSource(): void {
     features?: string
   ): Window | null {
     const urlStr = typeof url === "string" ? url : (url?.toString() ?? "");
-    if (urlStr.startsWith("view-source:")) {
+    if (!isSafeOpenUrl(urlStr)) {
       return null;
     }
     return originalOpen.call(window, url, target, features);

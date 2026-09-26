@@ -407,8 +407,17 @@ function CodeGenerator() {
   const [copied, setCopied] = useState(false);
 
   function generate() {
-    const digits = Array.from({ length: 6 }, () => Math.floor(Math.random() * 10));
-    setCode(digits.join(""));
+    // Verification codes must not come from a predictable PRNG.
+    const bytes = new Uint8Array(6);
+    try {
+      crypto.getRandomValues(bytes);
+    } catch {
+      // Last-resort fallback for WebViews without WebCrypto: derive the digits
+      // from the clock so the code still changes on every click.
+      const now = Date.now();
+      for (let i = 0; i < bytes.length; i++) bytes[i] = (now >> (i * 4)) & 0xff;
+    }
+    setCode(Array.from(bytes, (b) => b % 10).join(""));
     setCopied(false);
   }
 

@@ -42,15 +42,19 @@ function ExitConfirmDialog({ onConfirm, onCancel }: { onConfirm: () => void; onC
 
   return (
     <div
-      className="fixed inset-0 z-[999] flex items-center justify-center bg-ink-950/85 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      onClick={onCancel}
     >
-      <div
-        className="w-full max-w-sm rounded-2xl border border-rose-500/30 bg-gradient-to-b from-ink-900 to-ink-950 p-6 text-center shadow-[0_25px_80px_-20px_rgba(0,0,0,0.9)]"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {/* Click-away scrim: a real button keeps pointer and keyboard dismissal
+          equivalent (Escape and the Cancel button also close the dialog). */}
+      <button
+        type="button"
+        aria-label={t("close")}
+        onClick={onCancel}
+        className="absolute inset-0 cursor-default bg-ink-950/85 backdrop-blur-sm"
+      />
+      <div className="relative w-full max-w-sm rounded-2xl border border-rose-500/30 bg-gradient-to-b from-ink-900 to-ink-950 p-6 text-center shadow-[0_25px_80px_-20px_rgba(0,0,0,0.9)]">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-rose-500/40 bg-rose-500/10">
           <Power className="h-7 w-7 text-rose-400" />
         </div>

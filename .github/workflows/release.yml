@@ -59,7 +59,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Generate icons
         run: npm run icons
@@ -84,7 +84,7 @@ jobs:
           # Keep the Gemini key in the Convex SERVER environment (never in the
           # client bundle) — synced from the repo secret on every backend push.
           if [[ -n "$GEMINI_KEY_SECRET" && -n "$CONVEX_DEPLOY_KEY" ]]; then
-            npx convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" >/dev/null 2>&1 && \
+            ./node_modules/.bin/convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" >/dev/null 2>&1 && \
               echo "GEMINI_KEY synced to Convex server env" || \
               echo "::warning::Could not sync GEMINI_KEY to Convex env — AI falls back to the free engine until the key is set in the Convex dashboard."
           fi
@@ -95,7 +95,7 @@ jobs:
             echo "::warning::VITE_CONVEX_URL repo variable is not a valid Convex URL (ignored) — resolving the real URL via CONVEX_DEPLOY_KEY instead."
             if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
               echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-              DEPLOY_OUT=$(npx convex deploy 2>&1) || {
+              DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
                 echo "$DEPLOY_OUT"
                 echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
                 exit 1
@@ -114,7 +114,7 @@ jobs:
             fi
           elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
             echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-            DEPLOY_OUT=$(npx convex deploy 2>&1) || {
+            DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
               echo "$DEPLOY_OUT"
               echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
               exit 1
@@ -126,7 +126,8 @@ jobs:
               exit 1
             fi
             echo "url=$URL" >> "$GITHUB_OUTPUT"
-            echo "deployed and resolved: $URL"          else
+            echo "deployed and resolved: $URL"
+          else
             # No valid URL and no deploy key: the client bundle carries the
             # known-good live deployment URL as its built-in fallback, so the
             # app still connects to the live backend. Warn loudly instead of
@@ -156,7 +157,7 @@ jobs:
           cp -r dist release/web-pwa
           zip -r release/vip-yemen-web-pwa-${{ github.ref_name }}.zip release/web-pwa
           zip -r release/vip-yemen-source-${{ github.ref_name }}.zip src index.html package.json bun.lock bun.lockb vite.config.ts capacitor.config.ts convex.json public scripts android ios .github "store-graphics" || true
-          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md IOS-APPSTORE-GUIDE.md README.md store-listing.json release/ || true
+          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md IOS-APPSTORE-GUIDE.md README.md CHANGELOG.md store-listing.json release/ || true
           cp store-graphics/*.png release/ || true
 
       # Assets go straight from this job onto the GitHub Release (no CI
@@ -209,7 +210,7 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0" "platforms;android-35" 2>/dev/null || true
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Generate icons
         run: npm run icons
@@ -227,7 +228,7 @@ jobs:
           # Keep the Gemini key in the Convex SERVER environment (never in the
           # client bundle) — synced from the repo secret on every backend push.
           if [[ -n "$GEMINI_KEY_SECRET" && -n "$CONVEX_DEPLOY_KEY" ]]; then
-            npx convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" >/dev/null 2>&1 && \
+            ./node_modules/.bin/convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" >/dev/null 2>&1 && \
               echo "GEMINI_KEY synced to Convex server env" || \
               echo "::warning::Could not sync GEMINI_KEY to Convex env — AI falls back to the free engine until the key is set in the Convex dashboard."
           fi
@@ -238,7 +239,7 @@ jobs:
             echo "::warning::VITE_CONVEX_URL repo variable is not a valid Convex URL (ignored) — resolving the real URL via CONVEX_DEPLOY_KEY instead."
             if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
               echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-              DEPLOY_OUT=$(npx convex deploy 2>&1) || {
+              DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
                 echo "$DEPLOY_OUT"
                 echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
                 exit 1
@@ -257,7 +258,7 @@ jobs:
             fi
           elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
             echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-            DEPLOY_OUT=$(npx convex deploy 2>&1) || {
+            DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
               echo "$DEPLOY_OUT"
               echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
               exit 1
@@ -285,7 +286,7 @@ jobs:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: ./node_modules/.bin/cap sync android
 
       - name: Configure release keystore (secrets from the admin vault)
         id: keystore
@@ -437,7 +438,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Generate icons
         run: npm run icons
@@ -453,7 +454,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Sync Capacitor iOS (web assets + plugins)
-        run: npx cap sync ios
+        run: ./node_modules/.bin/cap sync ios
 
       - name: Show Xcode version
         run: xcodebuild -version
@@ -542,7 +543,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Generate icons
         run: npm run icons
@@ -556,7 +557,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Sync Capacitor iOS
-        run: npx cap sync ios
+        run: ./node_modules/.bin/cap sync ios
 
       - name: Import Apple distribution certificate + provisioning profile
         env:

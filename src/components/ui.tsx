@@ -1,6 +1,7 @@
 import { X, Loader2 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/lib/i18n";
 
 export function Spinner({ className }: { className?: string }) {
   return <Loader2 className={cn("h-4 w-4 animate-spin", className)} />;
@@ -95,6 +96,8 @@ export function Modal({
   children: ReactNode;
   wide?: boolean;
 }) {
+  const { t } = useLang();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -108,16 +111,20 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-100 flex items-center justify-center bg-ink-950/80 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+      {/* Click-away scrim is a real button, so dismissing by pointer always has
+          a keyboard equivalent (Enter/Space) in addition to Escape. */}
+      <button
+        type="button"
+        aria-label={t("close")}
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-ink-950/80 backdrop-blur-sm"
+      />
       <div
         className={cn(
-          "max-h-[88vh] w-full overflow-y-auto rounded-2xl border border-ink-600/60 bg-ink-900 shadow-2xl",
+          "relative max-h-[88vh] w-full overflow-y-auto rounded-2xl border border-ink-600/60 bg-ink-900 shadow-2xl",
           wide ? "max-w-3xl" : "max-w-lg"
         )}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-ink-700/60 bg-ink-900/95 px-5 py-3.5 backdrop-blur">
           <h3 className="text-base font-bold text-gold-300">{title}</h3>

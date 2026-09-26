@@ -39,44 +39,34 @@ function StoreBadges() {
   );
   const iosUrl = (publicSettings?.iosDownloadUrl as string | undefined)?.trim() || "";
   const androidUrl = (publicSettings?.androidDownloadUrl as string | undefined)?.trim() || APKPURE_URL;
-  const storeLink = (url: string | null) => {
-    if (!url) return undefined;
-    return {
-      href: "#",
-      onClick: (e: React.MouseEvent) => {
-        e.preventDefault();
-        openExternal(url);
-      },
-    };
-  };
-  const android = storeLink(androidUrl);
-  const ios = storeLink(iosUrl || null);
   const badge =
     "flex items-center gap-2 rounded-xl border border-gold-500/40 bg-gold-500/10 px-3.5 py-2 text-xs font-bold text-gold-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/70 hover:bg-gold-500/15 disabled:cursor-not-allowed disabled:opacity-40";
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2.5">
-      <a
-        {...(android ?? { href: "#" })}
-        onClick={android?.onClick}
+      {/* Real buttons (not anchors): the store badges act on click only and
+          the iOS one is genuinely disabled until a URL is saved, so keyboard
+          users get the same behaviour as pointer users. */}
+      <button
+        type="button"
+        onClick={() => openExternal(androidUrl)}
         aria-label={t("footerDownloadAndroid")}
         title={t("footerDownloadAndroid")}
         className={badge}
       >
         <Smartphone className="h-4 w-4" />
-        <span>{lang === "ar" ? "Android — APK" : "Android — APK"}</span>
-      </a>
-      <a
-        {...(ios ? { ...ios } : { href: undefined })}
-        onClick={ios?.onClick}
-        aria-label={ios ? t("footerDownloadIos") : t("footerIosSoon")}
-        title={ios ? t("footerDownloadIos") : t("footerIosSoon")}
-        aria-disabled={!ios}
+        <span>{lang === "ar" ? "أندرويد — APK" : "Android — APK"}</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => iosUrl && openExternal(iosUrl)}
+        disabled={!iosUrl}
+        aria-label={iosUrl ? t("footerDownloadIos") : t("footerIosSoon")}
+        title={iosUrl ? t("footerDownloadIos") : t("footerIosSoon")}
         className={badge}
-        style={!ios ? { pointerEvents: "none" as const } : undefined}
       >
         <Apple className="h-4 w-4" />
-        <span>{lang === "ar" ? "iOS — App Store" : "iOS — App Store"}</span>
-      </a>
+        <span>{lang === "ar" ? "آيفون — App Store" : "iOS — App Store"}</span>
+      </button>
     </div>
   );
 }

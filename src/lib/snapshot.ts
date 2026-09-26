@@ -75,5 +75,5 @@ export function useSnapshotQuery<Query extends FunctionReference<"query">>(
     if (live !== undefined) saveSnapshot(key, live);
   }, [key, live]);
 
-  return live !== undefined ? live : cached;
+  return live ?? cached;
 }

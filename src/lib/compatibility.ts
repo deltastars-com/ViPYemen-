@@ -144,6 +144,26 @@ export function applyDeviceTier(): void {
 }
 
 /**
+ * Static feature table — a closed allowlist instead of evaluating a string,
+ * so a feature name coming from anywhere can never execute code.
+ */
+const FEATURE_CHECKS: Record<string, () => boolean> = {
+  IntersectionObserver: () => typeof window.IntersectionObserver !== "undefined",
+  ResizeObserver: () => typeof window.ResizeObserver !== "undefined",
+  requestIdleCallback: () => typeof window.requestIdleCallback === "function",
+  structuredClone: () => typeof window.structuredClone === "function",
+  WebAssembly: () => typeof window.WebAssembly !== "undefined",
+};
+
+/** True when the browser already provides the named feature. */
+export function hasFeature(feature: string): boolean {
+  if (typeof window === "undefined") return true;
+  const check = FEATURE_CHECKS[feature];
+  // Unknown feature name → assume present (never load an unverified polyfill).
+  return check ? check() : true;
+}
+
+/**
  * Dynamically load a polyfill only when the feature is missing.
  * Returns a promise that resolves when the polyfill is ready.
  */
@@ -153,9 +173,8 @@ export async function loadPolyfillIfNeeded(
 ): Promise<void> {
   if (typeof window === "undefined") return;
   try {
-    // Simple feature check — if feature exists, skip
-    const check = new Function(`return typeof ${feature}`);
-    if (check()) return;
+    // Static allowlisted feature check — if the feature exists, skip.
+    if (hasFeature(feature)) return;
   } catch {
     // Feature detection failed → load polyfill to be safe
   }

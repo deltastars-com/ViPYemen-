@@ -27,7 +27,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Generate official icons
         run: npm run icons
@@ -54,7 +54,7 @@ jobs:
           # client bundle). The client AI engine calls the server action, so a
           # repo secret is propagated to the deployment on every backend push.
           if [[ -n "$GEMINI_KEY_SECRET" && -n "$CONVEX_DEPLOY_KEY" ]]; then
-            npx convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" --prod >/dev/null 2>&1 && \
+            ./node_modules/.bin/convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" --prod >/dev/null 2>&1 && \
               echo "GEMINI_KEY synced to Convex server env" || \
               echo "::warning::Could not sync GEMINI_KEY to Convex env (deploy key missing?) — AI falls back to the free engine until the key is set in the Convex dashboard."
           fi
@@ -63,11 +63,11 @@ jobs:
           # the deploy key actually targets — regardless of where the values
           # were set in the dashboard.
           if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-            [[ -n "$FB_TOKEN_SECRET" ]] && npx convex env set FACEBOOK_ACCESS_TOKEN "$FB_TOKEN_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_ACCESS_TOKEN synced (prod)" || true
-            [[ -n "$FB_PAGE_SECRET" ]] && npx convex env set FACEBOOK_PAGE_ID "$FB_PAGE_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_PAGE_ID synced (prod)" || true
-            [[ -n "$FB_GROUP_SECRET" ]] && npx convex env set FACEBOOK_GROUP_ID "$FB_GROUP_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_GROUP_ID synced (prod)" || true
-            [[ -n "$TG_TOKEN_SECRET" ]] && npx convex env set TELEGRAM_BOT_TOKEN "$TG_TOKEN_SECRET" --prod >/dev/null 2>&1 || true
-            [[ -n "$TG_CHAT_SECRET" ]] && npx convex env set TELEGRAM_CHAT_ID "$TG_CHAT_SECRET" --prod >/dev/null 2>&1 || true
+            [[ -n "$FB_TOKEN_SECRET" ]] && ./node_modules/.bin/convex env set FACEBOOK_ACCESS_TOKEN "$FB_TOKEN_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_ACCESS_TOKEN synced (prod)" || true
+            [[ -n "$FB_PAGE_SECRET" ]] && ./node_modules/.bin/convex env set FACEBOOK_PAGE_ID "$FB_PAGE_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_PAGE_ID synced (prod)" || true
+            [[ -n "$FB_GROUP_SECRET" ]] && ./node_modules/.bin/convex env set FACEBOOK_GROUP_ID "$FB_GROUP_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_GROUP_ID synced (prod)" || true
+            [[ -n "$TG_TOKEN_SECRET" ]] && ./node_modules/.bin/convex env set TELEGRAM_BOT_TOKEN "$TG_TOKEN_SECRET" --prod >/dev/null 2>&1 || true
+            [[ -n "$TG_CHAT_SECRET" ]] && ./node_modules/.bin/convex env set TELEGRAM_CHAT_ID "$TG_CHAT_SECRET" --prod >/dev/null 2>&1 || true
           fi
           if [[ -n "$VITE_CONVEX_URL_VAR" && "$VITE_CONVEX_URL_VAR" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
             echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
@@ -76,7 +76,7 @@ jobs:
             echo "::warning::VITE_CONVEX_URL repo variable is not a valid Convex URL (ignored) — resolving the real URL via CONVEX_DEPLOY_KEY instead."
             if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
               echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-              DEPLOY_OUT=$(npx convex deploy 2>&1) || {
+              DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
                 echo "$DEPLOY_OUT"
                 echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
                 exit 1
@@ -95,7 +95,7 @@ jobs:
             fi
           elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
             echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-            DEPLOY_OUT=$(npx convex deploy 2>&1) || {
+            DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
               echo "$DEPLOY_OUT"
               echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
               exit 1
@@ -131,7 +131,7 @@ jobs:
           echo "app version: $VERSION"
 
       - name: Build (Pages base)
-        run: npx tsc -b && npx vite build --base=/ViPYemen-/
+        run: ./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build --base=/ViPYemen-/
         env:
           VITE_APP_VERSION: ${{ env.VITE_APP_VERSION }}
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}

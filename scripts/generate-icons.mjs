@@ -46,7 +46,7 @@ function encodePNG(width, height, rgba) {
   const raw = Buffer.alloc(height * stride);
   for (let y = 0; y < height; y++) {
     raw[y * stride] = 0;
-    rgba.copy ? rgba.copy(raw, y * stride + 1, y * width * 4, (y + 1) * width * 4) : null;
+    rgba.copy(raw, y * stride + 1, y * width * 4, (y + 1) * width * 4);
   }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);

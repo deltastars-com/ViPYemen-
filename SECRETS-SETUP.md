@@ -128,4 +128,55 @@ sh scripts/vault-import.sh
 | iOS Bundle ID | `com.vip.yemen` |
 | صفحة الخصوصية | `https://vi-p-yemen.vercel.app/privacy-policy` |
 
+---
+
+## 🔟 توقيع iOS التلقائي للنشر في App Store (اختياري)
+
+الافتراضي: كل إصدار يُنتج **IPA غير موقّع** (يُعاد توقيعه بحسابك خلال ثوانٍ —
+انظر `IOS-APPSTORE-GUIDE.md`). لتفعيل **بناء IPA موقّع جاهز للرفع مباشرة**
+إلى App Store Connect، أضف الأسرار التالية في
+`Settings → Secrets and variables → Actions → Secrets`:
+
+| السر | القيمة |
+|---|---|
+| `APPLE_CERTIFICATE_B64` | شهادة التوزيع `.p12` بترميز base64: `base64 -i cert.p12 \| pbcopy` |
+| `APPLE_CERTIFICATE_PASSWORD` | كلمة مرور ملف الـ p12 |
+| `APPLE_PROVISIONING_PROFILE_B64` | بروفايل التوزيع `.mobileprovision` بترميز base64 |
+| `APPLE_TEAM_ID` | معرّف فريق Apple (10 خانات) |
+
+ثم أنشئ **Variable** (وليس Secret) بنفس الصفحة تحت تبويب
+`Variables`:
+
+| المتغير | القيمة |
+|---|---|
+| `APPLE_SIGNING_ENABLED` | `true` |
+
+النتيجة: وظيفة إضافية `Build SIGNED iOS (App Store Connect)` تعمل تلقائياً على
+كل وسم إصدار وتضيف ملفاً باسم
+`vip-yemen-ios-signed-<الإصدار>.ipa` إلى صفحة الإصدارات، **دون أي تأثير** على
+بناء الـ IPA غير الموقّع (يبقى موجوداً دائماً).
+
+> ℹ️ ما دام المتغير غير مضبوط (أو قيمته ليست `true`) لا يتغير شيء إطلاقاً — أي
+> أن غياب شهادات Apple لا يمكن أن يُعطّل أي إصدار.
+
+---
+
+## 1️⃣1️⃣ مراقبة الاستمرارية التلقائية (Uptime watchdog)
+
+سير عمل مجاني `Uptime watchdog` يفحص **كل** قنوات التشغيل العامّة كل 6 ساعات:
+
+- Vercel · Render · GitHub Pages · خادم Convex
+
+- عند أي تعطّل: **يفتح Issue واحداً متتبعاً** فيه القناة المتعثرة وزمن الفحص
+  ورابط التشغيل — ويُحدّثه في كل فحص تالٍ.
+- عند عودة كل القنوات: يعلّق بالتعافي ويغلق الـ Issue تلقائياً.
+- لا يحتاج أي إعداد أو مفاتيح — يعمل فوراً. والتطبيقات الأصلية
+  (APK/AAB/iOS) لا تتأثر بأي تعطّل في هذه القنوات أصلاً لأن واجهتها مدمجة
+  داخل الحزمة.
+
+يمكن تشغيله يدوياً في أي وقت من
+`Actions → Uptime watchdog → Run workflow`.
+
+---
+
 © 2026 ViP Yemen — جميع الحقوق محفوظة.

@@ -6,13 +6,19 @@
 #
 # The build bakes the production Convex URL so the deployed site talks to
 # the live backend without needing any dashboard configuration.
+#
+# NOTE: `staticPublishPath` is Render's real key for static sites (the
+# service must ALSO be set to Build = `npm ci && npm run build` and
+# Publish Directory = `./dist` in the dashboard when it was created manually;
+# scripts/postinstall-build.mjs additionally mirrors the output so a service
+# created with any other publish dir still deploys successfully).
 
 services:
   - type: web
     name: vipyemen
     runtime: static
     buildCommand: npm ci && npm run build
-    outputDir: dist
+    staticPublishPath: ./dist
     pullRequestPreviewsEnabled: false
     envVars:
       - key: NODE_VERSION
@@ -20,16 +26,25 @@ services:
       - key: VITE_CONVEX_URL
         value: https://notable-shepherd-367.convex.cloud
     headers:
-      # SPA fallback: serve index.html for any unknown path so client-side
-      # routes (/jobs, /real-estate, /privacy-policy, …) work on refresh.
-      - pattern: /*
-        headers:
-          - key: X-Frame-Options
-            value: DENY
-          - key: X-Content-Type-Options
-            value: nosniff
-          - key: Referrer-Policy
-            value: strict-origin-when-cross-origin
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+      # Immutable hashed assets + long-lived icons: instant repeat visits.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /icons/*
+        name: Cache-Control
+        value: public, max-age=604800
     routes:
       # Send everything that is not a real file to index.html (SPA)
       - type: rewrite

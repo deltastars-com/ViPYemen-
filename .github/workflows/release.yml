@@ -515,3 +515,118 @@ jobs:
           fi
           ls -la "${files[@]}"
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
+
+  # ── Signed iOS build (App Store Connect ready) ──────────────────────────
+  # OPTIONAL extra pass. Runs only when the repository VARIABLE
+  # APPLE_SIGNING_ENABLED is "true" and these secrets are present:
+  #   APPLE_CERTIFICATE_B64           – base64 of the .p12 distribution cert
+  #   APPLE_CERTIFICATE_PASSWORD      – its password
+  #   APPLE_PROVISIONING_PROFILE_B64  – base64 of the .mobileprovision
+  #   APPLE_TEAM_ID                   – 10-character Apple Team ID
+  # When disabled (default) nothing changes: the unsigned IPA built by
+  # build-ios stays the release artifact, so missing Apple credentials can
+  # never break a release. See SECRETS-SETUP.md for the one-time setup.
+  build-ios-signed:
+    name: Build SIGNED iOS (App Store Connect)
+    needs: [prepare-release]
+    if: github.ref_type == 'tag' && vars.APPLE_SIGNING_ENABLED == 'true'
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate icons
+        run: npm run icons
+
+      - name: Build web
+        run: npm run build
+        env:
+          VITE_APP_VERSION: ${{ github.ref_name }}
+          VITE_CONVEX_URL: https://notable-shepherd-367.convex.cloud
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Import Apple distribution certificate + provisioning profile
+        env:
+          CERT_B64: ${{ secrets.APPLE_CERTIFICATE_B64 }}
+          CERT_PASS: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          PROFILE_B64: ${{ secrets.APPLE_PROVISIONING_PROFILE_B64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CERT_B64" ] || [ -z "$CERT_PASS" ] || [ -z "$PROFILE_B64" ]; then
+            echo "::error::APPLE_SIGNING_ENABLED=true but the Apple secrets are missing. Set APPLE_CERTIFICATE_B64 / APPLE_CERTIFICATE_PASSWORD / APPLE_PROVISIONING_PROFILE_B64 / APPLE_TEAM_ID (see SECRETS-SETUP.md)."
+            exit 1
+          fi
+          KEYCHAIN=build.keychain
+          KEYCHAIN_PASS="$(openssl rand -base64 24)"
+          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+          echo "$CERT_B64" | base64 --decode > /tmp/cert.p12
+          security import /tmp/cert.p12 -k "$KEYCHAIN" -P "$CERT_PASS" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASS" "$KEYCHAIN" >/dev/null
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROFILE_B64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/vipyemen.mobileprovision
+          security find-identity -v -p codesigning
+
+      - name: Archive + export the signed IPA
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          [ -n "$TEAM_ID" ] || { echo "::error::APPLE_TEAM_ID is required for signing"; exit 1; }
+          PROFILE_NAME=$(security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/vipyemen.mobileprovision | plutil -extract Name raw -o - -)
+          echo "Provisioning profile: $PROFILE_NAME"
+          cat > /tmp/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.vip.yemen</key><string>${PROFILE_NAME}</string>
+            </dict>
+            <key>uploadSymbols</key><true/>
+            <key>stripSwiftSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          PLIST
+          cd ios/App
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build -archivePath build/App.xcarchive archive | tail -20
+          xcodebuild -exportArchive -archivePath build/App.xcarchive \
+            -exportOptionsPlist /tmp/ExportOptions.plist -exportPath build/export | tail -20
+          ls -la build/export
+
+      - name: Attach the signed IPA to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          IPA=$(ls ios/App/build/export/*.ipa | head -1)
+          mkdir -p release/ios-signed
+          cp "$IPA" "release/ios-signed/vip-yemen-ios-signed-${TAG}.ipa"
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "release/ios-signed/vip-yemen-ios-signed-${TAG}.ipa"
+          echo "✔ signed IPA attached (App Store Connect ready)"

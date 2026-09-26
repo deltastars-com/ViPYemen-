@@ -121,9 +121,19 @@ jobs:
       # must use that base for assets to resolve. The main site (Vercel /
       # vipyemen.com) keeps the default root base — only this build is
       # re-based for the /ViPYemen-/ subpath.
+      # Bake the app version into the bundle from package.json so the in-app
+      # update notifier can compare the running build against the latest
+      # published release on every platform (including this Pages mirror).
+      - name: Resolve app version for the build
+        run: |
+          VERSION=$(node -p 'require("./package.json").version')
+          echo "VITE_APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "app version: $VERSION"
+
       - name: Build (Pages base)
         run: npx tsc -b && npx vite build --base=/ViPYemen-/
         env:
+          VITE_APP_VERSION: ${{ env.VITE_APP_VERSION }}
           VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

@@ -18,8 +18,35 @@ permissions:
   contents: write
 
 jobs:
+  # One-time release preparation: create the GitHub Release as a DRAFT
+  # before any build runs. Each build job then attaches its platform assets
+  # DIRECTLY with `gh release upload` — no actions/upload-artifact hop — so
+  # the release pipeline can never be blocked by the account's Actions
+  # artifact storage quota. The final publish job flips the draft to a
+  # public release only after verifying EVERY platform asset is attached.
+  prepare-release:
+    name: Prepare GitHub release (draft)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the draft release (idempotent)
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          if gh release list --repo "$GITHUB_REPOSITORY" --json tagName --jq '.[].tagName' | grep -Fxq "$TAG"; then
+            echo "Release $TAG already exists — assets will be re-attached with --clobber."
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --draft \
+              --title "ViP Yemen $TAG" \
+              --notes "يجري الآن بناء جميع المنصات (Android · iOS · Web) — يُنشر هذا الإصدار تلقائياً بعد اكتمال البناء والتحقق من كامل الملفات."
+          fi
+
   build-web:
     name: Build PWA and publish release
+    needs: [prepare-release]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -132,24 +159,28 @@ jobs:
           cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md IOS-APPSTORE-GUIDE.md README.md store-listing.json release/ || true
           cp store-graphics/*.png release/ || true
 
-      # Artifact hand-off pattern: every build job uploads its files as CI
-      # artifacts; the final publish-release job downloads them all and creates
-      # the GitHub release in ONE atomic call. This removes the draft/published
-      # races and duplicate-draft cleanup that previously dropped assets.
-      - name: Upload web + docs release artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-web
-          path: |
-            release/*.zip
-            release/*.md
-            release/*.json
-            release/*.png
-          if-no-files-found: error
-          retention-days: 7
+      # Assets go straight from this job onto the GitHub Release (no CI
+      # artifact storage involved) — see prepare-release above.
+      - name: Attach web + docs assets to the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          cd release
+          shopt -s nullglob
+          files=( *.zip *.md *.json *.png )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::No web release files were produced"
+            exit 1
+          fi
+          ls -la "${files[@]}"
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
 
   build-android:
     name: Build signed APK + AAB
+    needs: [prepare-release]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -324,66 +355,76 @@ jobs:
         env:
           EXPECTED_SIGNATURE_SHA1: ${{ secrets.EXPECTED_SIGNATURE_SHA1 }}
 
-      - name: Upload Android release artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-android
-          path: |
-            android/app/build/outputs/apk/release/*.apk
-            android/app/build/outputs/bundle/release/*.aab
-          if-no-files-found: error
-          retention-days: 7
+      - name: Attach APK + AAB to the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          APK="android/app/build/outputs/apk/release/vip-yemen-android-${TAG}.apk"
+          AAB="android/app/build/outputs/bundle/release/vip-yemen-android-${TAG}.aab"
+          if [ ! -f "$APK" ] || [ ! -f "$AAB" ]; then
+            echo "::error::APK/AAB missing — cannot attach to the release"
+            exit 1
+          fi
+          ls -la "$APK" "$AAB"
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "$APK" "$AAB"
 
-  # Publishing is a separate final job so parallel build jobs (Android, iOS)
-  # never race on the release state. It downloads every artifact and creates
-  # the release with ALL assets in a single atomic call.
+  # Final gate: every platform asset MUST be present on the release before it
+  # is flipped from draft to public. Uploads happen directly from the build
+  # jobs via `gh release upload` (no CI artifact storage), so a full Actions
+  # artifact-storage quota can never block a release again.
   publish-release:
     name: Publish release
-    needs: [build-web, build-android, build-ios]
+    needs: [prepare-release, build-web, build-android, build-ios]
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
-      - name: Download all release artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: release-*
-          merge-multiple: true
-          path: release-final
-
-      # upload-artifact preserves directory structure relative to each
-      # artifact's common ancestor, so Android files arrive as
-      # apk/release/*.apk and bundle/release/*.aab. Flatten everything to the
-      # top level (file names are unique across artifacts) so the release
-      # step's `release-final/*` glob attaches every file.
-      - name: Flatten artifacts for upload
-        run: |
-          cd release-final
-          find . -mindepth 2 -type f -exec mv -n {} . \;
-          ls -la
-
-      - name: Publish release with all assets
-        uses: softprops/action-gh-release@v3
-        with:
-          name: ViP Yemen ${{ github.ref_name }}
-          body: |
-            ## ViP Yemen — الإصدار ${{ github.ref_name }}
-
-            ### المحتويات
-            - **تطبيق Android (APK/AAB)**: موقّعة بمفتاح الإصدار الثابت — تُثبَّت النسخ الجديدة مباشرة فوق السابقة
-            - **تطبيق iOS (IPA + ملفات المتجر)**: حزمة iOS جاهزة للتوقيع والرفع إلى App Store Connect مع دليل IOS-APPSTORE-GUIDE
-            - **تطبيق الويب (PWA)**: مجلد `web-pwa` جاهز للاستضافة — يعمل بدون إنترنت
-            - **الكود المصدري الكامل**: الواجهة + الباك إند (Convex) + مشروعي Android/iOS (Capacitor)
-            - **ملفات المتاجر**: أيقونة 512، صورة المتجر 1024×500، بيانات القائمة (AR/EN)، أدلة Google Play وApp Store
-            - **التوقيع والملكية**: بصمة SHA-256/SHA-1 وسجل الملكية في `SIGNING-AND-OWNERSHIP.md`
-            - **الوثائق**: سياسة الخصوصية (المنصة والتطبيقات)، أدلة النشر والإدارة والتشغيل
-          files: release-final/*
-          draft: false
-          prerelease: false
-          fail_on_unmatched_files: true
+      - name: Verify every platform asset is attached
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          NAMES=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+          echo "$NAMES"
+          fail() { echo "::error::$1"; exit 1; }
+          echo "$NAMES" | grep -qE '\.apk$'          || fail "APK missing from the release"
+          echo "$NAMES" | grep -qE '\.aab$'          || fail "AAB missing from the release"
+          echo "$NAMES" | grep -qE '\.ipa$'          || fail "IPA missing from the release"
+          echo "$NAMES" | grep -qE 'web-pwa.*\.zip$' || fail "PWA zip missing from the release"
+          echo "$NAMES" | grep -qE 'source.*\.zip$'  || fail "source zip missing from the release"
+          echo "$NAMES" | grep -qE '\.md$'           || fail "documentation files missing from the release"
+          echo "✔ all platform assets present ($TAG)"
+
+      - name: Publish release with full notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          {
+            echo "## ViP Yemen — الإصدار $TAG"
+            echo
+            echo "### المحتويات"
+            echo '- **تطبيق Android (APK/AAB)**: موقّعة بمفتاح الإصدار الثابت — تُثبَّت النسخ الجديدة مباشرة فوق السابقة'
+            echo '- **تطبيق iOS (IPA + ملفات المتجر)**: حزمة iOS جاهزة للتوقيع والرفع إلى App Store Connect مع دليل IOS-APPSTORE-GUIDE'
+            echo '- **تطبيق الويب (PWA)**: مجلد web-pwa جاهز للاستضافة — يعمل بدون إنترنت'
+            echo '- **الكود المصدري الكامل**: الواجهة + الباك إند (Convex) + مشروعي Android/iOS (Capacitor)'
+            echo '- **ملفات المتجر**: أيقونة 512، صورة المتجر 1024×500، بيانات القائمة (AR/EN)، أدلة Google Play وApp Store'
+            echo '- **التوقيع والملكية**: بصمة SHA-256/SHA-1 وسجل الملكية في SIGNING-AND-OWNERSHIP.md'
+            echo '- **الوثائق**: سياسة الخصوصية (المنصة والتطبيقات)، أدلة النشر والإدارة والتشغيل'
+          } > /tmp/release-notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --draft=false \
+            --title "ViP Yemen $TAG" \
+            --notes-file /tmp/release-notes.md
+          echo "✔ release published: $TAG"
 
   build-ios:
     name: Build iOS app + App Store bundle
+    needs: [prepare-release]
     runs-on: macos-15
     steps:
       - name: Checkout
@@ -459,13 +500,18 @@ jobs:
           # Keep the build log for troubleshooting
           cp ios/App/build.log release/ios/ || true
 
-      - name: Upload iOS release artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-ios
-          path: |
-            release/ios/*.ipa
-            release/ios/*.zip
-            release/ios/build.log
-          if-no-files-found: error
-          retention-days: 7
+      - name: Attach IPA + metadata to the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          shopt -s nullglob
+          files=( release/ios/*.ipa release/ios/*.zip release/ios/build.log )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::No iOS release files were produced"
+            exit 1
+          fi
+          ls -la "${files[@]}"
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"

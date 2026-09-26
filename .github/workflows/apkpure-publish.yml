@@ -154,6 +154,9 @@ jobs:
 
       - name: Keep the submission bundle (audit trail)
         if: steps.tag.outputs.skip != 'true'
+        # Audit-trail only — a full Actions artifact-storage quota must never
+        # turn this workflow red (the real deliverable is the store submission).
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: apkpure-submission-${{ steps.tag.outputs.tag }}

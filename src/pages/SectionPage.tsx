@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useSnapshotQuery } from "@/lib/snapshot";
 import { motion } from "framer-motion";
 import { ArrowLeft, ListFilter, PenLine } from "lucide-react";
 import { SubmissionForm } from "@/components/SubmissionForm";
@@ -12,7 +12,9 @@ import { cn } from "@/lib/utils";
 
 export function SectionPage({ category }: { category: CategoryConfig }) {
   const { t, tCat, tField } = useLang();
-  const published = useQuery(api.submissions.listPublished, { category: category.key });
+  const published = useSnapshotQuery("subm.all." + category.key, api.submissions.listPublished, {
+    category: category.key,
+  });
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
 

@@ -40,9 +40,32 @@ process.on("uncaughtException", (err) => {
   process.exit(0);
 });
 
-// Skip during development installs if a fresh build already exists.
-if (hasIndex("dist") || hasIndex("build") || hasIndex("e.g.build")) {
+// Every publish directory a hosting service might have been created with.
+// Render services in the wild use `dist`, `build`, or the pasted placeholder
+// typo `e.g.build` — we guarantee ALL of them exist after every install.
+const MIRRORS = ["dist", "build", "e.g.build"];
+
+function mirrorDist() {
+  for (const alt of MIRRORS.slice(1)) {
+    rmSync(resolve(root, alt), { recursive: true, force: true });
+    mkdirSync(resolve(root, alt), { recursive: true });
+    cpSync(resolve(root, "dist"), resolve(root, alt), { recursive: true });
+  }
+}
+
+const missing = MIRRORS.filter((dir) => !hasIndex(dir));
+
+if (missing.length === 0) {
   console.log("[postinstall] Build output already present — skipping build.");
+  process.exit(0);
+}
+
+// A cached/partial state: dist exists but a mirror is missing (this is what
+// broke Render auto-deploys — publish dir "e.g.build" absent while "dist"
+// survived from cache). Cheap fix: re-mirror WITHOUT rebuilding.
+if (hasIndex("dist")) {
+  mirrorDist();
+  console.log(`[postinstall] ✔ Re-mirrored missing output (${missing.join(", ")}).`);
   process.exit(0);
 }
 
@@ -57,9 +80,5 @@ if (!hasIndex("dist")) {
 // Mirror dist → build so a Render service created with publish dir "build"
 // also succeeds without any dashboard change. Also covers the common typo
 // "e.g.build" (the placeholder text pasted literally into the field).
-for (const alt of ["build", "e.g.build"]) {
-  rmSync(resolve(root, alt), { recursive: true, force: true });
-  mkdirSync(resolve(root, alt), { recursive: true });
-  cpSync(resolve(root, "dist"), resolve(root, alt), { recursive: true });
-}
+mirrorDist();
 console.log("[postinstall] ✔ Built and mirrored to dist/, build/, e.g.build/");

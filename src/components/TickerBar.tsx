@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useSnapshotQuery } from "@/lib/snapshot";
 import { CalendarDays, Megaphone } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { getHijriToday } from "@/lib/hijri";
 
 export function TickerBar() {
-  const ads = useQuery(api.ads.listActive);
+  const ads = useSnapshotQuery("ads.active", api.ads.listActive);
   const { t, lang } = useLang();
   const [hijri] = useState(() => getHijriToday(lang));
 

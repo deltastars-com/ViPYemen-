@@ -5,6 +5,8 @@ node_modules/
 # Build output
 dist/
 build/
+# Render publish-dir mirror created by scripts/postinstall-build.mjs
+e.g.build/
 .expo/
 release/
 

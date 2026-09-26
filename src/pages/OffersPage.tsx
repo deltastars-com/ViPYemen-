@@ -1,4 +1,3 @@
-import { useQuery } from "convex/react";
 import { LogoMark } from "@/components/Logo";
 import { motion } from "framer-motion";
 import { Crown, MessageCircle, PlayCircle, BadgePercent, ShieldCheck } from "lucide-react";
@@ -7,10 +6,11 @@ import { OfferCard, type PublicOffer } from "@/components/OfferCard";
 import { Badge, EmptyState, Spinner } from "@/components/ui";
 import { PLATFORM_WHATSAPP_DISPLAY, PLATFORM_WHATSAPP_LINK, whatsappLink } from "@/lib/utils";
 import { useLang } from "@/lib/i18n";
+import { useSnapshotQuery } from "@/lib/snapshot";
 
 export function OffersPage() {
   const { t } = useLang();
-  const offers = useQuery(api.offers.listPublished);
+  const offers = useSnapshotQuery("offers.published", api.offers.listPublished);
   const rows = (offers ?? []) as unknown as PublicOffer[];
   const featured = rows.find((o) => o.isFeatured) ?? rows[0];
   const rest = rows.filter((o) => o._id !== featured?._id);

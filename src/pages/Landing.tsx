@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { LogoMark } from "@/components/Logo";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useSnapshotQuery } from "@/lib/snapshot";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -44,12 +45,21 @@ export function Landing() {
   useEffect(() => {
     seed().catch(() => {});
   }, [seed]);
-  const stats = useQuery(api.submissions.getPublicStats);
-  const ads = useQuery(api.ads.listActive);
-  const offers = useQuery(api.offers.listPublished);
-  const jobs = useQuery(api.submissions.listPublished, { category: "jobs", limit: 3 });
-  const realEstate = useQuery(api.submissions.listPublished, { category: "real_estate", limit: 3 });
-  const emarket = useQuery(api.submissions.listPublished, { category: "emarket", limit: 3 });
+  const stats = useSnapshotQuery("stats.public", api.submissions.getPublicStats);
+  const ads = useSnapshotQuery("ads.active", api.ads.listActive);
+  const offers = useSnapshotQuery("offers.published", api.offers.listPublished);
+  const jobs = useSnapshotQuery("subm.l3.jobs", api.submissions.listPublished, {
+    category: "jobs",
+    limit: 3,
+  });
+  const realEstate = useSnapshotQuery("subm.l3.real_estate", api.submissions.listPublished, {
+    category: "real_estate",
+    limit: 3,
+  });
+  const emarket = useSnapshotQuery("subm.l3.emarket", api.submissions.listPublished, {
+    category: "emarket",
+    limit: 3,
+  });
 
   const latest: PublicSubmission[] = [
     ...((jobs ?? []) as unknown as PublicSubmission[]),

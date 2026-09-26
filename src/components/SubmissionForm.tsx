@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
 import { api } from "../convex/_generated/api";
+import { queueSubmission } from "@/lib/outbox";
 import {
   CheckCircle2,
   MessageCircle,
@@ -47,6 +49,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
+  const [queuedOffline, setQueuedOffline] = useState(false);
 
   async function handleOtp() {
     setError("");
@@ -109,24 +112,41 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
     e.preventDefault();
     setError("");
     setBusy(true);
+    const payload = {
+      category: category.key,
+      type: typeValue,
+      title,
+      description,
+      fullName,
+      phone,
+      address,
+      price: price ? Number(price) : undefined,
+      currency,
+      fields,
+      attachments,
+      otpCode: otpCode.trim() || undefined,
+    };
     try {
-      await submit({
-        category: category.key,
-        type: typeValue,
-        title,
-        description,
-        fullName,
-        phone,
-        address,
-        price: price ? Number(price) : undefined,
-        currency,
-        fields,
-        attachments,
-        otpCode: otpCode.trim() || undefined,
-      });
+      await submit(payload);
+      setQueuedOffline(false);
       setDone(true);
     } catch (err: any) {
-      setError(err.message ?? t("submitError"));
+      // 🛟 Continuity: only REAL validation failures surface as an error.
+      // If the device is offline OR the backend/host is unreachable, the
+      // submission is saved to the offline outbox and delivered automatically
+      // when connectivity returns — the request is never lost.
+      const permanent = err instanceof ConvexError;
+      const offline = typeof navigator !== "undefined" && !navigator.onLine;
+      const netError = /fetch|network|websocket|timeout|connection|offline|failed to|aborted|socket|ECONN|503|502|504/i.test(
+        String(err?.message ?? err?.name ?? "")
+      );
+      if (!permanent && (offline || netError)) {
+        queueSubmission(payload);
+        setQueuedOffline(true);
+        setDone(true);
+      } else {
+        setError(err.message ?? t("submitError"));
+      }
     } finally {
       setBusy(false);
     }
@@ -135,14 +155,28 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
   if (done) {
     return (
       <div className="card-surface flex flex-col items-center gap-4 p-8 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
-          <CheckCircle2 className="h-9 w-9" />
+        <div
+          className={`flex h-16 w-16 items-center justify-center rounded-full ${
+            queuedOffline
+              ? "bg-amber-400/15 text-amber-300"
+              : "bg-emerald-500/15 text-emerald-300"
+          }`}
+        >
+          {queuedOffline ? (
+            <UploadCloud className="h-9 w-9" />
+          ) : (
+            <CheckCircle2 className="h-9 w-9" />
+          )}
         </div>
-        <h3 className="text-xl font-extrabold text-cream">{t("submissionSuccess")}</h3>
+        <h3 className="text-xl font-extrabold text-cream">
+          {queuedOffline ? "حُفظ طلبك في انتظار الإرسال" : t("submissionSuccess")}
+        </h3>
         <p className="max-w-md text-sm leading-relaxed text-ink-300">
-          {t("submissionSuccessSub")}
+          {queuedOffline
+            ? "لا يوجد اتصال بالخادم الآن — لم يضيع طلبك. سيُرسَل تلقائياً فور عودة الشبكة دون أي إدخال إضافي منك."
+            : t("submissionSuccessSub")}
         </p>
-        <Button type="button" onClick={() => { setDone(false); setOtpState(null); setOtpCode(""); setAttachments([]); }}>
+        <Button type="button" onClick={() => { setDone(false); setQueuedOffline(false); setOtpState(null); setOtpCode(""); setAttachments([]); }}>
           {t("submitAnother")}
         </Button>
       </div>

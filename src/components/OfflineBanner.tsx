@@ -8,11 +8,14 @@ import { pendingCount } from "@/lib/outbox";
  * Independent hosting mirrors — every push deploys to ALL of them at once
  * (Vercel + Render + GitHub Pages), so if one provider is down the others
  * keep serving the full platform. The banner offers the live ones whenever
- * the origin the user is on stops answering.
+ * the origin the user is on stops answering. All three are publicly
+ * reachable (the repository is public, so the Pages mirror works for
+ * everyone, not just collaborators).
  */
 const MIRRORS = [
   { label: "Vercel", url: "https://vi-p-yemen.vercel.app" },
   { label: "Render", url: "https://vipyemen.onrender.com" },
+  { label: "GitHub Pages", url: "https://deltastars-com.github.io/ViPYemen-/" },
 ];
 
 /**
@@ -107,9 +110,13 @@ export function OfflineBanner() {
   // The hosting provider the user is currently on stopped answering while
   // the cached app keeps running — point them at the live backup mirrors.
   if (host === "down") {
-    const mirrors = MIRRORS.filter(
-      (m) => typeof location === "undefined" || !location.href.startsWith(m.url)
-    );
+    const mirrors = MIRRORS.filter((m) => {
+      if (typeof location === "undefined") return true;
+      // Compare without the trailing slash so the Pages mirror (…/ViPYemen-/)
+      // is also correctly hidden while the user is ON it.
+      const base = m.url.replace(/\/$/, "");
+      return !location.href.startsWith(base);
+    });
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-400/30 bg-gradient-to-l from-amber-400/15 via-amber-400/10 to-transparent px-4 py-2 text-[13px] text-amber-100">
         <span className="flex flex-wrap items-center gap-2">

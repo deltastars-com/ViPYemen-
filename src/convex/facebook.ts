@@ -21,6 +21,30 @@ const GRAPH = "https://graph.facebook.com/v21.0";
 const RENEW_WINDOW_DAYS = 20;
 const DAY = 86_400_000;
 
+/**
+ * الصلاحية الوحيدة التي تفصل بين «ربط ناجح» و«نشر ناجح». بدونها يُوصل فيسبوك
+ * الخطأ (#200): If posting to a page, requires both pages_read_engagement and
+ * pages_manage_posts. لذلك نفحصها صراحةً ونخبر بها بوضوح.
+ */
+const POSTING_SCOPES = ["pages_manage_posts"] as const;
+
+/** يقيّم صلاحيات النشر من قائمة الصلاحيات المقروءة من debug_token. */
+function evaluatePostingPermission(scopes: string[]): {
+  canPost: boolean | null;
+  missing: string[];
+  detail: string;
+} {
+  if (scopes.length === 0) {
+    return { canPost: null, missing: [], detail: "" };
+  }
+  const missing = POSTING_SCOPES.filter((scope) => !scopes.includes(scope));
+  if (missing.length === 0) return { canPost: true, missing: [], detail: "" };
+  return {
+    canPost: false,
+    missing: [...missing],
+    detail: `التوكن لا يمنح صلاحية النشر على الصفحة (${missing.join(", ")}) — أعد توليد التوكن من Graph API Explorer مع تحديد هذه الصلاحية ثم اربطه من هنا`,  };
+}
+
 interface GraphResult {
   ok: boolean;
   status: number;
@@ -185,6 +209,7 @@ export const connectFacebook = action({
     let userTokenExpiresAt = 0;
     let pageTokenExpiresAt = 0;
     let pageName = "";
+    let observedScopes: string[] = [];
 
     if (args.mode === "exchange") {
       if (!appId || !appSecret) {
@@ -221,6 +246,7 @@ export const connectFacebook = action({
       if (!inspected.valid) {
         throw new Error(inspected.error ?? "التوكن غير صالح أو منتهي الصلاحية");
       }
+      observedScopes = inspected.scopes ?? [];
       pageTokenExpiresAt = inspected.expiresAt;
       if (inspected.type === "USER") {
         userToken = input;
@@ -269,10 +295,17 @@ export const connectFacebook = action({
       pageName = page.name ?? pageName;
     }
 
-    // فحص التوكن النهائي لتحديد الانتهاء بدقة
+    // فحص التوكن النهائي لتحديد الانتهاء بدقة + صلاحية النشر
     const finalInspect = await inspectToken(pageToken, appId, appSecret);
     if (finalInspect.valid) {
       pageTokenExpiresAt = finalInspect.expiresAt;
+    }
+    const allScopes = [...new Set([...(finalInspect.scopes ?? []), ...observedScopes])];
+    const posting = evaluatePostingPermission(allScopes);
+    if (posting.canPost === false) {
+      warnings.push(
+        `${posting.detail} — وبدونها ينشر النظام على تلجرام والقنوات الأخرى ويُعلن حالة الصفحة كـ«تحتاج صلاحية» في فحص القنوات.`
+      );
     }
 
     const group = await verifyGroup(groupId, pageToken);
@@ -295,7 +328,12 @@ export const connectFacebook = action({
         facebookTokenExpiresAt: pageTokenExpiresAt,
         facebookConnectedAt: Date.now(),
         facebookPageName: pageName || pageId,
-        facebookLastError: page.ok ? "" : (page.error ?? "تعذر التحقق من الصفحة"),
+        facebookLastError: page.ok
+          ? (posting.canPost === false ? posting.detail : "")
+          : (page.error ?? "تعذر التحقق من الصفحة"),
+        ...(posting.canPost === null
+          ? {}
+          : { facebookCanPost: posting.canPost, facebookPostingDetail: posting.detail }),
       },
     });
 
@@ -326,7 +364,10 @@ export const connectFacebook = action({
       daysLeft,
       userTokenExpiresAt: userTokenExpiresAt || null,
       autoRenew: !!(appId && appSecret && userToken),
-      scopes: finalInspect.scopes,
+      scopes: allScopes,
+      canPost: posting.canPost,
+      missingPostScopes: posting.missing,
+      postingDetail: posting.detail,
       warnings,
     };
   },
@@ -382,6 +423,14 @@ export const refreshTokenInternal = internalAction({
       values.facebookPageId = chosen.id;
       values.facebookPageName = chosen.name;
       values.facebookTokenExpiresAt = 0; // توكن صفحة مستخرج من توكن طويل الأجل = دائم
+      // إعادة تقييم صلاحية النشر على التوكن الجديد
+      const fresh = await inspectToken(chosen.token, appId, appSecret);
+      const posting = evaluatePostingPermission(fresh.scopes ?? []);
+      if (posting.canPost !== null) {
+        values.facebookCanPost = posting.canPost;
+        values.facebookPostingDetail = posting.detail;
+        if (posting.canPost === false) values.facebookLastError = posting.detail;
+      }
     }
 
     await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values });

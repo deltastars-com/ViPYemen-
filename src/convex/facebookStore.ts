@@ -28,6 +28,8 @@ export const KEYS = [
   "facebookConnectedAt",
   "facebookPageName",
   "facebookLastError",
+  "facebookCanPost",
+  "facebookPostingDetail",
 ] as const;
 
 export type FacebookKey = (typeof KEYS)[number];
@@ -44,6 +46,9 @@ export interface FacebookConfig {
   facebookConnectedAt?: number;
   facebookPageName?: string;
   facebookLastError?: string;
+  /** هل يمنح التوكن صلاحية النشر على الصفحة (pages_manage_posts)؟ */
+  facebookCanPost?: boolean;
+  facebookPostingDetail?: string;
 }
 
 async function readConfig(ctx: { db: any }): Promise<FacebookConfig> {
@@ -145,6 +150,8 @@ export const getFacebookStatus = query({
       userTokenDaysLeft: userDaysLeft,
       connectedAt: config.facebookConnectedAt ?? null,
       lastError: config.facebookLastError ?? null,
+      canPost: typeof config.facebookCanPost === "boolean" ? config.facebookCanPost : null,
+      postingDetail: config.facebookPostingDetail ?? "",
     };
   },
 });

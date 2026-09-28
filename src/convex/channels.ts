@@ -6,11 +6,14 @@
 //
 //   • Telegram  — official Bot API (sendMessage). Bot: @vipyemen_bot
 //                 Channel: @vipyemen77
-//   • WhatsApp  — WhatsApp Cloud API broadcast to the numbers in
-//                 WHATSAPP_BROADCAST_TO when the admin configures
-//                 WHATSAPP_ACCESS_TOKEN + WHATSAPP_PHONE_NUMBER_ID.
-//   • Facebook Page  — Graph API posts to page vipyemen1 with image+text
-//   • Facebook Group — Graph API posts to group 346010664332427 with text+link
+//   • WhatsApp  — WhatsApp Cloud API: تُدار بالكامل من لوحة التحكم
+//                 (الإعدادات ← تشغيل قناة واتساب) وتُقرأ من جدول الإعدادات،
+//                 مع دعم متغيرات البيئة كخيار بديل فقط.
+//   • Facebook Page  — Graph API posts to the official page with image+text
+//   • Facebook Group — Graph API posts to the official group with text+link
+//
+// كل الأسرار تُقرأ من: متغيرات البيئة أولاً إن وُجدت، ثم جدول الإعدادات
+// (الذي تكتبه بطاقات لوحة التحكم) — فلا تحتاج المنصة أي إعادة نشر لتشغيل قناة.
 //
 // Everything is best-effort: a missing key or a failed channel never breaks
 // the publish flow — the item is still live on the platform, and the
@@ -19,6 +22,9 @@
 import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
+import type { FacebookConfig } from "./facebookStore";
+import type { WhatsAppConfig } from "./whatsapp";
+import { buildMessageBody, normalizeRecipients } from "./whatsappBody";
 
 export type ChannelKind = "submission" | "ad" | "offer";
 
@@ -126,39 +132,32 @@ async function postToTelegram(text: string): Promise<boolean> {
 }
 
 // ── WhatsApp ──────────────────────────────────────────────────────────
-async function postToWhatsApp(text: string): Promise<boolean> {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
-  const recipients = (process.env.WHATSAPP_BROADCAST_TO ?? "")
-    .split(",")
-    .map((n) => n.trim())
-    .filter(Boolean);
-  if (!token || !phoneNumberId || recipients.length === 0) {
-    console.log("[Channel:WhatsApp] SKIP — missing token/phone/recipients");
+async function postToWhatsApp(text: string, wa: WhatsAppRuntimeConfig): Promise<boolean> {
+  if (!wa.token || !wa.phoneNumberId || wa.recipients.length === 0) {
+    console.log(
+      "[Channel:WhatsApp] SKIP — القناة غير مهيأة (لوحة التحكم ← الإعدادات ← تشغيل قناة واتساب)"
+    );
     return false;
   }
   let any = false;
-  for (const to of recipients) {
+  for (const to of wa.recipients) {
     try {
-      const res = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+      const res = await fetch(`https://graph.facebook.com/v21.0/${wa.phoneNumberId}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${wa.token}`,
         },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to,
-          type: "text",
-          text: { body: text },
-        }),
+        body: JSON.stringify(
+          buildMessageBody(to, text, wa.templateName || undefined, wa.templateLang)
+        ),
       });
       const data = await res.json();
       if (res.ok) {
         any = true;
         console.log(`[Channel:WhatsApp] OK → ${to}`);
       } else {
-        console.error(`[Channel:WhatsApp] FAIL → ${to}: ${JSON.stringify(data)}`);
+        console.error(`[Channel:WhatsApp] FAIL → ${to}: ${JSON.stringify(data?.error ?? data)}`);
       }
     } catch (err) {
       console.error(`[Channel:WhatsApp] ERROR → ${to}:`, err);
@@ -168,39 +167,43 @@ async function postToWhatsApp(text: string): Promise<boolean> {
 }
 
 // ── Facebook Page ─────────────────────────────────────────────────────
-async function postToFacebookPage(text: string, imageUrl?: string, overrideToken?: string): Promise<boolean> {
-  const token = overrideToken || process.env.FACEBOOK_ACCESS_TOKEN?.trim();
-  const pageId = process.env.FACEBOOK_PAGE_ID?.trim() || FB_PAGE_ID_DEFAULT;
+async function postToFacebookPage(
+  text: string,
+  imageUrl: string | undefined,
+  fb: FacebookRuntimeConfig
+): Promise<boolean> {
+  const token = fb.token;
+  const pageId = fb.pageId || FB_PAGE_ID_DEFAULT;
   if (!token) {
-    console.log("[Channel:FacebookPage] SKIP — no FACEBOOK_ACCESS_TOKEN");
+    console.log(
+      "[Channel:FacebookPage] SKIP — لا يوجد توكن (لوحة التحكم ← الإعدادات ← ربط فيسبوك)"
+    );
     return false;
   }
 
   try {
-    // Try to get the page access token from the user token first
+    // التوكن المحفوظ من اللوحة هو توكن صفحة جاهز. أما توكن البيئة فقد يكون توكن
+    // مستخدم — فنستخرج منه توكن الصفحة مرة واحدة قبل النشر.
     let pageToken = token;
-    try {
-      const pagesRes = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?access_token=${token}`
-      );
-      const pagesData = await pagesRes.json();
-      if (pagesData.data && pagesData.data.length > 0) {
-        // Find the page that matches or use the first one
-        const matched = pagesData.data.find(
-          (p: { id: string; name: string }) =>
-            p.id === pageId || p.name?.toLowerCase().includes("vipyemen")
+    if (fb.source === "env") {
+      try {
+        const pagesRes = await fetch(
+          `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&access_token=${token}`
         );
-        if (matched) {
+        const pagesData = await pagesRes.json();
+        const pages = Array.isArray(pagesData?.data) ? pagesData.data : [];
+        const matched =
+          pages.find(
+            (p: { id: string; name?: string }) =>
+              p.id === pageId || /vip\s*yemen/i.test(p.name ?? "")
+          ) ?? pages.find((p: { access_token?: string }) => p.access_token);
+        if (matched?.access_token) {
           pageToken = matched.access_token;
           console.log(`[Channel:FacebookPage] Resolved page token for: ${matched.name} (${matched.id})`);
-        } else {
-          pageToken = pagesData.data[0].access_token;
-          console.log(`[Channel:FacebookPage] Using first page: ${pagesData.data[0].name}`);
         }
+      } catch {
+        console.log("[Channel:FacebookPage] Using token directly (could not resolve pages)");
       }
-    } catch {
-      // If we can't resolve pages, use the token directly (might be a page token already)
-      console.log("[Channel:FacebookPage] Using token directly (could not resolve pages)");
     }
 
     if (imageUrl) {
@@ -251,11 +254,13 @@ async function postToFacebookPage(text: string, imageUrl?: string, overrideToken
 }
 
 // ── Facebook Group ────────────────────────────────────────────────────
-async function postToFacebookGroup(text: string, overrideToken?: string): Promise<boolean> {
-  const token = overrideToken || process.env.FACEBOOK_ACCESS_TOKEN?.trim();
-  const groupId = process.env.FACEBOOK_GROUP_ID?.trim() || FB_GROUP_ID_DEFAULT;
+async function postToFacebookGroup(text: string, fb: FacebookRuntimeConfig): Promise<boolean> {
+  const token = fb.token;
+  const groupId = fb.groupId || FB_GROUP_ID_DEFAULT;
   if (!token) {
-    console.log("[Channel:FacebookGroup] SKIP — no FACEBOOK_ACCESS_TOKEN");
+    console.log(
+      "[Channel:FacebookGroup] SKIP — لا يوجد توكن (لوحة التحكم ← الإعدادات ← ربط فيسبوك)"
+    );
     return false;
   }
 
@@ -288,64 +293,38 @@ async function postToFacebookGroup(text: string, overrideToken?: string): Promis
 export const getChannelSetup = action({
   args: {},
   handler: async (ctx) => {
+    const fb = await resolveFacebookConfig(ctx);
+    const wa = await resolveWhatsAppConfig(ctx);
     const telegram =
       !!(
         process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_DEFAULT
-      ) &&
-      !!(
-        process.env.TELEGRAM_CHAT_ID?.trim() || TELEGRAM_CHAT_ID_DEFAULT
-      );
-    const whatsapp =
-      !!process.env.WHATSAPP_ACCESS_TOKEN?.trim() &&
-      !!process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() &&
-      (process.env.WHATSAPP_BROADCAST_TO ?? "").split(",").some((n) => n.trim());
-
-    // Facebook: try env var first, fallback to database settings
-    let fbToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
-    let fbTokenSource: string = fbToken ? "env" : "none";
-    if (!fbToken) {
-      try {
-        const settings: Record<string, unknown> = await ctx.runQuery(
-          (await import("./_generated/api" as string)).api.settings.getAll,
-          { token: "__channel_setup__" }
-        ) as Record<string, unknown>;
-        // Check common key patterns for the Facebook token in settings
-        for (const key of ["facebookAccessToken", "facebook_access_token", "FB_ACCESS_TOKEN"]) {
-          const val = settings[key];
-          if (typeof val === "string" && val.trim().length > 10) {
-            fbToken = val.trim();
-            fbTokenSource = "db:" + key;
-            break;
-          }
-        }
-      } catch {
-        // query might fail if not admin — that's fine, use env only
-      }
-    }
-
-    const fbTokenLen = fbToken.length;
-    const fbTokenPrefix = fbTokenLen > 4 ? fbToken.slice(0, 4) : "";
-    const facebook =
-      fbTokenLen > 0 &&
-      (!!process.env.FACEBOOK_PAGE_ID?.trim() || !!FB_PAGE_ID_DEFAULT);
-    const facebookGroup =
-      fbTokenLen > 0 &&
-      (!!process.env.FACEBOOK_GROUP_ID?.trim() || !!FB_GROUP_ID_DEFAULT);
+      ) && !!process.env.TELEGRAM_CHAT_ID?.trim();
+    const whatsapp = !!wa.token && !!wa.phoneNumberId;
+    const facebook = !!fb.token;
+    const facebookGroup = !!fb.token;
     return {
       telegram,
       whatsapp,
       facebook,
       facebookGroup,
+      whatsappRecipients: wa.recipients.length,
+      whatsappTemplate: wa.templateName || "",
+      whatsappNumber: wa.displayPhone || "",
+      whatsappSource: wa.source,
+      facebookPageName: fb.pageName || "",
+      facebookCanPost: fb.canPost,
       _diag: {
-        fbTokenPresent: fbTokenLen > 0,
-        fbTokenLen,
-        fbTokenPrefix,
-        fbTokenSource,
-        fbPageIdPresent: !!(process.env.FACEBOOK_PAGE_ID?.trim()),
-        fbGroupIdPresent: !!(process.env.FACEBOOK_GROUP_ID?.trim()),
+        fbTokenPresent: !!fb.token,
+        fbTokenLen: fb.token.length,
+        fbTokenPrefix: fb.token.length > 4 ? fb.token.slice(0, 4) : "",
+        fbTokenSource: fb.source,
+        fbPageIdPresent: !!fb.pageId,
+        fbGroupIdPresent: !!fb.groupId,
         fbGroupIdDefault: !!FB_GROUP_ID_DEFAULT,
         fbPageIdDefault: !!FB_PAGE_ID_DEFAULT,
         envFbToken: !!process.env.FACEBOOK_ACCESS_TOKEN?.trim(),
+        waTokenSource: wa.source,
+        waTokenLen: wa.token.length,
       },
     };
   },
@@ -353,26 +332,111 @@ export const getChannelSetup = action({
 
 // ── صندوق الإرسال الموثوق ─────────────────────────────────────────────
 
-/** توكن فيسبوك: متغير البيئة أولاً ثم قاعدة بيانات الإعدادات (بدون أسرار عرضة). */
-async function resolveFacebookToken(ctx: ActionCtx): Promise<string> {
-  let token = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
-  if (!token) {
-    try {
-      const settings = (await ctx.runQuery(api.settings.getAll, {
-        token: "__channel_publish__",
-      })) as Record<string, unknown>;
-      for (const key of ["facebookAccessToken", "facebook_access_token", "FB_ACCESS_TOKEN"]) {
-        const value = settings[key];
-        if (typeof value === "string" && value.trim().length > 10) {
-          token = value.trim();
-          break;
-        }
-      }
-    } catch {
-      /* fallback: no token */
-    }
+// ── إعدادات القنوات: متغيرات البيئة أولاً ثم جدول الإعدادات (لوحة التحكم) ──
+
+export interface FacebookRuntimeConfig {
+  token: string;
+  pageId: string;
+  groupId: string;
+  pageName: string;
+  source: "env" | "settings" | "none";
+  /** هل يمنح التوكن صلاحية النشر على الصفحة (pages_manage_posts)؟ */
+  canPost: boolean | null;
+  postingDetail: string;
+}
+
+/** إعدادات فيسبوك من البيئة أو من الإعدادات المحفوظة في اللوحة. */
+async function resolveFacebookConfig(ctx: ActionCtx): Promise<FacebookRuntimeConfig> {
+  const envToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
+  if (envToken) {
+    return {
+      token: envToken,
+      pageId: process.env.FACEBOOK_PAGE_ID?.trim() || FB_PAGE_ID_DEFAULT,
+      groupId: process.env.FACEBOOK_GROUP_ID?.trim() || FB_GROUP_ID_DEFAULT,
+      pageName: "",
+      source: "env",
+      canPost: null,
+      postingDetail: "",
+    };
   }
-  return token;
+  try {
+    const cfg = (await ctx.runQuery(
+      internal.facebookStore.getConfigInternal,
+      {}
+    )) as FacebookConfig;
+    const token = cfg.facebookAccessToken?.trim() ?? "";
+    return {
+      token,
+      pageId: cfg.facebookPageId?.trim() || FB_PAGE_ID_DEFAULT,
+      groupId: cfg.facebookGroupId?.trim() || FB_GROUP_ID_DEFAULT,
+      pageName: cfg.facebookPageName ?? "",
+      source: token ? "settings" : "none",
+      canPost: typeof cfg.facebookCanPost === "boolean" ? cfg.facebookCanPost : null,
+      postingDetail: cfg.facebookPostingDetail ?? "",
+    };
+  } catch {
+    return {
+      token: "",
+      pageId: FB_PAGE_ID_DEFAULT,
+      groupId: FB_GROUP_ID_DEFAULT,
+      pageName: "",
+      source: "none",
+      canPost: null,
+      postingDetail: "",
+    };
+  }
+}
+
+export interface WhatsAppRuntimeConfig {
+  token: string;
+  phoneNumberId: string;
+  recipients: string[];
+  templateName: string;
+  templateLang: string;
+  displayPhone: string;
+  source: "env" | "settings" | "none";
+}
+
+/** إعدادات واتساب من البيئة أو من الإعدادات المحفوظة في اللوحة. */
+async function resolveWhatsAppConfig(ctx: ActionCtx): Promise<WhatsAppRuntimeConfig> {
+  const envToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim() ?? "";
+  if (envToken) {
+    return {
+      token: envToken,
+      phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() ?? "",
+      recipients: normalizeRecipients([process.env.WHATSAPP_BROADCAST_TO ?? ""]),
+      templateName: process.env.WHATSAPP_TEMPLATE_NAME?.trim() ?? "",
+      templateLang: process.env.WHATSAPP_TEMPLATE_LANG?.trim() || "ar",
+      displayPhone: "",
+      source: "env",
+    };
+  }
+  try {
+    const cfg = (await ctx.runQuery(
+      internal.whatsapp.getConfigInternal,
+      {}
+    )) as WhatsAppConfig;
+    const token = cfg.whatsappAccessToken?.trim() ?? "";
+    return {
+      token,
+      phoneNumberId: cfg.whatsappPhoneNumberId?.trim() ?? "",
+      recipients: normalizeRecipients(cfg.whatsappBroadcastTo ?? []),
+      templateName: cfg.whatsappTemplateName?.trim() ?? "",
+      templateLang: cfg.whatsappTemplateLang?.trim() || "ar",
+      displayPhone: cfg.whatsappDisplayPhone ?? "",
+      source: token ? "settings" : "none",
+    };
+  } catch {
+    return {
+      token: "",
+      phoneNumberId: "",
+      recipients: [],
+      templateName: "",
+      templateLang: "ar",
+      displayPhone: "",
+      source: "none",
+    };
+  }
 }
 
 export type ChannelName = "telegram" | "whatsapp" | "facebook_page" | "facebook_group";
@@ -386,16 +450,15 @@ export const ALL_CHANNELS: ChannelName[] = [
 
 /** إرسال نص واحد إلى قناة واحدة — يُستخدم للإرسال المباشر وإعادة المحاولة. */
 async function sendToChannel(ctx: ActionCtx, channel: string, text: string): Promise<boolean> {
-  const fbToken = await resolveFacebookToken(ctx);
   switch (channel) {
     case "telegram":
       return postToTelegram(text);
     case "whatsapp":
-      return postToWhatsApp(text);
+      return postToWhatsApp(text, await resolveWhatsAppConfig(ctx));
     case "facebook_page":
-      return postToFacebookPage(text, undefined, fbToken || undefined);
+      return postToFacebookPage(text, undefined, await resolveFacebookConfig(ctx));
     case "facebook_group":
-      return postToFacebookGroup(text, fbToken || undefined);
+      return postToFacebookGroup(text, await resolveFacebookConfig(ctx));
     default:
       return false;
   }
@@ -587,28 +650,26 @@ async function checkTelegram(): Promise<ChannelHealthRow> {
   };
 }
 
-async function checkWhatsApp(): Promise<ChannelHealthRow> {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
-  const recipients = (process.env.WHATSAPP_BROADCAST_TO ?? "")
-    .split(",")
-    .map((n) => n.trim())
-    .filter(Boolean);
-  if (!token || !phoneNumberId) {
+async function checkWhatsApp(wa: WhatsAppRuntimeConfig): Promise<ChannelHealthRow> {
+  if (!wa.token || !wa.phoneNumberId) {
     return {
       channel: "whatsapp",
       status: "down",
-      detail: "غير مهيأ — يحتاج WHATSAPP_ACCESS_TOKEN + WHATSAPP_PHONE_NUMBER_ID",
+      detail:
+        "غير مهيأ — أدخل توكن Meta ومعرّف رقم الإرسال من لوحة التحكم ← الإعدادات ← «تشغيل قناة واتساب»",
     };
   }
   const res = await timedJson(
-    `https://graph.facebook.com/v21.0/${phoneNumberId}?fields=display_phone_number,verified_name&access_token=${encodeURIComponent(token)}`
+    `https://graph.facebook.com/v21.0/${wa.phoneNumberId}?fields=display_phone_number,verified_name&access_token=${encodeURIComponent(wa.token)}`
   );
   if (res.ok) {
+    const tpl = wa.templateName
+      ? `قالب مُعتمد: ${wa.templateName}`
+      : "بلا قالب (تسليم الرسائل الحرة محدود بـ 24 ساعة)";
     return {
       channel: "whatsapp",
       status: "ok",
-      detail: `Cloud API — ${res.data.verified_name ?? "الحساب"} (${res.data.display_phone_number ?? phoneNumberId}) · ${recipients.length} مستلم`,
+      detail: `Cloud API — ${res.data.verified_name ?? "الحساب"} (${res.data.display_phone_number ?? wa.phoneNumberId}) · ${wa.recipients.length} مستلم · ${tpl}`,
       latencyMs: res.latencyMs,
     };
   }
@@ -623,35 +684,53 @@ async function checkWhatsApp(): Promise<ChannelHealthRow> {
 async function checkFacebookTarget(
   channel: "facebook_page" | "facebook_group",
   id: string,
-  token: string
+  fb: FacebookRuntimeConfig
 ): Promise<ChannelHealthRow> {
   const label = channel === "facebook_page" ? "صفحة فيسبوك" : "مجموعة فيسبوك";
+  const token = fb.token;
   if (!token) {
     return {
       channel,
       status: "down",
-      detail: `غير مهيأ — يحتاج FACEBOOK_ACCESS_TOKEN للنشر على ${label}`,
+      detail: `غير مهيأ — اربط ${label} من لوحة التحكم ← الإعدادات ← «ربط فيسبوك» (بلا أي متغيرات بيئة)`,
     };
   }
   const res = await timedJson(
     `https://graph.facebook.com/v21.0/${id}?fields=name&access_token=${encodeURIComponent(token)}`
   );
-  if (res.ok) {
+  if (!res.ok) {
+    const raw = String(res.data?.error?.message ?? res.error ?? "راجع صلاحيات التوكن");
+    const expired = /expired|session has expired|invalid oauth|OAuthException/i.test(raw);
     return {
       channel,
-      status: "ok",
-      detail: `${label}: ${res.data.name ?? id}`,
+      status: "degraded",
+      detail: expired
+        ? `التوكن منتهي الصلاحية — أعد الربط من لوحة التحكم ← الإعدادات ← «ربط فيسبوك بتوكن طويل الأجل» (التبديل والتجديد الآلي بضغطة)`
+        : `التوكن سليم لكن الوصول لـ${label} (${id}) فشل — ${raw}`,
       latencyMs: res.latencyMs,
     };
   }
-  const raw = String(res.data?.error?.message ?? res.error ?? "راجع صلاحيات التوكن");
-  const expired = /expired|session has expired|invalid oauth|OAuthException/i.test(raw);
+  const name = res.data.name ?? id;
+  if (channel === "facebook_group") {
+    return {
+      channel,
+      status: "ok",
+      detail: `${label}: ${name} — الوصول متاح؛ النشر التلقائي على المجموعات عبر API موقوف من Meta لمعظم التطبيقات (الصفحة والقنوات الأخرى تنشر طبيعياً)`,
+      latencyMs: res.latencyMs,
+    };
+  }
+  if (fb.canPost === false) {
+    return {
+      channel,
+      status: "degraded",
+      detail: `الصفحة: ${name} — التوكن لا يمنح صلاحية النشر (pages_manage_posts). أعد توليد التوكن مع تحديد هذا الخيار ثم اربطه من لوحة التحكم`,
+      latencyMs: res.latencyMs,
+    };
+  }
   return {
     channel,
-    status: "degraded",
-    detail: expired
-      ? `التوكن منتهي الصلاحية — أعد الربط من لوحة التحكم ← الإعدادات ← «ربط فيسبوك بتوكن طويل الأجل» (يعمل التبديل والتجديد الآلي بضغطة)`
-      : `التوكن سليم لكن الوصول لـ${label} (${id}) فشل — ${raw}`,
+    status: "ok",
+    detail: `${label}: ${name}`,
     latencyMs: res.latencyMs,
   };
 }
@@ -665,20 +744,13 @@ export const checkChannels = internalAction({
   args: {},
   handler: async (ctx) => {
     const checkedAt = Date.now();
-    const fbToken = await resolveFacebookToken(ctx);
+    const fb = await resolveFacebookConfig(ctx);
+    const wa = await resolveWhatsAppConfig(ctx);
     const rows: ChannelHealthRow[] = [
       await checkTelegram(),
-      await checkWhatsApp(),
-      await checkFacebookTarget(
-        "facebook_page",
-        process.env.FACEBOOK_PAGE_ID?.trim() || FB_PAGE_ID_DEFAULT,
-        fbToken
-      ),
-      await checkFacebookTarget(
-        "facebook_group",
-        process.env.FACEBOOK_GROUP_ID?.trim() || FB_GROUP_ID_DEFAULT,
-        fbToken
-      ),
+      await checkWhatsApp(wa),
+      await checkFacebookTarget("facebook_page", fb.pageId || FB_PAGE_ID_DEFAULT, fb),
+      await checkFacebookTarget("facebook_group", fb.groupId || FB_GROUP_ID_DEFAULT, fb),
     ];
 
     // آخر حالة معروفة قبل التحديث — لكشف التحوّل (انقطاع/تعافي)
@@ -701,7 +773,7 @@ export const checkChannels = internalAction({
 
     // ♻️ تجديد ذاتي لتوكن فيسبوك عند اقتراب انتهاء توكن المستخدم (لا يعمل إلا عند الحاجة)
     try {
-      if (fbToken) {
+      if (fb.token) {
         await ctx.scheduler.runAfter(0, internal.facebook.refreshTokenInternal, {});
       }
     } catch {

@@ -38,6 +38,8 @@ import type * as settings from "../settings.js";
 import type * as storage from "../storage.js";
 import type * as submissions from "../submissions.js";
 import type * as users from "../users.js";
+import type * as whatsapp from "../whatsapp.js";
+import type * as whatsappBody from "../whatsappBody.js";
 
 import type {
   ApiFromModules,
@@ -76,6 +78,8 @@ declare const fullApi: ApiFromModules<{
   storage: typeof storage;
   submissions: typeof submissions;
   users: typeof users;
+  whatsapp: typeof whatsapp;
+  whatsappBody: typeof whatsappBody;
 }>;
 
 /**

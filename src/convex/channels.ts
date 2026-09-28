@@ -295,10 +295,12 @@ export const getChannelSetup = action({
   handler: async (ctx) => {
     const fb = await resolveFacebookConfig(ctx);
     const wa = await resolveWhatsAppConfig(ctx);
+    // نفس منطق الإرسال الفعلي: توكن البوت من البيئة أو الافتراضي، والقناة من
+    // البيئة أو الافتراضية — فلا تناقض بين بطاقة الإعداد وفحص الصحة.
     const telegram =
       !!(
         process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_DEFAULT
-      ) && !!process.env.TELEGRAM_CHAT_ID?.trim();
+      ) && !!(process.env.TELEGRAM_CHAT_ID?.trim() || TELEGRAM_CHAT_ID_DEFAULT);
     const whatsapp = !!wa.token && !!wa.phoneNumberId;
     const facebook = !!fb.token;
     const facebookGroup = !!fb.token;

@@ -1,12 +1,25 @@
 // Channel-publish bookkeeping (regular mutations — NOT node actions).
-// The node action in `channels.ts` does the actual sending; these mutations
-// record which channels received an item and let the admin re-push any live
+// The node actions in `channels.ts` do the actual sending; these mutations
+// record which channels received an item, keep a durable delivery outbox so a
+// failed channel API never loses a post, and let the admin re-push any live
 // item with one click.
-import { mutation } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type MutationCtx,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { requireAdmin } from "./auth";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+
+/** كل قنوات المنصة الرسمية. */
+export const CHANNEL_NAMES = ["telegram", "whatsapp", "facebook_page", "facebook_group"] as const;
+export type ChannelName = (typeof CHANNEL_NAMES)[number];
+
+const MAX_ATTEMPTS = 5;
 
 /** Internal — records which channels received the item. */
 export const recordChannelPublish = mutation({
@@ -24,6 +37,250 @@ export const recordChannelPublish = mutation({
     channels.forEach((c) => existing.add(c));
     await ctx.db.patch(id, { publishedTo: [...existing], lastChannelPush: at });
     return { ok: true };
+  },
+});
+
+/**
+ * 📮 إدخال رسالة في صندوق القنوات الموثوق: تُسجَّل أولاً لكل قناة، ثم تُحاول
+ * الإرسال. أي فشل يبقى في الصندوق ويُعاد تلقائياً في دورة الأتمتة — فلا يضيع
+ * منشور أبداً بسبب انقطاع في واجهة قناة.
+ */
+export const enqueueOutbox = internalMutation({
+  args: {
+    title: v.string(),
+    message: v.string(),
+    category: v.optional(v.string()),
+    kind: v.optional(v.string()),
+    entityId: v.optional(v.string()),
+    channels: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, { title, message, category, kind, entityId, channels }) => {
+    const now = Date.now();
+    const targets = (channels ?? [...CHANNEL_NAMES]).filter((c) =>
+      (CHANNEL_NAMES as readonly string[]).includes(c)
+    );
+    const rows: { id: string; channel: string }[] = [];
+    for (const channel of targets) {
+      const id = await ctx.db.insert("channelOutbox", {
+        channel,
+        title,
+        message,
+        category,
+        kind,
+        entityId,
+        status: "pending",
+        attempts: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      rows.push({ id: String(id), channel });
+    }
+    return rows;
+  },
+});
+
+/** Internal — نتيجة محاولة الإرسال لقناة واحدة. */
+export const markOutboxResult = internalMutation({
+  args: {
+    id: v.string(),
+    ok: v.boolean(),
+    error: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, ok, error }) => {
+    const row = (await ctx.db.get(id as any)) as any;
+    if (!row) return { ok: false };
+    const now = Date.now();
+    await ctx.db.patch(row._id, {
+      status: ok ? "sent" : "failed",
+      attempts: (row.attempts ?? 0) + 1,
+      lastError: ok ? undefined : (error ?? "send failed"),
+      sentAt: ok ? now : row.sentAt,
+      updatedAt: now,
+    });
+    return { ok: true };
+  },
+});
+
+/** يطلب فحصاً فورياً لقنوات المنصة من لوحة الكنترول (يعمل في الخلفية). */
+export const requestChannelCheck = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    await requireAdmin(ctx, token);
+    await ctx.scheduler.runAfter(0, internal.channels.checkChannels, {});
+    return { ok: true };
+  },
+});
+
+/** تنبيه نظامي عند تغيّر حالة قنوات المنصة (انقطاع/تعافي). */
+export const logChannelEvent = internalMutation({
+  args: { title: v.string(), message: v.string() },
+  handler: async (ctx, { title, message }) => {
+    await ctx.db.insert("notifications", {
+      title,
+      message,
+      category: "system",
+      createdAt: Date.now(),
+    });
+    return { ok: true };
+  },
+});
+
+/** 🩺 يُسجّل نتيجة فحص صحة القنوات (تُحدَّث صفاً بصَف، فلا تتضخّم البيانات). */
+export const saveChannelStatus = internalMutation({
+  args: {
+    rows: v.array(
+      v.object({
+        channel: v.string(),
+        status: v.string(),
+        detail: v.string(),
+        latencyMs: v.optional(v.number()),
+      })
+    ),
+    checkedAt: v.number(),
+  },
+  handler: async (ctx, { rows, checkedAt }) => {
+    for (const row of rows) {
+      const existing = await ctx.db
+        .query("channelStatus")
+        .withIndex("by_channel", (q) => q.eq("channel", row.channel))
+        .first();
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          status: row.status,
+          detail: row.detail,
+          latencyMs: row.latencyMs,
+          checkedAt,
+        });
+      } else {
+        await ctx.db.insert("channelStatus", { ...row, checkedAt });
+      }
+    }
+    return { saved: rows.length };
+  },
+});
+
+/** حالة القنوات بشكل نظيف للاستهلاك العام (بلا معرّفات داخلية). */
+export const listChannelStatusPublic = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("channelStatus").collect();
+    return rows.map((row) => ({
+      channel: row.channel,
+      status: row.status,
+      detail: row.detail,
+      checkedAt: row.checkedAt,
+    }));
+  },
+});
+
+/** آخر حالة مسجّلة لكل قناة (داخلي — يُستخدم لكشف التحوّل من انقطاع إلى تعافي). */
+export const getStatusesInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => await ctx.db.query("channelStatus").collect(),
+});
+
+/** 🩺 صحة قنوات المنصة الرسمية — تُعرض في لوحة الكنترول. */
+export const getChannelHealth = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    await requireAdmin(ctx, token);
+    const rows = await ctx.db.query("channelStatus").collect();
+    const order = [...CHANNEL_NAMES] as readonly string[];
+    const sorted = [...rows].sort(
+      (a, b) => order.indexOf(a.channel) - order.indexOf(b.channel)
+    );
+    const checkedAt = sorted.reduce((max, row) => Math.max(max, row.checkedAt), 0);
+    return {
+      rows: sorted.map((row) => ({
+        channel: row.channel,
+        status: row.status,
+        detail: row.detail,
+        latencyMs: row.latencyMs ?? null,
+        checkedAt: row.checkedAt,
+      })),
+      checkedAt: checkedAt || null,
+      healthy: sorted.filter((row) => row.status === "ok").length,
+      total: sorted.length,
+    };
+  },
+});
+
+/** التقاط صفوف فشلت (أو تعطلت) لإعادة المحاولة — يُستخدم في دورة الأتمتة. */
+export async function collectRetryableOutbox(
+  ctx: MutationCtx,
+  limit = 8
+): Promise<{ _id: unknown; channel: string; title: string; message: string }[]> {
+  const now = Date.now();
+  const failed = await ctx.db
+    .query("channelOutbox")
+    .withIndex("by_status", (q) => q.eq("status", "failed"))
+    .order("asc")
+    .take(limit);
+  const retryable = failed.filter((row) => (row.attempts ?? 0) < MAX_ATTEMPTS);
+  if (retryable.length >= limit) return retryable.slice(0, limit);
+  // صفوف عالقة في «قيد الإرسال» منذ أكثر من 5 دقائق (انقطاع أثناء الإرسال)
+  const stuckCutoff = now - 5 * 60 * 1000;
+  const pending = await ctx.db
+    .query("channelOutbox")
+    .withIndex("by_status", (q) => q.eq("status", "pending"))
+    .order("asc")
+    .take(limit);
+  const stuck = pending.filter((row) => row.updatedAt < stuckCutoff);
+  return [...retryable, ...stuck].slice(0, limit);
+}
+
+/** إحصائيات الصندوق للوحة الكنترول. */
+export const getOutboxStats = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    await requireAdmin(ctx, token);
+    const rows = await ctx.db.query("channelOutbox").collect();
+    const byStatus: Record<string, number> = { pending: 0, sent: 0, failed: 0 };
+    const byChannel: Record<string, number> = {};
+    let lastSentAt = 0;
+    let lastError: string | undefined;
+    for (const row of rows) {
+      byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
+      byChannel[row.channel] = (byChannel[row.channel] ?? 0) + 1;
+      if (row.sentAt && row.sentAt > lastSentAt) lastSentAt = row.sentAt;
+      if (row.status === "failed" && (row.lastError || row.title)) {
+        lastError = `${row.channel}: ${row.lastError ?? row.title}`;
+      }
+    }
+    return { total: rows.length, byStatus, byChannel, lastSentAt, lastError };
+  },
+});
+
+/** إعادة محاولة كل الرسائل الفاشلة بضغطة واحدة من لوحة الكنترول. */
+export const retryFailed = mutation({
+  args: { token: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, { token, limit }) => {
+    await requireAdmin(ctx, token);
+    const rows = await collectRetryableOutbox(ctx, limit ?? 20);
+    for (const row of rows) {
+      await ctx.db.patch(row._id as any, { status: "pending", updatedAt: Date.now() });
+      await ctx.scheduler.runAfter(0, internal.channels.deliverOutboxItem, {
+        id: String(row._id),
+        channel: row.channel,
+        title: row.title,
+        message: row.message,
+      });
+    }
+    return { ok: true, retried: rows.length };
+  },
+});
+
+/** آخر رسائل الصندوق (لعرضها في لوحة الكنترول). */
+export const listOutbox = query({
+  args: { token: v.string(), status: v.optional(v.string()), limit: v.optional(v.number()) },
+  handler: async (ctx, { token, status, limit }) => {
+    await requireAdmin(ctx, token);
+    const rows = await ctx.db
+      .query("channelOutbox")
+      .withIndex("by_created")
+      .order("desc")
+      .take(limit ?? 60);
+    return status && status !== "all" ? rows.filter((row) => row.status === status) : rows;
   },
 });
 

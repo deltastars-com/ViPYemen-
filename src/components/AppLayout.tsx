@@ -3,6 +3,7 @@ import { TickerBar } from "./TickerBar";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { OfflineBanner } from "./OfflineBanner";
+import { MirrorFailover } from "./MirrorFailover";
 import { UpdateNotice } from "./UpdateNotice";
 import { WhatsAppButton, AssistantEntry } from "./FloatingButtons";
 
@@ -19,6 +20,8 @@ export function AppLayout() {
       <Footer />
       <WhatsAppButton />
       <AssistantEntry />
+      {/* تحويل تلقائي إلى مرآة مجانية عاملة إذا توقف مزود الاستضافة الحالي */}
+      <MirrorFailover />
     </div>
   );
 }

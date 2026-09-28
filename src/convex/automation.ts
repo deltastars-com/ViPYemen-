@@ -1,5 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
+import { collectRetryableOutbox } from "./channelPush";
 
 /**
  * Automation tick — runs every 5 minutes via convex/crons.ts.
@@ -159,6 +160,68 @@ export const tick = internalMutation({
       }
     }
     if (notifCount > 0) events.push(`تم حذف ${notifCount} إشعار قديم`);
+
+    // ── 10b. صندوق القنوات: إعادة المحاولة التلقائية ──────────────────
+    // أي منشور فشل إرساله إلى تلجرام/واتساب/فيسبوك يُعاد إرساله تلقائياً
+    // (حتى 5 محاولات) — فلا يضيع منشور بسبب انقطاع في واجهة إحدى القنوات.
+    const retryable = await collectRetryableOutbox(ctx, 8);
+    for (const row of retryable) {
+      await ctx.db.patch(row._id as any, { status: "pending", updatedAt: now });
+      await ctx.scheduler.runAfter(0, internal.channels.deliverOutboxItem, {
+        id: String(row._id),
+        channel: row.channel,
+        title: row.title,
+        message: row.message,
+      });
+    }
+    if (retryable.length > 0) {
+      events.push(`إعادة إرسال ${retryable.length} رسالة إلى قنوات المنصة`);
+    }
+
+    // ── 10c. تقليم الجداول النامية — لا تضخّم في البيانات أبداً ─────
+    // صندوق القنوات: المرسل أقدم من 3 أيام (وصل بالفعل)
+    const outboxCutoff = now - 3 * 24 * 60 * 60 * 1000;
+    const sentOutbox = await ctx.db
+      .query("channelOutbox")
+      .withIndex("by_status", (q) => q.eq("status", "sent"))
+      .order("asc")
+      .take(200);
+    let outboxTrimmed = 0;
+    for (const row of sentOutbox) {
+      if (row.createdAt < outboxCutoff) {
+        await ctx.db.delete(row._id);
+        outboxTrimmed += 1;
+      }
+    }
+    // سجل الأرشفة: أقدم من سنة
+    const archiveCutoff = now - 365 * 24 * 60 * 60 * 1000;
+    const oldArchive = await ctx.db
+      .query("archiveLog")
+      .withIndex("by_created")
+      .order("asc")
+      .take(200);
+    for (const row of oldArchive) {
+      if (row.createdAt < archiveCutoff) {
+        await ctx.db.delete(row._id);
+        outboxTrimmed += 1;
+      }
+    }
+    // مطابقات مغلقة/مكتملة أقدم من 180 يوماً (الأرشيف الحي يبقى محدوداً)
+    const matchCutoff = now - 180 * 24 * 60 * 60 * 1000;
+    const oldMatches = await ctx.db
+      .query("matchSuggestions")
+      .withIndex("by_created")
+      .order("asc")
+      .take(200);
+    for (const row of oldMatches) {
+      if (row.createdAt < matchCutoff && (row.status === "closed" || row.status === "matched")) {
+        await ctx.db.delete(row._id);
+        outboxTrimmed += 1;
+      }
+    }
+    if (outboxTrimmed > 0) {
+      events.push(`تم تقليم ${outboxTrimmed} سجلاً قديماً (قنوات · أرشيف · مطابقات)`);
+    }
 
     // ── 11. Notifications for automated events ──────────────────────
     for (const message of events.slice(0, 10)) {

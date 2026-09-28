@@ -50,6 +50,26 @@ updates:
     reviewers:
       - "deltastars-com"
 
+  # Android (Gradle) — plugins and libraries of the APK/AAB build
+  - package-ecosystem: "gradle"
+    directory: "/android"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "06:00"
+      timezone: "Asia/Aden"
+    groups:
+      gradle-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "android"
+    commit-message:
+      prefix: "chore(android-deps)"
+
   # GitHub Actions used by the CI/CD workflows (checkout, setup-node, ...)
   - package-ecosystem: "github-actions"
     directory: "/"

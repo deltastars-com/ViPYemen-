@@ -23,6 +23,7 @@ import type * as fileQueueInternal from "../fileQueueInternal.js";
 import type * as fileQueueMutations from "../fileQueueMutations.js";
 import type * as finance from "../finance.js";
 import type * as followups from "../followups.js";
+import type * as http from "../http.js";
 import type * as internal_ from "../internal.js";
 import type * as matching from "../matching.js";
 import type * as notifications from "../notifications.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   fileQueueMutations: typeof fileQueueMutations;
   finance: typeof finance;
   followups: typeof followups;
+  http: typeof http;
   internal: typeof internal_;
   matching: typeof matching;
   notifications: typeof notifications;

@@ -1,0 +1,59 @@
+name: Keep-alive (servers never sleep)
+
+# 🫀 نبضات مجانية تُبقي سيرفرات المنصة المجانية صاحية على مدار الساعة.
+#
+# خطط الاستضافة المجانية (Render ويب سيرفس مجاني) تدخل في نوم الخمول بعد
+# 15 دقيقة بلا زيارات — وهو سبب شائع لتوقف الويب مؤقتاً. هذا السيرفر يزور
+# القنوات كل 10 دقائق، فيبقى كل شيء صاحياً بلا أي تكلفة (المستودع عام ومجاني).
+#
+# الطلبات خفيفة جداً: طلب HEAD/GET واحد لكل قناة، بلا تنزيل أي محتوى.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+jobs:
+  pulse:
+    name: نبضة إبقاء تشغيل
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: نبضات (Render · Vercel · Pages · Convex · HTTP server)
+        env:
+          EXTRA_MIRROR_URLS: ${{ vars.EXTRA_MIRROR_URLS }}
+        run: |
+          set -uo pipefail
+          pulse() {
+            local name="$1" url="$2"
+            local code
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 \
+              -H "User-Agent: ViP-Yemen-KeepAlive/1.0" "$url" 2>/dev/null || echo 000)
+            printf '%-22s %s\n' "$name" "$code"
+          }
+
+          pulse "Render"       "https://vipyemen.onrender.com"
+          pulse "Vercel"       "https://vi-p-yemen.vercel.app"
+          pulse "GitHub Pages" "https://deltastars-com.github.io/ViPYemen-/"
+          pulse "Convex backend" "https://notable-shepherd-367.convex.cloud"
+          pulse "Convex HTTP"  "https://notable-shepherd-367.convex.site/ping"
+
+          # مرايا إضافية اختيارية (Netlify / Cloudflare Pages …) — تُضاف
+          # كمتغير مستودع EXTRA_MIRROR_URLS بصيغة: "اسم|https://...,اسم|https://..."
+          if [ -n "${EXTRA_MIRROR_URLS:-}" ]; then
+            IFS=',' read -ra EXTRA <<< "$EXTRA_MIRROR_URLS"
+            for entry in "${EXTRA[@]}"; do
+              local_label="${entry%%|*}"
+              local_url="${entry#*|}"
+              [ -n "$local_url" ] && pulse "${local_label:-mirror}" "$local_url"
+            done
+          fi
+
+          echo "✔ اكتملت النبضات — كل السيرفرات المجانية تبقى صاحية."

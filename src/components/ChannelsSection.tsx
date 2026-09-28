@@ -1,13 +1,15 @@
 import { ArrowLeft, ExternalLink, Radio } from "lucide-react";
 import { CHANNELS } from "@/lib/channels";
 import { cn } from "@/lib/utils";
-import { TelegramIcon, WhatsAppIcon, YouTubeIcon } from "./ChannelIcons";
+import { FacebookIcon, TelegramIcon, WhatsAppIcon, YouTubeIcon } from "./ChannelIcons";
 import type { ComponentType, SVGProps } from "react";
 import { useLang } from "@/lib/i18n";
 
 const CHANNEL_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
   whatsapp: WhatsAppIcon,
   telegram: TelegramIcon,
+  facebook: FacebookIcon,
+  facebook_group: FacebookIcon,
   youtube: YouTubeIcon,
 };
 

@@ -16,9 +16,9 @@
 // the publish flow — the item is still live on the platform, and the
 // channels that succeeded are recorded on the document so the admin can see
 // the status and re-push with one click.
-import { action, internalAction } from "./_generated/server";
+import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 export type ChannelKind = "submission" | "ad" | "offer";
 
@@ -351,6 +351,140 @@ export const getChannelSetup = action({
   },
 });
 
+// ── صندوق الإرسال الموثوق ─────────────────────────────────────────────
+
+/** توكن فيسبوك: متغير البيئة أولاً ثم قاعدة بيانات الإعدادات (بدون أسرار عرضة). */
+async function resolveFacebookToken(ctx: ActionCtx): Promise<string> {
+  let token = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
+  if (!token) {
+    try {
+      const settings = (await ctx.runQuery(api.settings.getAll, {
+        token: "__channel_publish__",
+      })) as Record<string, unknown>;
+      for (const key of ["facebookAccessToken", "facebook_access_token", "FB_ACCESS_TOKEN"]) {
+        const value = settings[key];
+        if (typeof value === "string" && value.trim().length > 10) {
+          token = value.trim();
+          break;
+        }
+      }
+    } catch {
+      /* fallback: no token */
+    }
+  }
+  return token;
+}
+
+export type ChannelName = "telegram" | "whatsapp" | "facebook_page" | "facebook_group";
+
+export const ALL_CHANNELS: ChannelName[] = [
+  "telegram",
+  "whatsapp",
+  "facebook_page",
+  "facebook_group",
+];
+
+/** إرسال نص واحد إلى قناة واحدة — يُستخدم للإرسال المباشر وإعادة المحاولة. */
+async function sendToChannel(ctx: ActionCtx, channel: string, text: string): Promise<boolean> {
+  const fbToken = await resolveFacebookToken(ctx);
+  switch (channel) {
+    case "telegram":
+      return postToTelegram(text);
+    case "whatsapp":
+      return postToWhatsApp(text);
+    case "facebook_page":
+      return postToFacebookPage(text, undefined, fbToken || undefined);
+    case "facebook_group":
+      return postToFacebookGroup(text, fbToken || undefined);
+    default:
+      return false;
+  }
+}
+
+/**
+ * 📮 الإرسال الموثوق إلى كل قنوات المنصة:
+ *   1. تُسجَّل الرسالة لكل قناة في الصندوق (لا شيء يُفقد)
+ *   2. تُحاول الإرسال فوراً
+ *   3. ما يفشل يبقى في الصندوق ويُعاد تلقائياً في دورة الأتمتة (حتى 5 محاولات)
+ */
+async function deliverEverywhere(
+  ctx: ActionCtx,
+  payload: {
+    title: string;
+    kind?: string;
+    category?: string;
+    entityId?: string;
+    texts: Record<ChannelName, string>;
+  }
+): Promise<{ done: string[]; failed: string[] }> {
+  const rows = (await ctx.runMutation(internal.channelPush.enqueueOutbox, {
+    title: payload.title,
+    // الرسالة المحفوظة في الصندوق تُستخدم حرفياً في إعادة المحاولة
+    message: payload.texts.telegram,
+    category: payload.category,
+    kind: payload.kind,
+    entityId: payload.entityId,
+  })) as { id: string; channel: string }[];
+
+  const done: string[] = [];
+  const failed: string[] = [];
+  for (const row of rows) {
+    const text = payload.texts[row.channel as ChannelName] ?? payload.texts.telegram;
+    let ok = false;
+    let error: string | undefined;
+    try {
+      ok = await sendToChannel(ctx, row.channel, text);
+    } catch (err: any) {
+      ok = false;
+      error = err?.message ?? String(err);
+    }
+    try {
+      await ctx.runMutation(internal.channelPush.markOutboxResult, {
+        id: row.id,
+        ok,
+        error: ok ? undefined : (error ?? "send failed"),
+      });
+    } catch {
+      /* bookkeeping must never break publishing */
+    }
+    if (ok) done.push(row.channel);
+    else failed.push(row.channel);
+  }
+  console.log(`[ChannelOutbox] title="${payload.title}" done=[${done}] failed=[${failed}]`);
+  return { done, failed };
+}
+
+/** إعادة محاولة رسالة من الصندوق (تُستدعى من دورة الأتمتة أو من لوحة الكنترول). */
+export const deliverOutboxItem = internalAction({
+  args: {
+    id: v.string(),
+    channel: v.string(),
+    title: v.string(),
+    message: v.string(),
+  },
+  handler: async (ctx, args) => {
+    let ok = false;
+    let error: string | undefined;
+    try {
+      ok = await sendToChannel(ctx, args.channel, args.message);
+    } catch (err: any) {
+      ok = false;
+      error = err?.message ?? String(err);
+    }
+    try {
+      await ctx.runMutation(internal.channelPush.markOutboxResult, {
+        id: args.id,
+        ok,
+        error: ok ? undefined : (error ?? "send failed"),
+      });
+    } catch {
+      /* ignore */
+    }
+    console.log(`[ChannelRetry] ${args.channel} ${ok ? "OK" : "FAIL"} — ${args.title}`);
+    return { ok };
+  },
+});
+
 /**
  * 📣 تنبيه نصي إلى كل قنوات المنصة (تلجرام · واتساب · فيسبوك)
  *
@@ -365,23 +499,6 @@ export const publishNotice = internalAction({
     category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let fbToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
-    if (!fbToken) {
-      try {
-        const settings: Record<string, unknown> = await ctx.runQuery(
-          (await import("./_generated/api" as string)).api.settings.getAll,
-          { token: "__channel_notice__" }
-        ) as Record<string, unknown>;
-        for (const key of ["facebookAccessToken", "facebook_access_token", "FB_ACCESS_TOKEN"]) {
-          const val = settings[key];
-          if (typeof val === "string" && val.trim().length > 10) {
-            fbToken = val.trim();
-            break;
-          }
-        }
-      } catch { /* fallback: no token */ }
-    }
-
     const text = [
       `🔔 ${args.title}`,
       "",
@@ -391,17 +508,222 @@ export const publishNotice = internalAction({
       `📱 واتساب المنصة: ${PLATFORM_PHONE_DISPLAY} (${PLATFORM_PHONE_LINK})`,
     ].join("\n");
 
-    const done: string[] = [];
-    const failed: string[] = [];
-    if (await postToTelegram(text)) done.push("telegram"); else failed.push("telegram");
-    if (await postToWhatsApp(text)) done.push("whatsapp"); else failed.push("whatsapp");
-    if (await postToFacebookPage(text, undefined, fbToken || undefined)) done.push("facebook_page");
-    else failed.push("facebook_page");
-    if (await postToFacebookGroup(text, fbToken || undefined)) done.push("facebook_group");
-    else failed.push("facebook_group");
+    const { done, failed } = await deliverEverywhere(ctx, {
+      title: args.title,
+      kind: "notice",
+      category: args.category,
+      texts: {
+        telegram: text,
+        whatsapp: text,
+        facebook_page: text,
+        facebook_group: text,
+      },
+    });
 
     console.log(`[ChannelNotice] title="${args.title}" done=[${done}] failed=[${failed}]`);
     return { ok: done.length > 0, published: done, failed };
+  },
+});
+
+// ── 🩺 فحص صحة قنوات المنصة (سيرفرات التواصل الاجتماعي) ──────────────────
+
+type ChannelHealthRow = {
+  channel: string;
+  status: "ok" | "degraded" | "down";
+  detail: string;
+  latencyMs?: number;
+};
+
+async function timedJson(
+  url: string
+): Promise<{ ok: boolean; latencyMs: number; data: any; error?: string }> {
+  const started = Date.now();
+  try {
+    const res = await fetch(url, { cache: "no-store" as RequestCache });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok && data?.error === undefined, latencyMs: Date.now() - started, data };
+  } catch (err: any) {
+    return {
+      ok: false,
+      latencyMs: Date.now() - started,
+      data: {},
+      error: err?.message ?? String(err),
+    };
+  }
+}
+
+async function checkTelegram(): Promise<ChannelHealthRow> {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_DEFAULT;
+  const envChats = (process.env.TELEGRAM_CHAT_ID ?? "").trim();
+  const chatId = envChats ? envChats.split(",")[0].trim() : TELEGRAM_CHAT_ID_DEFAULT;
+  if (!token) {
+    return { channel: "telegram", status: "down", detail: "لا يوجد توكن بوت (TELEGRAM_BOT_TOKEN)" };
+  }
+  const me = await timedJson(`https://api.telegram.org/bot${token}/getMe`);
+  if (!me.ok || !me.data?.ok) {
+    return {
+      channel: "telegram",
+      status: "down",
+      detail: `تعذر الوصول لواجهة تلجرام — ${me.data?.description ?? me.error ?? "خطأ غير معروف"}`,
+      latencyMs: me.latencyMs,
+    };
+  }
+  const chat = await timedJson(
+    `https://api.telegram.org/bot${token}/getChat?chat_id=${encodeURIComponent(chatId)}`
+  );
+  if (chat.ok && chat.data?.ok) {
+    return {
+      channel: "telegram",
+      status: "ok",
+      detail: `البوت @${me.data.result.username} — القناة: ${chat.data.result.title ?? chatId}`,
+      latencyMs: me.latencyMs,
+    };
+  }
+  return {
+    channel: "telegram",
+    status: "degraded",
+    detail: `البوت يعمل لكن الوصول للقناة (${chatId}) فشل — ${chat.data?.description ?? "تأكد أن البوت مشرف في القناة"}`,
+    latencyMs: me.latencyMs,
+  };
+}
+
+async function checkWhatsApp(): Promise<ChannelHealthRow> {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const recipients = (process.env.WHATSAPP_BROADCAST_TO ?? "")
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  if (!token || !phoneNumberId) {
+    return {
+      channel: "whatsapp",
+      status: "down",
+      detail: "غير مهيأ — يحتاج WHATSAPP_ACCESS_TOKEN + WHATSAPP_PHONE_NUMBER_ID",
+    };
+  }
+  const res = await timedJson(
+    `https://graph.facebook.com/v21.0/${phoneNumberId}?fields=display_phone_number,verified_name&access_token=${encodeURIComponent(token)}`
+  );
+  if (res.ok) {
+    return {
+      channel: "whatsapp",
+      status: "ok",
+      detail: `Cloud API — ${res.data.verified_name ?? "الحساب"} (${res.data.display_phone_number ?? phoneNumberId}) · ${recipients.length} مستلم`,
+      latencyMs: res.latencyMs,
+    };
+  }
+  return {
+    channel: "whatsapp",
+    status: "down",
+    detail: `فشل الوصول إلى WhatsApp Cloud API — ${res.data?.error?.message ?? res.error ?? "توكن غير صالح"}`,
+    latencyMs: res.latencyMs,
+  };
+}
+
+async function checkFacebookTarget(
+  channel: "facebook_page" | "facebook_group",
+  id: string,
+  token: string
+): Promise<ChannelHealthRow> {
+  const label = channel === "facebook_page" ? "صفحة فيسبوك" : "مجموعة فيسبوك";
+  if (!token) {
+    return {
+      channel,
+      status: "down",
+      detail: `غير مهيأ — يحتاج FACEBOOK_ACCESS_TOKEN للنشر على ${label}`,
+    };
+  }
+  const res = await timedJson(
+    `https://graph.facebook.com/v21.0/${id}?fields=name&access_token=${encodeURIComponent(token)}`
+  );
+  if (res.ok) {
+    return {
+      channel,
+      status: "ok",
+      detail: `${label}: ${res.data.name ?? id}`,
+      latencyMs: res.latencyMs,
+    };
+  }
+  return {
+    channel,
+    status: "degraded",
+    detail: `التوكن سليم لكن الوصول لـ${label} (${id}) فشل — ${res.data?.error?.message ?? res.error ?? "راجع صلاحيات التوكن"}`,
+    latencyMs: res.latencyMs,
+  };
+}
+
+/**
+ * 🩺 فحص شامل لقنوات المنصة (تُلجرام · واتساب · صفحة فيسبوك · مجموعة فيسبوك):
+ * يتحقق فعلياً من التوكن والوصول وزمن الاستجابة، يحفظ النتيجة في صحة القنوات،
+ * ويُشعر الإدارة عند أي انقطاع أو عند تعافي قناة كانت متوقفة.
+ */
+export const checkChannels = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const checkedAt = Date.now();
+    const fbToken = await resolveFacebookToken(ctx);
+    const rows: ChannelHealthRow[] = [
+      await checkTelegram(),
+      await checkWhatsApp(),
+      await checkFacebookTarget(
+        "facebook_page",
+        process.env.FACEBOOK_PAGE_ID?.trim() || FB_PAGE_ID_DEFAULT,
+        fbToken
+      ),
+      await checkFacebookTarget(
+        "facebook_group",
+        process.env.FACEBOOK_GROUP_ID?.trim() || FB_GROUP_ID_DEFAULT,
+        fbToken
+      ),
+    ];
+
+    // آخر حالة معروفة قبل التحديث — لكشف التحوّل (انقطاع/تعافي)
+    let previous: Record<string, string> = {};
+    try {
+      const stored = (await ctx.runQuery(internal.channelPush.getStatusesInternal, {})) as {
+        channel: string;
+        status: string;
+      }[];
+      previous = Object.fromEntries(stored.map((row) => [row.channel, row.status]));
+    } catch {
+      /* أول فحص — لا سجل سابق */
+    }
+
+    try {
+      await ctx.runMutation(internal.channelPush.saveChannelStatus, { rows, checkedAt });
+    } catch (err) {
+      console.error("[ChannelHealth] save failed:", err);
+    }
+
+    const healthy = rows.filter((row) => row.status === "ok").length;
+    const broken = rows.filter((row) => row.status !== "ok");
+    const healed = rows.filter(
+      (row) => row.status === "ok" && previous[row.channel] && previous[row.channel] !== "ok"
+    );
+    const broke = rows.filter(
+      (row) => row.status !== "ok" && previous[row.channel] === "ok"
+    );
+
+    if (broke.length > 0 || healed.length > 0) {
+      try {
+        await ctx.runMutation(internal.channelPush.logChannelEvent, {
+          title: broke.length > 0 ? "⚠️ انقطاع في إحدى قنوات المنصة" : "✅ تعافي قنوات المنصة",
+          message:
+            broke.length > 0
+              ? broke.map((row) => `${row.channel}: ${row.detail}`).join(" | ")
+              : healed.map((row) => `${row.channel}: ${row.detail}`).join(" | "),
+        });
+      } catch {
+        /* التنبيه إضافة — لا يُسقط الفحص */
+      }
+    }
+
+    console.log(
+      `[ChannelHealth] ${healthy}/${rows.length} healthy — ${broken
+        .map((row) => `${row.channel}=${row.status}`)
+        .join(", ")}`
+    );
+    return { checkedAt, healthy, total: rows.length, rows };
   },
 });
 
@@ -420,57 +742,20 @@ export const publishToChannels = action({
     price: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Resolve Facebook token: env var → database fallback
-    let fbToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
-    if (!fbToken) {
-      try {
-        const settings: Record<string, unknown> = await ctx.runQuery(
-          (await import("./_generated/api" as string)).api.settings.getAll,
-          { token: "__channel_publish__" }
-        ) as Record<string, unknown>;
-        for (const key of ["facebookAccessToken", "facebook_access_token", "FB_ACCESS_TOKEN"]) {
-          const val = settings[key];
-          if (typeof val === "string" && val.trim().length > 10) {
-            fbToken = val.trim();
-            break;
-          }
-        }
-      } catch { /* fallback: no token */ }
-    }
-
     const text = buildMessage(args);
-    const fbText = buildFacebookMessage(args);
-    const fullUrl = `${PLATFORM_BASE}${args.url}`;
-    const done: string[] = [];
-    const failed: string[] = [];
+    const fbText = buildFacebookMessage(args) + `\n\n🔗 ${PLATFORM_BASE}${args.url}`;
 
-    // Telegram
-    if (await postToTelegram(text)) {
-      done.push("telegram");
-    } else {
-      failed.push("telegram");
-    }
-
-    // WhatsApp
-    if (await postToWhatsApp(text)) {
-      done.push("whatsapp");
-    } else {
-      failed.push("whatsapp");
-    }
-
-    // Facebook Page (with platform link)
-    if (await postToFacebookPage(fbText + `\n\n🔗 ${fullUrl}`, undefined, fbToken || undefined)) {
-      done.push("facebook_page");
-    } else {
-      failed.push("facebook_page");
-    }
-
-    // Facebook Group (text + link)
-    if (await postToFacebookGroup(fbText + `\n\n🔗 ${fullUrl}`, fbToken || undefined)) {
-      done.push("facebook_group");
-    } else {
-      failed.push("facebook_group");
-    }
+    const { done, failed } = await deliverEverywhere(ctx, {
+      title: args.title,
+      kind: args.kind,
+      entityId: args.itemId,
+      texts: {
+        telegram: text,
+        whatsapp: text,
+        facebook_page: fbText,
+        facebook_group: fbText,
+      },
+    });
 
     console.log(`[ChannelPublish] kind=${args.kind} title="${args.title}" done=[${done}] failed=[${failed}]`);
 

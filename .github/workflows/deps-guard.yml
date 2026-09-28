@@ -1,0 +1,107 @@
+name: Auto dependency refresh (تحديث التبعيات آلياً)
+
+# 🧩 تحديث التبعيات والمكتبات والأدوات آلياً وباستمرار:
+#
+#   1. Dependabot (‎.github/dependabot.yml) يفتح طلبات تحديث أسبوعية
+#      لـ npm و GitHub Actions و Gradle (أندرويد).
+#   2. هذا السيرفر يرفع كل التحديثات الآمنة داخل نطاقات SemVer (patch/minor)
+#      تلقائياً في فرع واحد، ولا يفتح طلب الدمج إلا إذا نجح فحص الأنواع
+#      بالكامل — فلا تدخل نسخة مكسورة إلى المنصة أبداً.
+#   3. تقرير الحزم المتقادمة والثغرات يُرفق في ملخص التشغيل مع كل تشغيل.
+#
+# لا يمس هذا السيرفر أي ملف مصدر — فقط package.json / package-lock.json.
+
+on:
+  schedule:
+    - cron: "0 7 * * 6" # السبت 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: deps-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: تحديث آمن + بوّابة فحص
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: تثبيت نظيف
+        run: npm ci --ignore-scripts
+
+      - name: تقرير الحزم المتقادمة
+        run: |
+          {
+            echo "### 📦 حزم تحتاج تحديثاً"
+            echo ""
+            echo '```'
+            npm outdated || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: تقرير الثغرات الأمنية
+        run: |
+          {
+            echo "### 🛡️ فحص الثغرات"
+            echo ""
+            echo '```'
+            npm audit --audit-level=moderate || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: رفع التحديثات الآمنة (داخل نطاقات SemVer)
+        id: bump
+        run: |
+          set -uo pipefail
+          npm update --save
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "✔ لا تحديثات آمنة متاحة الآن — كل شيء محدَّث."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- package.json package-lock.json
+          fi
+
+      - name: بوّابة الجودة (فحص الأنواع + بناء Convex)
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          npm run typecheck
+          npm run build
+
+      - name: فتح/تحديث طلب الدمج
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          BRANCH="chore/deps-auto"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add package.json package-lock.json
+          git commit -m "chore(deps): رفع آمن لتبعيات المنصة (patch/minor)"
+          git push --force origin "$BRANCH"
+
+          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh pr comment "$EXISTING" --body "🔄 تحديث آلي جديد — نجحت بوّابة فحص الأنواع والبناء لهذه الدفعة."
+          else
+            gh pr create \
+              --head "$BRANCH" \
+              --base main \
+              --title "chore(deps): تحديث آلي لتبعيات المنصة" \
+              --body "$(printf 'تحديث آلي آمن (patch/minor) داخل نطاقات SemVer.\n\n- ✅ `npm run typecheck` نجح\n- ✅ `npm run build` نجح\n- 📦 تفاصيل الحزم في ملخص سير العمل\n\n> لا يُدمج إلا بعد نجاح كل الفحوص.')"
+          fi

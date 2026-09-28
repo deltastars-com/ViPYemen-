@@ -261,6 +261,44 @@ export default defineSchema({
     .index("by_created", ["createdAt"]),
 
   /**
+   * 📮 صندوق القنوات الموثوق — كل رسالة تُسجَّل لقناة المنصة قبل الإرسال،
+   * وأي فشل يُعاد تلقائياً (حتى 5 محاولات) فلا يضيع منشور بسبب انقطاع واجهة.
+   * channel: telegram | whatsapp | facebook_page | facebook_group
+   * status:  pending | sent | failed
+   */
+  channelOutbox: defineTable({
+    channel: v.string(),
+    title: v.string(),
+    message: v.string(),
+    category: v.optional(v.string()),
+    kind: v.optional(v.string()),
+    entityId: v.optional(v.string()),
+    status: v.string(),
+    attempts: v.number(),
+    lastError: v.optional(v.string()),
+    sentAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_created", ["createdAt"])
+    .index("by_channel", ["channel"]),
+
+  /**
+   * 🩺 صحة قنوات المنصة الرسمية — فحص دوري مباشر لواجهات القنوات
+   * (تلجرام · واتساب · صفحة فيسبوك · مجموعة فيسبوك) مع زمن الاستجابة
+   * وسبب أي خلل، فيعرف المشرف من لوحة الكنترول أي قناة متوقفة فوراً.
+   * status: ok | degraded | down
+   */
+  channelStatus: defineTable({
+    channel: v.string(),
+    status: v.string(),
+    detail: v.string(),
+    latencyMs: v.optional(v.number()),
+    checkedAt: v.number(),
+  }).index("by_channel", ["channel"]),
+
+  /**
    * 🧠 محرك التوافق والمطابقة — أفضل التطابقات بين العروض والطلبات.
    * يبنيها النظام تلقائياً (وعند الطلب من لوحة الكنترول) فتُحفظ كأرشيف
    * قابل للتتبع: من أُبلغ، من تم التواصل معه، ومن اكتمل توافقه.

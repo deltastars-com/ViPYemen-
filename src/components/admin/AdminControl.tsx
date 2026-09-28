@@ -5,7 +5,7 @@
  * التوافق والمطابقة · التنبيهات الحية · تقييم مقدمي التوظيف · العملاء العائدون.
  */
 import { useMemo, useState } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
   Activity,
   AlertTriangle,
@@ -47,6 +47,13 @@ export type ControlSection =
   | "notices"
   | "ratings"
   | "returning";
+
+const CHANNEL_LABELS: Record<string, (L: (ar: string, en: string) => string) => string> = {
+  telegram: (L) => L("قناة التلجرام", "Telegram channel"),
+  whatsapp: (L) => L("قناة واتساب (بث Cloud API)", "WhatsApp channel (Cloud API broadcast)"),
+  facebook_page: (L) => L("صفحة فيسبوك", "Facebook page"),
+  facebook_group: (L) => L("مجموعة فيسبوك", "Facebook group"),
+};
 
 const NOTICE_STYLES: Record<string, string> = {
   vacant: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
@@ -271,11 +278,12 @@ function ControlAutomation({ token }: { token: string }) {
   const buildIndex = useMutation(api.controlPanel.buildIndexNow);
   const recalcRatings = useMutation(api.employers.recalcNow);
   const publishNotice = useMutation(api.controlPanel.publishLiveNotice);
-  const checkChannels = useAction(api.channels.getChannelSetup);
+  const requestChannelCheck = useMutation(api.channelPush.requestChannelCheck);
+  // 🩺 صحة قنوات المنصة — فحص آلي كل 6 ساعات أو بضغطة من اللوحة
+  const channelHealth = useQuery(api.channelPush.getChannelHealth, { token });
 
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const [channelState, setChannelState] = useState<any>(null);
   const [noticeTitle, setNoticeTitle] = useState("");
   const [noticeBody, setNoticeBody] = useState("");
 
@@ -440,10 +448,7 @@ function ControlAutomation({ token }: { token: string }) {
               onClick={() =>
                 run(
                   "channels",
-                  async () => {
-                    const state = await checkChannels({});
-                    setChannelState(state);
-                  },
+                  () => requestChannelCheck({ token }),
                   L("فحص القنوات", "Channel check")
                 )
               }
@@ -452,27 +457,54 @@ function ControlAutomation({ token }: { token: string }) {
               {L("فحص الآن", "Check now")}
             </Button>
           </div>
-          {channelState ? (
+          {channelHealth && channelHealth.rows.length > 0 ? (
             <div className="space-y-2 text-[11px] font-bold">
-              {[
-                { key: "telegram", label: L("قناة التلجرام", "Telegram channel") },
-                { key: "whatsapp", label: L("بث واتساب", "WhatsApp broadcast") },
-                { key: "facebook", label: L("صفحة فيسبوك", "Facebook page") },
-                { key: "facebookGroup", label: L("مجموعة فيسبوك", "Facebook group") },
-              ].map((channel) => (
-                <div key={channel.key} className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-800/40 px-3 py-2">
-                  <span className="text-ink-200">{channel.label}</span>
-                  <span className={channelState[channel.key] ? "text-emerald-300" : "text-rose-300"}>
-                    {channelState[channel.key] ? L("متصل ويعمل", "Connected") : L("يحتاج مفتاحاً", "Needs key")}
-                  </span>
+              {channelHealth.rows.map((row) => (
+                <div
+                  key={row.channel}
+                  className="rounded-lg border border-ink-700/50 bg-ink-800/40 px-3 py-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-ink-200">
+                      {CHANNEL_LABELS[row.channel]?.(L) ?? row.channel}
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0",
+                        row.status === "ok"
+                          ? "text-emerald-300"
+                          : row.status === "degraded"
+                            ? "text-amber-300"
+                            : "text-rose-300"
+                      )}
+                    >
+                      {row.status === "ok"
+                        ? L("يعمل", "Live")
+                        : row.status === "degraded"
+                          ? L("جزئي", "Degraded")
+                          : L("متوقف", "Down")}
+                      {row.latencyMs !== null && (
+                        <span className="mr-1 text-ink-400"> · {row.latencyMs}ms</span>
+                      )}
+                    </span>
+                  </div>
+                  {row.detail && (
+                    <p className="mt-1 font-normal leading-relaxed text-ink-400">{row.detail}</p>
+                  )}
                 </div>
               ))}
+              <p className="text-[11px] font-normal text-ink-400">
+                {L(
+                  `آخر فحص آلي: ${channelHealth.checkedAt ? formatDateTime(channelHealth.checkedAt) : "—"} · ${channelHealth.healthy}/${channelHealth.total} قناة تعمل — الفحص يتكرر تلقائياً كل 6 ساعات، وأي رسالة تفشل تُعاد إرسالها تلقائياً حتى 5 محاولات.`,
+                  `Last automatic check: ${channelHealth.checkedAt ? formatDateTime(channelHealth.checkedAt) : "—"} · ${channelHealth.healthy}/${channelHealth.total} channels live — checks repeat automatically every 6 hours, and any failed post is retried up to 5 times.`
+                )}
+              </p>
             </div>
           ) : (
             <p className="text-[11px] text-ink-400">
               {L(
-                "اضغط «فحص الآن» للتحقق من جاهزية قنوات النشر (تلجرام · واتساب · فيسبوك).",
-                "Press “Check now” to verify publishing channels (Telegram · WhatsApp · Facebook)."
+                "لم يُسجَّل فحص بعد — اضغط «فحص الآن» ليتحقق النظام فعلياً من تلجرام وواتساب وصفحة/مجموعة فيسبوك ويسجّل النتيجة.",
+                "No check recorded yet — press “Check now” to verify Telegram, WhatsApp and the Facebook page/group for real."
               )}
             </p>
           )}

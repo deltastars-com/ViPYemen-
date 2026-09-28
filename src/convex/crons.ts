@@ -11,6 +11,15 @@ crons.interval(
   internal.automation.tick
 );
 
+// ── 🩺 فحص صحة قنوات المنصة (كل 6 ساعات) ─────────────────────────────
+// يتحقق فعلياً من تلجرام وواتساب وصفحة/مجموعة فيسبوك، ويسجّل الحالة
+// في لوحة الكنترول، ويُشعر الإدارة عند أي انقطاع أو تعاف.
+crons.interval(
+  "channel-health",
+  { hours: 6 },
+  internal.channels.checkChannels
+);
+
 // ── File forwarding queue processor (every 2 min) ─────────────────────
 // Processes pending files in the queue and forwards them to
 // Telegram + Facebook, then cleans up Convex storage.

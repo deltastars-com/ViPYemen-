@@ -32,6 +32,7 @@ jobs:
         id: probe
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXTRA_MIRROR_URLS: ${{ vars.EXTRA_MIRROR_URLS }}
         run: |
           set -uo pipefail
           FAILED=""
@@ -44,10 +45,19 @@ jobs:
             [ "$code" = "200" ] || FAILED="${FAILED}- **${name}** → HTTP ${code} (${url})"$'\n'
           }
 
-          check "Vercel mirror"  "https://vi-p-yemen.vercel.app"
-          check "Render mirror"  "https://vipyemen.onrender.com"
-          check "GitHub Pages"   "https://deltastars-com.github.io/ViPYemen-/"
-          check "Convex backend" "https://notable-shepherd-367.convex.cloud"
+          check "Vercel mirror"   "https://vi-p-yemen.vercel.app"
+          check "Render mirror"   "https://vipyemen.onrender.com"
+          check "GitHub Pages"    "https://deltastars-com.github.io/ViPYemen-/"
+          check "Convex backend"  "https://notable-shepherd-367.convex.cloud"
+          check "Convex HTTP"     "https://notable-shepherd-367.convex.site/health"
+
+          # مرايا إضافية اختيارية (Netlify / Cloudflare Pages …) — متغير مستودع
+          if [ -n "${EXTRA_MIRROR_URLS:-}" ]; then
+            IFS=',' read -ra EXTRA <<< "$EXTRA_MIRROR_URLS"
+            for entry in "${EXTRA[@]}"; do
+              check "${entry%%|*}" "${entry#*|}"
+            done
+          fi
 
           if [ -z "$FAILED" ]; then
             echo "✔ all channels healthy"

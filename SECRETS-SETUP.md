@@ -179,4 +179,43 @@ sh scripts/vault-import.sh
 
 ---
 
+## 1️⃣2️⃣ السيرفرات المجانية الإضافية (اختيارية — لا توقف أي شيء عند غيابها)
+
+المنصة تعمل بالفعل على ثلاث مرايا مستقلة (Vercel · Render · GitHub Pages)
+بالإضافة إلى الباك اند، ونبضات إبقاء التشغيل كل 10 دقائق. لزيادة التوزيع
+المجاني يمكنك (كلها اختيارية ويُتخطى ما لم تُضبط مفاتيحه بسلاسة):
+
+### أ) Netlify (مرآة مجانية إضافية)
+
+أسرار المستودع: `NETLIFY_AUTH_TOKEN` و `NETLIFY_SITE_ID`
+
+من Netlify: `User settings → Applications → Personal access tokens` لإنشاء
+التوكن، ومن إعدادات الموقع (Site configuration → Site ID) تأخذ رقم الموقع.
+
+### ب) Cloudflare Pages (مرآة مجانية إضافية)
+
+أسرار المستودع: `CLOUDFLARE_API_TOKEN` و `CLOUDFLARE_ACCOUNT_ID`
+
+أنشئ التوكن من `My Profile → API Tokens` بصلاحية `Cloudflare Pages: Edit`
+و رقم الحساب من صفحة الحساب الرئيسية.
+
+### ج) تحديث التبعيات مع التحقق الكامل (اختياري)
+
+سرّ `CONVEX_DEPLOY_KEY` يجعل سير `Auto dependency refresh` يتحقق من البناء
+كاملًا قبل فتح طلب التحديث. بدونه لا يزال السير يعمل مع فحص الأنواع والبناء.
+
+### د) مرايا إضافية بلا تعديل كود
+
+متغير المستودع `EXTRA_MIRROR_URLS` بصيغة
+`اسم|https://example.com,اسم2|https://example2.com` — تُضاف تلقائياً إلى
+شريط التنبيهات داخل التطبيق وسجل `/mirrors` وسير النشر والمراقبة.
+
+> بعد إضافة أي مرآة، سجّل رابطها في خدمة مراقبة مجانية (UptimeRobot /
+> cron-job.org) على النقطة `https://notable-shepherd-367.convex.site/health`
+> لتصلك تنبيهات فورية إضافة إلى التذكرة التلقائية.
+
+التفاصيل الكاملة لكل سيرفر: انظر `FREE-SERVERS.md`.
+
+---
+
 © 2026 ViP Yemen — جميع الحقوق محفوظة.

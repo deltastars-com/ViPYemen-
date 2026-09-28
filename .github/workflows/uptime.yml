@@ -40,7 +40,8 @@ jobs:
             local code
             code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 25 "$url" 2>/dev/null || echo 000)
             printf '%-24s %s\n' "$name" "$code"
-            [ "$code" = "200" ] || FAILED="${FAILED}- **${name}** → HTTP ${code} (${url})\n"
+            # real newline ("\n" inside quotes stays literal and breaks printf)
+            [ "$code" = "200" ] || FAILED="${FAILED}- **${name}** → HTTP ${code} (${url})"$'\n'
           }
 
           check "Vercel mirror"  "https://vi-p-yemen.vercel.app"
@@ -54,7 +55,8 @@ jobs:
           else
             echo "::warning::Outage detected on one or more channels"
             printf "failed=true\n" >> "$GITHUB_OUTPUT"
-            printf "$FAILED" > /tmp/outage.md
+            # '%s' so a report starting with "- " is never parsed as printf options
+            printf '%s' "$FAILED" > /tmp/outage.md
           fi
 
       - name: Report outage as a single tracked issue

@@ -11,7 +11,7 @@
  *   7. تقييم مقدمي التوظيف    — أرشيف بالنجوم (في employers.ts)
  *   8. المطابقة والتوافق      — محرك الترشيح التلقائي (في matching.ts)
  */
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { requireAdmin } from "./auth";
@@ -145,7 +145,8 @@ export async function archiveExpired(
   let files = 0;
   let recaps = 0;
 
-  const all = await ctx.db.query("submissions").withIndex("by_created").order("desc").take(600);
+  // حدود قراءة محسوبة لتبقى الدورة داخل حدود معاملة واحدة في Convex
+  const all = await ctx.db.query("submissions").withIndex("by_created").order("desc").take(400);
 
   for (const row of all) {
     const expired =
@@ -185,7 +186,7 @@ export async function archiveExpired(
   }
 
   // أرشفة سجل كل عميل سابق (أكثر من طلب) في قناة التلجرام — بحد أقصى 3 في الدورة
-  const clients = await ctx.db.query("followups").withIndex("by_updated").order("desc").take(300);
+  const clients = await ctx.db.query("followups").withIndex("by_updated").order("desc").take(120);
   const MAX_RECAPS_PER_RUN = 3;
   for (const client of clients) {
     if ((client.submissionCount ?? 0) < 2) continue;
@@ -233,6 +234,12 @@ export async function archiveExpired(
   }
   return { archived, files, recaps };
 }
+
+/** تشغيل الأرشفة من المجدول في معاملة مستقلة (تُبقي دورة الأتمتة خفيفة). */
+export const archiveInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => archiveExpired(ctx),
+});
 
 /** بناء فهرس الكلمات لكل الطلبات (يُستخدم في البحث الفوري بلوحة الكنترول). */
 export async function buildPlatformIndex(

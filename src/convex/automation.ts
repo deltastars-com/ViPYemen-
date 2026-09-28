@@ -1,6 +1,5 @@
 import { internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
-import { archiveExpired } from "./controlPanel";
 
 /**
  * Automation tick — runs every 5 minutes via convex/crons.ts.
@@ -40,13 +39,8 @@ export const tick = internalMutation({
     // ── 2+3. الأرشفة التلقائية + توجيه الملفات لقناة التلجرام ────────
     // المنشور > 60 يوماً والمرفوض > 90 يوماً، مع تقييد كامل في سجل الأرشفة
     // وأرشفة سجل كل عميل سابق في قناة المنصة.
-    const archive = await archiveExpired(ctx);
-    if (archive.archived > 0) {
-      events.push(`تمت أرشفة ${archive.archived} عنصراً تلقائياً (${archive.files} ملف إلى قناة المنصة)`);
-    }
-    if (archive.recaps > 0) {
-      events.push(`أُرشف سجل ${archive.recaps} عميل سابق في قناة المنصة`);
-    }
+    // \ معاملة مستقلة حتى لا يثقل حجمها دورة الأتمتة الأساسية.
+    await ctx.scheduler.runAfter(0, internal.controlPanel.archiveInternal, {});
 
     // ── 3b. محرك التوافق + تقييم مقدمي التوظيف ──────────────────────
     // تُشغَّل كل واحدة في معاملة مستقلة (تحافظ على خفة دورة الأتمتة)

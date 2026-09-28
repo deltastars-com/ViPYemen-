@@ -79,12 +79,13 @@ jobs:
           BODY=$(printf 'فحص تلقائي وجد قناة تشغيل لا تستجيب:\n\n%s\n\nزمن الفحص: `%s`\nالتشغيل: %s/%s/actions/runs/%s\n\n> التطبيقات الأصلية (APK/AAB/iOS) لا تتأثر: واجهتها مدمجة داخل الحزمة وتعمل حتى لو توقفت كل الاستضافات. هذا التنبيه يخص مواقع الويب + الباك اند وحدهما.' \
             "$(cat /tmp/outage.md)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}")
-          EXISTING=$(gh issue list --state open --search "in:title channel outage" --json number --jq '.[0].number // empty')
+          # --repo صريح: هذه المهمة بلا actions/checkout، فيحتاج gh تحديد المستودع
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title channel outage" --json number --jq '.[0].number // empty')
           if [ -n "$EXISTING" ]; then
-            gh issue comment "$EXISTING" --body "$BODY"
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
             echo "updated issue #$EXISTING"
           else
-            gh issue create --title "$TITLE" --body "$BODY"
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
             echo "opened a new outage issue"
           fi
 
@@ -94,10 +95,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
-          EXISTING=$(gh issue list --state open --search "in:title channel outage" --json number --jq '.[0].number // empty')
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title channel outage" --json number --jq '.[0].number // empty')
           if [ -n "$EXISTING" ]; then
-            gh issue comment "$EXISTING" --body "✅ كل القنوات عادت للعمل بشكل طبيعي ($(date -u +%Y-%m-%dT%H:%M:%SZ)). يُغلق التنبيه تلقائياً."
-            gh issue close "$EXISTING" --reason completed
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "✅ كل القنوات عادت للعمل بشكل طبيعي ($(date -u +%Y-%m-%dT%H:%M:%SZ)). يُغلق التنبيه تلقائياً."
+            gh issue close "$EXISTING" --repo "$GITHUB_REPOSITORY" --reason completed
             echo "closed issue #$EXISTING"
           else
             echo "✔ no open outage issue"

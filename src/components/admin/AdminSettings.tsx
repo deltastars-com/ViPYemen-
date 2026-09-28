@@ -9,6 +9,7 @@ import {
   KeyRound,
   AlertTriangle,
   Fingerprint,
+  RefreshCw,
   Send,
   XCircle,
 } from "lucide-react";
@@ -233,6 +234,8 @@ export function AdminSettings({ token }: { token: string }) {
 
       <ChannelSetupCard />
 
+      <FacebookConnectCard token={token} />
+
       <BiometricCard accountName={values.brandName || "admin"} />
 
       <div className="flex items-center gap-3">
@@ -248,6 +251,267 @@ export function AdminSettings({ token }: { token: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * 🔗 ربط فيسبوك بتوكن طويل الأجل
+ *
+ * الوضع «تبديل» يأخذ توكن Graph API Explorer القصير + معرّف التطبيق وسرّه،
+ * ويبدله بتوكن مستخدم طويل الأجل (٦٠ يوماً) ثم يستخرج توكن الصفحة الذي لا
+ * ينتهي — ويحفظ المفاتيح ليتم تجديدها آلياً قبل انتهائها.
+ */
+function FacebookConnectCard({ token }: { token: string }) {
+  const connect = useAction(api.facebook.connectFacebook);
+  const refresh = useAction(api.facebookStore.refreshNow);
+  const status = useQuery(api.facebookStore.getFacebookStatus, { token });
+
+  const [mode, setMode] = useState<"exchange" | "direct">("exchange");
+  const [accessToken, setAccessToken] = useState("");
+  const [appId, setAppId] = useState("");
+  const [appSecret, setAppSecret] = useState("");
+  const [pageId, setPageId] = useState("");
+  const [groupId, setGroupId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState<any>(null);
+  const [error, setError] = useState("");
+
+  async function renewNow() {
+    setBusy(true);
+    setError("");
+    setReport(null);
+    try {
+      const result = await refresh({ token });
+      setReport({
+        ok: result.ok,
+        pageName: result.pageName ?? status?.pageName ?? "—",
+        pageId: result.pageId ?? status?.pageId ?? "—",
+        permanent: true,
+        daysLeft: null,
+        autoRenew: true,
+        groupOk: undefined,
+        warnings: result.ok
+          ? []
+          : [result.reason === "no-app-credentials" ? "التجديد الآلي يحتاج أول ربط بالوضع «تبديل» مع App ID و App Secret" : (result.error ?? "تعذر التجديد")],
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submit() {
+    setBusy(true);
+    setError("");
+    setReport(null);
+    try {
+      const result = await connect({
+        token,
+        mode,
+        accessToken: accessToken.trim(),
+        appId: appId.trim() || undefined,
+        appSecret: appSecret.trim() || undefined,
+        pageId: pageId.trim() || undefined,
+        groupId: groupId.trim() || undefined,
+      });
+      setReport(result);
+      setAccessToken("");
+      setAppSecret("");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#1877f2]/40 bg-[#1877f2]/15 text-[#4da3ff]">
+          <Share2 className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-base font-extrabold text-cream">ربط فيسبوك بتوكن طويل الأجل</h3>
+          <p className="text-xs text-ink-400">
+            تبديل آلي لتوكن قصير الأجل ← توكن مستخدم ٦٠ يوماً ← توكن صفحة لا ينتهي،
+            مع تجديد ذاتي قبل انتهائه فلا يتوقف النشر
+          </p>
+        </div>
+        {status?.connected ? (
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black text-emerald-300">
+            <CheckCircle2 className="h-3 w-3" />
+            {status.permanent ? "توكن دائم" : status.tokenDaysLeft !== null ? `يبقى ${status.tokenDaysLeft} يوم` : "مربوط"}
+          </span>
+        ) : (
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[10px] font-black text-rose-300">
+            <XCircle className="h-3 w-3" />
+            غير مربوط
+          </span>
+        )}
+      </div>
+
+      {status?.connected && (
+        <div className="mb-3 grid gap-2 text-[11px] sm:grid-cols-2">
+          <div className="rounded-lg border border-ink-700/50 bg-ink-800/40 px-3 py-2 text-ink-200">
+            <span className="text-ink-400">الصفحة: </span>
+            {status.pageName || status.pageId || "—"}
+            {status.tokenPrefix && <span className="text-ink-400"> · {status.tokenPrefix}</span>}
+          </div>
+          <div className="rounded-lg border border-ink-700/50 bg-ink-800/40 px-3 py-2 text-ink-200">
+            <span className="text-ink-400">التجديد الذاتي: </span>
+            {status.autoRenew
+              ? `مُفعّل${status.userTokenDaysLeft !== null ? ` (توكن المستخدم يبقى ${status.userTokenDaysLeft} يوماً)` : ""}`
+              : "غير مُفعّل — أضف App ID + App Secret مرة واحدة"}
+          </div>
+          {status.lastError && (
+            <p className="sm:col-span-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 font-bold text-amber-200">
+              ⚠️ {status.lastError}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {([
+          { key: "exchange" as const, label: "تبديل توكن قصير الأجل (موصى به)" },
+          { key: "direct" as const, label: "لديّ توكن جاهز (صفحة/مستخدم)" },
+        ]).map((option) => (
+          <button
+            key={option.key}
+            type="button"
+            onClick={() => setMode(option.key)}
+            className={`rounded-lg border px-3 py-2 text-[11px] font-bold transition-colors ${
+              mode === option.key
+                ? "border-gold-500/60 bg-gold-500/10 text-gold-300"
+                : "border-ink-600/60 bg-ink-900/50 text-ink-300 hover:text-cream"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        {mode === "exchange" && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label>App ID</Label>
+              <Input value={appId} onChange={(e) => setAppId(e.target.value)} dir="ltr" className="text-left" placeholder="123456789012345" />
+            </div>
+            <div>
+              <Label>App Secret</Label>
+              <Input type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} dir="ltr" className="text-left" placeholder="••••••••••••" />
+            </div>
+          </div>
+        )}
+        <div>
+          <Label>{mode === "exchange" ? "التوكن قصير الأجل (Graph API Explorer)" : "التوكن الجاهز"}</Label>
+          <Input value={accessToken} onChange={(e) => setAccessToken(e.target.value)} dir="ltr" className="text-left" placeholder="EAAG…" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <Label>معرّف الصفحة (اختياري)</Label>
+            <Input value={pageId} onChange={(e) => setPageId(e.target.value)} dir="ltr" className="text-left" placeholder="102672588647591" />
+          </div>
+          <div>
+            <Label>معرّف المجموعة (اختياري)</Label>
+            <Input value={groupId} onChange={(e) => setGroupId(e.target.value)} dir="ltr" className="text-left" placeholder="346010664332427" />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="gold" loading={busy} disabled={!accessToken.trim()} onClick={submit} className="!py-2 text-xs">
+            <Share2 className="h-4 w-4" />
+            {mode === "exchange" ? "ابدأ التبديل والربط" : "تحقق واحفظ التوكن"}
+          </Button>
+          {status?.hasUserToken && (
+            <Button variant="ghost" loading={busy} onClick={renewNow} className="!py-2 text-xs">
+              <RefreshCw className="h-4 w-4" />
+              جدّد التوكن الآن
+            </Button>
+          )}
+        </div>
+
+        {error && (
+          <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[11px] font-bold text-rose-300">
+            ⚠️ {error}
+          </p>
+        )}
+
+        {report && (
+          <div className="space-y-1.5 rounded-lg border border-ink-600/50 bg-ink-950/50 p-3 text-[11px]">
+            <p className={report.ok ? "font-black text-emerald-300" : "font-black text-amber-300"}>
+              {report.ok ? "✅ تم الربط بنجاح" : "⚠️ تم الحفظ مع ملاحظات"}
+            </p>
+            <p className="text-ink-200">
+              الصفحة: <b className="text-cream">{report.pageName}</b> ({report.pageId})
+              {typeof report.pageFans === "number" && report.pageFans > 0 && (
+                <span className="text-ink-400"> · {report.pageFans.toLocaleString("en-US")} متابع</span>
+              )}
+            </p>
+            <p className="text-ink-200">
+              مدة التوكن:{" "}
+              {report.permanent
+                ? "دائم — لا ينتهي ✅"
+                : report.daysLeft !== null
+                  ? `يتبقى ${report.daysLeft} يوماً`
+                  : "غير محددة"}
+              {report.autoRenew && <span className="text-emerald-300"> · التجديد الذاتي مُفعّل</span>}
+            </p>
+            {report.groupOk !== undefined && (
+              <p className="text-ink-300">
+                المجموعة: {report.groupOk ? `✅ ${report.groupName ?? report.groupId}` : "⚠️ غير متاحة للنشر عبر الـ API"}
+              </p>
+            )}
+            {(report.scopes?.length ?? 0) > 0 && (
+              <p className="text-ink-400" dir="ltr">
+                {report.scopes.join(" · ")}
+              </p>
+            )}
+            {report.warnings?.length > 0 && (
+              <ul className="list-inside list-disc space-y-1 text-amber-200">
+                {report.warnings.map((w: string) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            )}
+            <p className="pt-1 text-[10px] text-ink-400">
+              تم تحديث قنوات المنصة — النشر التلقائي على الصفحة يعمل الآن، والفحص يسجّل النتيجة
+              في لوحة الكنترول ← الأتمتة الشاملة.
+            </p>
+          </div>
+        )}
+
+        <details className="rounded-lg border border-ink-600/50 bg-ink-950/40 p-3">
+          <summary className="cursor-pointer text-[11px] font-bold text-ink-300 hover:text-cream">
+            كيف أحصل على التوكن ومعرّف التطبيق؟ (خطوات مختصرة)
+          </summary>
+          <ol className="mt-2 list-inside list-decimal space-y-1.5 text-[11px] leading-relaxed text-ink-300">
+            <li>
+              افتح <b className="text-cream" dir="ltr">developers.facebook.com</b> ← تطبيقك ← Settings ← Basic، وانسخ
+              <b className="text-cream"> App ID</b> و<b className="text-cream">App Secret</b>.
+            </li>
+            <li>
+              من <b className="text-cream" dir="ltr">Tools → Graph API Explorer</b> اختر تطبيقك، ثم أضف الصلاحيات:
+              <code className="mx-1 text-[9px] text-cream" dir="ltr">pages_manage_posts</code>
+              <code className="mx-1 text-[9px] text-cream" dir="ltr">pages_read_engagement</code>
+              <code className="mx-1 text-[9px] text-cream" dir="ltr">pages_show_list</code>
+            </li>
+            <li>
+              اضغط <b className="text-cream">Generate Access Token</b>، ووافق على الصفحة المطلوبة عند السؤال، ثم انسخ التوكن والصقه هنا.
+            </li>
+            <li>
+              اضغط «ابدأ التبديل والربط» — سيتولى النظام الباقي: توكن طويل الأجل ← توكن صفحة لا ينتهي ← حفظ + تجديد آلي.
+            </li>
+          </ol>
+          <p className="mt-2 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-[10px] font-bold text-amber-200">
+            ملاحظة: النشر التلقائي على <b>المجموعة</b> عبر الـ API أوقفته فيسبوك لتطبيقات كثيرة — تبقى القناة تعمل بلا خطأ،
+            ويُبلَّغ عنها بوضوح، بينما الصفحة وقنوات تلجرام/واتساب تُنشر تلقائياً بالكامل.
+          </p>
+        </details>
+      </div>
+    </Card>
   );
 }
 

@@ -644,10 +644,14 @@ async function checkFacebookTarget(
       latencyMs: res.latencyMs,
     };
   }
+  const raw = String(res.data?.error?.message ?? res.error ?? "راجع صلاحيات التوكن");
+  const expired = /expired|session has expired|invalid oauth|OAuthException/i.test(raw);
   return {
     channel,
     status: "degraded",
-    detail: `التوكن سليم لكن الوصول لـ${label} (${id}) فشل — ${res.data?.error?.message ?? res.error ?? "راجع صلاحيات التوكن"}`,
+    detail: expired
+      ? `التوكن منتهي الصلاحية — أعد الربط من لوحة التحكم ← الإعدادات ← «ربط فيسبوك بتوكن طويل الأجل» (يعمل التبديل والتجديد الآلي بضغطة)`
+      : `التوكن سليم لكن الوصول لـ${label} (${id}) فشل — ${raw}`,
     latencyMs: res.latencyMs,
   };
 }
@@ -693,6 +697,15 @@ export const checkChannels = internalAction({
       await ctx.runMutation(internal.channelPush.saveChannelStatus, { rows, checkedAt });
     } catch (err) {
       console.error("[ChannelHealth] save failed:", err);
+    }
+
+    // ♻️ تجديد ذاتي لتوكن فيسبوك عند اقتراب انتهاء توكن المستخدم (لا يعمل إلا عند الحاجة)
+    try {
+      if (fbToken) {
+        await ctx.scheduler.runAfter(0, internal.facebook.refreshTokenInternal, {});
+      }
+    } catch {
+      /* التجديد إضافة — لا يُسقط الفحص */
     }
 
     const healthy = rows.filter((row) => row.status === "ok").length;

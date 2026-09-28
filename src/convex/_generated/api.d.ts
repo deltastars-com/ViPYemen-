@@ -18,6 +18,8 @@ import type * as controlPanel from "../controlPanel.js";
 import type * as crons from "../crons.js";
 import type * as email from "../email.js";
 import type * as employers from "../employers.js";
+import type * as facebook from "../facebook.js";
+import type * as facebookStore from "../facebookStore.js";
 import type * as fileForward from "../fileForward.js";
 import type * as fileQueueInternal from "../fileQueueInternal.js";
 import type * as fileQueueMutations from "../fileQueueMutations.js";
@@ -54,6 +56,8 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   email: typeof email;
   employers: typeof employers;
+  facebook: typeof facebook;
+  facebookStore: typeof facebookStore;
   fileForward: typeof fileForward;
   fileQueueInternal: typeof fileQueueInternal;
   fileQueueMutations: typeof fileQueueMutations;

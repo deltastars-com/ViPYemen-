@@ -17,9 +17,9 @@
  *   → this action processes queue → sends to Telegram + Facebook
  *   → marks as forwarded → cleanup action deletes from Convex storage
  */
-import { action } from "./_generated/server";
+import { action, type ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 // ── Constants ─────────────────────────────────────────────────────────
 const TELEGRAM_BOT_TOKEN_DEFAULT = "8876814738:AAFepkzzC0g__-xGz9JE_sqvq0JMM1kHVWM";
@@ -41,10 +41,27 @@ function getTelegramConfig() {
   return { token, chatId };
 }
 
-function getFacebookConfig() {
-  const token = process.env.FACEBOOK_ACCESS_TOKEN?.trim();
+function getFacebookConfig(tokenOverride?: string) {
+  const token = tokenOverride?.trim() || process.env.FACEBOOK_ACCESS_TOKEN?.trim();
   const groupId = process.env.FACEBOOK_GROUP_ID?.trim() || FB_GROUP_ID_DEFAULT;
   return { token, groupId };
+}
+
+/**
+ * توكن فيسبوك: متغير البيئة أولاً ثم التوكن المحفوظ من لوحة التحكم (ربط فيسبوك
+ * بتوكن طويل الأجل) — فتعمل توجيه الملفات حتى لو كان التوكن في قاعدة البيانات.
+ */
+async function resolveFacebookToken(ctx: ActionCtx): Promise<string> {
+  const env = process.env.FACEBOOK_ACCESS_TOKEN?.trim();
+  if (env) return env;
+  try {
+    const config = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as {
+      facebookAccessToken?: string;
+    };
+    return config.facebookAccessToken?.trim() ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function detectFileType(mimeType: string): "photo" | "video" | "document" {
@@ -156,9 +173,10 @@ async function sendFileToFacebook(
   fileBuffer: ArrayBuffer,
   fileName: string,
   mimeType: string,
-  caption: string
+  caption: string,
+  tokenOverride?: string
 ): Promise<{ ok: boolean; url?: string; error?: string }> {
-  const { token, groupId } = getFacebookConfig();
+  const { token, groupId } = getFacebookConfig(tokenOverride);
   if (!token) {
     return { ok: false, error: "Facebook not configured" };
   }
@@ -250,6 +268,7 @@ export const processFileQueue = action({
 
     const buffer = await res.arrayBuffer();
     const caption = categoryLabel(args.entityType, args.entityTitle);
+    const fbToken = await resolveFacebookToken(ctx);
 
     // Forward to Telegram + Facebook in parallel
     const [tgResult, fbResult] = await Promise.all([
@@ -257,7 +276,7 @@ export const processFileQueue = action({
         ok: false as const,
         error: e.message,
       })),
-      sendFileToFacebook(buffer, args.fileName, args.mimeType, caption).catch((e) => ({
+      sendFileToFacebook(buffer, args.fileName, args.mimeType, caption, fbToken).catch((e) => ({
         ok: false as const,
         error: e.message,
       })),

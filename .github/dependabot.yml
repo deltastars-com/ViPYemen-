@@ -69,6 +69,14 @@ updates:
       - "android"
     commit-message:
       prefix: "chore(android-deps)"
+    # Gradle Wrapper majors move in lockstep with Android Gradle Plugin and
+    # Java requirements — a major bump there can break the signed APK/AAB
+    # build, so only minors/patches flow automatically.
+    ignore:
+      - dependency-name: "gradle-wrapper"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "com.android.tools.build:gradle"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions used by the CI/CD workflows (checkout, setup-node, ...)
   - package-ecosystem: "github-actions"

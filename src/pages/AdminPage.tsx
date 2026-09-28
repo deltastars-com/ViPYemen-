@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   Code2,
   Archive,
+  Gauge,
   Megaphone,
   Crown,
   Bell,
@@ -31,6 +32,7 @@ import { Logo, LogoMark } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/lib/i18n";
 import { AdminOverview } from "@/components/admin/AdminOverview";
+import { AdminControl } from "@/components/admin/AdminControl";
 import { AdminSubmissions } from "@/components/admin/AdminSubmissions";
 import { AdminAds } from "@/components/admin/AdminAds";
 import { AdminOffers } from "@/components/admin/AdminOffers";
@@ -40,6 +42,7 @@ import { AdminDeveloper } from "@/components/admin/AdminDeveloper";
 
 export type AdminTab =
   | "overview"
+  | "control"
   | "jobs"
   | "real_estate"
   | "emarket"
@@ -53,12 +56,13 @@ export type AdminTab =
 
 function getTabs(lang: "ar" | "en") {
   const L = {
-    ar: { overview: "نظرة عامة", jobs: "طلبات التوظيف", real_estate: "طلبات العقارات", emarket: "طلبات التسويق الإلكتروني", software: "طلبات البرمجيات", archived: "الأرشيف", ads: "الإعلانات الترويجية", offers: "العروض", notifications: "الإشعارات", clients: "بيانات العملاء", developer: "قسم المطور" },
-    en: { overview: "Overview", jobs: "Job Requests", real_estate: "Real Estate", emarket: "E-Marketing", software: "Software", archived: "Archive", ads: "Promotional Ads", offers: "Offers", notifications: "Notifications", clients: "Clients", developer: "Developer Hub" },
+    ar: { overview: "نظرة عامة", control: "لوحة الكنترول", jobs: "طلبات التوظيف", real_estate: "طلبات العقارات", emarket: "طلبات التسويق الإلكتروني", software: "طلبات البرمجيات", archived: "الأرشيف", ads: "الإعلانات الترويجية", offers: "العروض", notifications: "الإشعارات", clients: "بيانات العملاء", developer: "قسم المطور" },
+    en: { overview: "Overview", control: "Control Panel", jobs: "Job Requests", real_estate: "Real Estate", emarket: "E-Marketing", software: "Software", archived: "Archive", ads: "Promotional Ads", offers: "Offers", notifications: "Notifications", clients: "Clients", developer: "Developer Hub" },
   };
   const t = L[lang];
   return [
     { key: "overview" as AdminTab, label: t.overview, icon: LayoutDashboard },
+    { key: "control" as AdminTab, label: t.control, icon: Gauge },
     { key: "jobs" as AdminTab, label: t.jobs, icon: Briefcase, category: "jobs" },
     { key: "real_estate" as AdminTab, label: t.real_estate, icon: Home, category: "real_estate" },
     { key: "emarket" as AdminTab, label: t.emarket, icon: ShoppingBag, category: "emarket" },
@@ -325,6 +329,7 @@ export function AdminPage() {
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
             {tab === "overview" && <AdminOverview token={token} setTab={goToTab} />}
+            {tab === "control" && <AdminControl token={token} />}
             {tab === "jobs" && <AdminSubmissions token={token} category="jobs" />}
             {tab === "real_estate" && <AdminSubmissions token={token} category="real_estate" />}
             {tab === "emarket" && <AdminSubmissions token={token} category="emarket" />}

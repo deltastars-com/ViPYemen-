@@ -15,6 +15,10 @@ import {
   Code2,
   Users2,
   UserCheck,
+  Gauge,
+  Target,
+  Radio,
+  Archive,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { StatCard, Spinner } from "@/components/ui";
@@ -47,6 +51,38 @@ export function AdminOverview({ token, setTab }: { token: string; setTab: (t: Ad
         <StatCard label="العروض" value={stats.offers} icon={<Crown className="h-5 w-5" />} />
         <StatCard label="العملاء" value={stats.clientsTotal ?? 0} icon={<Users2 className="h-5 w-5" />} accent="violet" />
         <StatCard label="متابعات مكتملة" value={stats.clientsResolved ?? 0} icon={<UserCheck className="h-5 w-5" />} accent="emerald" />
+      </div>
+
+      <div className="card-surface flex flex-col gap-4 border-gold-500/30 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gold-500/40 bg-gold-500/10 text-gold-300">
+            <Gauge className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-extrabold text-cream">لوحة الكنترول الاحترافية الشاملة</p>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-300">
+              تحليلات كاملة · أتمتة شاملة · أرشفة وفهرسة · توافق ومطابقة تلقائية · تنبيهات حية (شاغرة / تم التوظيف / متاح / تم البيع) ·
+              تقييم مقدمي التوظيف بالنجوم · كشف العملاء العائدين وإشعارهم آلياً.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {[
+                { icon: Target, label: "مطابقة وتوافق" },
+                { icon: Radio, label: "تنبيهات حية" },
+                { icon: Archive, label: "أرشفة وفهرسة" },
+                { icon: UserCheck, label: "عملاء عائدون" },
+              ].map((item) => (
+                <span key={item.label} className="chip !border-gold-500/30 !bg-gold-500/10 !text-gold-300">
+                  <item.icon className="h-3 w-3" />
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <button onClick={() => setTab("control")} className="btn-gold shrink-0">
+          <Gauge className="h-4 w-4" />
+          افتح لوحة الكنترول
+        </button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

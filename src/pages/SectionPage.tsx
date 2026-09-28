@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ListFilter, PenLine } from "lucide-react";
 import { SubmissionForm } from "@/components/SubmissionForm";
 import { SubmissionCard, type PublicSubmission } from "@/components/SubmissionCard";
+import { LiveNotices } from "@/components/LiveNotices";
 import { EmptyState, Spinner } from "@/components/ui";
 import type { CategoryConfig } from "@/lib/categories";
 import { useLang } from "@/lib/i18n";
@@ -80,6 +81,10 @@ export function SectionPage({ category }: { category: CategoryConfig }) {
           </div>
         ) : (
           <>
+            {/* تنبيهات حية: شاغرة / تم التوظيف · متاح / تم البيع + حالة القنوات */}
+            <div className="mb-6">
+              <LiveNotices category={category.key} />
+            </div>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="flex items-center gap-2 text-lg font-extrabold text-cream">
                 <span>{t("publishedIn")} {tCat(category.key, "label")}</span>

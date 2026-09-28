@@ -1,5 +1,6 @@
 import { internalMutation } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+import { archiveExpired } from "./controlPanel";
 
 /**
  * Automation tick — runs every 5 minutes via convex/crons.ts.
@@ -36,74 +37,21 @@ export const tick = internalMutation({
       }
     }
 
-    // ── 2. Submissions: auto-archive rejected (>90 days) ────────────
-    const archiveCutoff = now - 90 * 24 * 60 * 60 * 1000;
-    const submissions = await ctx.db
-      .query("submissions")
-      .withIndex("by_created")
-      .order("asc")
-      .take(200);
-    for (const s of submissions) {
-      if (s.status === "rejected" && s.updatedAt < archiveCutoff) {
-        const history = s.history ?? [];
-        history.push({
-          by: "النظام",
-          at: now,
-          action: "archived",
-          note: "أرشفة تلقائية بعد 90 يوماً من الرفض",
-        });
-        await ctx.db.patch(s._id, { status: "archived", history, updatedAt: now });
-        events.push(`تمت أرشفة الطلب "${s.title}" تلقائياً`);
-      }
+    // ── 2+3. الأرشفة التلقائية + توجيه الملفات لقناة التلجرام ────────
+    // المنشور > 60 يوماً والمرفوض > 90 يوماً، مع تقييد كامل في سجل الأرشفة
+    // وأرشفة سجل كل عميل سابق في قناة المنصة.
+    const archive = await archiveExpired(ctx);
+    if (archive.archived > 0) {
+      events.push(`تمت أرشفة ${archive.archived} عنصراً تلقائياً (${archive.files} ملف إلى قناة المنصة)`);
+    }
+    if (archive.recaps > 0) {
+      events.push(`أُرشف سجل ${archive.recaps} عميل سابق في قناة المنصة`);
     }
 
-    // ── 3. Auto-archive published submissions older than 60 days ────
-    const publishCutoff = now - 60 * 24 * 60 * 60 * 1000;
-    const publishedSubs = await ctx.db
-      .query("submissions")
-      .withIndex("by_status", (q) => q.eq("status", "published"))
-      .order("asc")
-      .take(100);
-    for (const s of publishedSubs) {
-      if (s.publishedAt && s.publishedAt < publishCutoff) {
-        const history = s.history ?? [];
-        history.push({
-          by: "النظام",
-          at: now,
-          action: "archived",
-          note: "أرشفة تلقائية بعد 60 يوماً من النشر",
-        });
-        await ctx.db.patch(s._id, { status: "archived", history, updatedAt: now });
-        // Enqueue attachments for forwarding before archive
-        if (s.attachments && s.attachments.length > 0) {
-          for (const att of s.attachments) {
-            const existing = await ctx.db
-              .query("fileQueue")
-              .withIndex("by_entity", (q) =>
-                q.eq("entityType", "submission").eq("entityId", s._id as string)
-              )
-              .collect();
-            if (!existing.some((e) => e.storageId === att.storageId)) {
-              await ctx.db.insert("fileQueue", {
-                storageId: att.storageId,
-                fileName: att.name,
-                fileKind: att.kind,
-                fileSize: 0,
-                mimeType: att.kind === "image" ? "image/jpeg"
-                  : att.kind === "video" ? "video/mp4"
-                  : "application/octet-stream",
-                entityType: "submission",
-                entityId: s._id as string,
-                status: "pending",
-                retryCount: 0,
-                createdAt: now,
-              });
-            }
-          }
-        }
-        events.push(`تمت أرشفة إعلان منشور "${s.title}" بعد انتهاء الصلاحية — الملفات مُحوّلة للقنوات`);
-      }
-    }
+    // ── 3b. محرك التوافق + تقييم مقدمي التوظيف ──────────────────────
+    // تُشغَّل كل واحدة في معاملة مستقلة (تحافظ على خفة دورة الأتمتة)
+    await ctx.scheduler.runAfter(0, internal.matching.runAutoMatchInternal, { limit: 30 });
+    await ctx.scheduler.runAfter(0, internal.employers.recalcInternal, {});
 
     // ── 4. Notify admin about stale pending submissions (>7 days) ────
     const staleCutoff = now - 7 * 24 * 60 * 60 * 1000;

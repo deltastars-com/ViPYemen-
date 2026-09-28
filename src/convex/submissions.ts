@@ -8,8 +8,8 @@ import {
   requireAdmin,
   sha256Hex,
 } from "./auth";
-import { api } from "./_generated/api";
-import { touchFollowup } from "./followups";
+import { api, internal } from "./_generated/api";
+import { findReturningClient, touchFollowup } from "./followups";
 
 const CATEGORIES = ["jobs", "real_estate", "emarket", "software"];
 const TYPES = ["owner", "seeker", "buyer", "seller", "client", "employer"];
@@ -81,7 +81,9 @@ export const requestPhoneOtp = mutation({
       used: false,
       createdAt: now,
     });
-    return { code, phone: normalized };
+    // 🔁 كشف العميل السابق: من أرسل عرضاً/طلباً من قبل لا يحتاج إعادة كل شيء
+    const returning = await findReturningClient(ctx, normalized);
+    return { code, phone: normalized, returning };
   },
 });
 
@@ -145,7 +147,7 @@ export const submit = mutation({
       createdAt: now,
       updatedAt: now,
     });
-    await touchFollowup(ctx, {
+    const client = await touchFollowup(ctx, {
       fullName: args.fullName.trim(),
       phone: normalizePhone(args.phone),
       address: args.address?.trim() || undefined,
@@ -158,6 +160,30 @@ export const submit = mutation({
       category: args.category,
       createdAt: now,
     });
+
+    // 🔁 عميل سابق: إشعار تلقائي (للإدارة وفي قناة المنصة) يوضح أن العميل
+    // معروف مسبقاً وأن ملفاته محفوظة — يكفي تنشيط الطلب السابق أو إضافة جديد.
+    if (client.isReturning) {
+      await ctx.db.insert("notifications", {
+        title: "عميل سابق — إرسال جديد",
+        message: `${args.fullName} (${normalizePhone(args.phone)}) عميل سابق لديه ${client.previousCount} طلب/طلبات — آخرها: ${client.previousTitle ?? "—"}. يمكنه تنشيط طلبه السابق بدل إعادة الإرسال.`,
+        category: args.category,
+        createdAt: now,
+      });
+      const maskedPhone = normalizePhone(args.phone).replace(/^(\d{3})\d{3}(\d{3})$/, "$1***$2");
+      await ctx.scheduler.runAfter(0, internal.channels.publishNotice, {
+        title: "عميل سابق — إرسال جديد",
+        message: [
+          `👤 العميل: ${args.fullName} (${maskedPhone})`,
+          `📊 طلبات سابقة: ${client.previousCount}`,
+          client.previousTitle ? `🆔 آخر طلب سابق: ${client.previousTitle}` : "",
+          `🆕 الطلب الجديد: ${args.title}`,
+          "ℹ️ ملفات العميل السابق محفوظة في قناة المنصة — يكفي تنشيط الطلب السابق أو إضافة جديد غير ما أُرسل سابقاً.",
+        ].filter(Boolean).join("\n"),
+        category: args.category,
+      });
+    }
+
     // Auto-enqueue all attachments for forwarding to Telegram + Facebook
     // This moves files off Convex storage to external channels asynchronously,
     // keeping the platform lightweight even with thousands of uploads.
@@ -180,7 +206,68 @@ export const submit = mutation({
         });
       }
     }
-    return { id };
+    return {
+      id,
+      returning: client.isReturning
+        ? {
+            previousCount: client.previousCount,
+            lastTitle: client.previousTitle ?? null,
+          }
+        : null,
+    };
+  },
+});
+
+/**
+ * 🔁 إعادة تنشيط طلب سابق من العميل نفسه (بتحقق رقم الهاتف).
+ * العميل السابق لا يحتاج إعادة إرسال كل شيء: يُعاد طلبه للمراجعة فوراً.
+ */
+export const reactivate = mutation({
+  args: { phone: v.string(), id: v.string() },
+  handler: async (ctx, { phone, id }) => {
+    if (!isValidYemeniPhone(phone))
+      throw new ConvexError("رقم الهاتف غير صحيح — أدخل رقم يمني صحيح (7xxxxxxxx)");
+    const normalized = normalizePhone(phone);
+    const existing = (await ctx.db.get(id as any)) as any;
+    if (!existing) throw new ConvexError("الطلب غير موجود");
+    if (existing.phone !== normalized) {
+      throw new ConvexError("لا يمكن تنشيط طلب لا يخص هذا الرقم");
+    }
+    if (existing.status === "sold") {
+      throw new ConvexError("هذا الطلب مكتمل/مُغلق — أضف إعلاناً جديداً بارتياح");
+    }
+    const now = Date.now();
+    const history = existing.history ?? [];
+    history.push({
+      by: existing.fullName,
+      at: now,
+      action: "reactivated",
+      note: "إعادة تنشيط الطلب من العميل (عميل سابق) — بلا إعادة إرسال",
+    });
+    await ctx.db.patch(existing._id, {
+      status: "pending",
+      reactivatedAt: now,
+      updatedAt: now,
+      history,
+      adminNote: "إعادة تنشيط من العميل — أولوية في المراجعة",
+    });
+    await ctx.db.insert("notifications", {
+      title: "إعادة تنشيط طلب",
+      message: `${existing.fullName} أعاد تنشيط طلبه "${existing.title}" — جاهز للمراجعة والنشر`,
+      category: existing.category,
+      createdAt: now,
+    });
+    await ctx.scheduler.runAfter(0, internal.channels.publishNotice, {
+      title: "إعادة تنشيط طلب من عميل سابق",
+      message: [
+        `👤 العميل: ${existing.fullName}`,
+        `🆔 الطلب: ${existing.title}`,
+        `📍 القسم: ${existing.category}`,
+        "♻️ أُعيد التنشيط مباشرة دون إعادة إرسال الملفات.",
+      ].join("\n"),
+      category: existing.category,
+    });
+    return { ok: true, title: existing.title, category: existing.category };
   },
 });
 
@@ -358,6 +445,11 @@ export const setStatus = mutation({
           existing.price !== undefined
             ? `${existing.price.toLocaleString("en-US")} ${existing.currency === "usd" ? "$" : "ريال يمني"}`
             : undefined,
+      });
+      // 🧠 محرك التوافق: الطلب صار مفتوحاً ⇢ رشّح أفضل المطابقات له فوراً
+      await ctx.scheduler.runAfter(0, internal.matching.runAutoMatchInternal, {
+        category: existing.category,
+        limit: 25,
       });
     }
     return { ok: true };

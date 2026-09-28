@@ -2,6 +2,7 @@ import { MessageCircle, Phone, BadgeCheck, ImageIcon, FileText, CheckCircle2 } f
 import { Badge, Card } from "./ui";
 import { getCategory, getType, TYPE_ICONS, PRODUCT_ICONS } from "@/lib/categories";
 import { formatPrice, whatsappLink } from "@/lib/utils";
+import { liveStateClass, liveStateLabel } from "@/lib/liveLabels";
 import { useLang } from "@/lib/i18n";
 
 export interface PublicSubmission {
@@ -26,7 +27,7 @@ export interface PublicSubmission {
 }
 
 export function SubmissionCard({ item }: { item: PublicSubmission }) {
-  const { t, tField, tOption } = useLang();
+  const { t, tField, tOption, lang } = useLang();
   const category = getCategory(item.category);
   const typeConfig = getType(category, item.type);
   const isSold = item.status === "sold";
@@ -43,6 +44,11 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
             <h3 className="text-sm font-extrabold leading-snug text-cream">{item.title}</h3>
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
               <Badge className="border-ink-600/60 bg-ink-800/60 text-ink-200">{tField(item.category, item.type, "label")}</Badge>
+              {/* الحالة الحية على الواجهة: شاغرة / تم التوظيف · متاح / تم البيع */}
+              <Badge className={liveStateClass(item.category, item.status)}>
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
+                {liveStateLabel(item.category, item.status, lang)}
+              </Badge>
               {category.key === "emarket" && (
                 <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-300">
                   {item.fields?.productType ? tOption(item.fields.productType) : t("optGoods")}

@@ -85,6 +85,15 @@ export default defineSchema({
     publishedAt: v.optional(v.number()),
     publishedTo: v.optional(v.array(v.string())),
     lastChannelPush: v.optional(v.number()),
+    /** كلمات الفهرس — يبنيها محرك الفهرسة في لوحة الكنترول */
+    indexKeys: v.optional(v.array(v.string())),
+    indexedAt: v.optional(v.number()),
+    /** وقت الأرشفة التلقائية/اليدوية */
+    archivedAt: v.optional(v.number()),
+    /** آخر تنشيط من العميل (عميل سابق أعاد تنشيط طلبه) */
+    reactivatedAt: v.optional(v.number()),
+    /** أفضل نتيجة مطابقة محسوبة من محرك التوافق (0..100) */
+    bestMatchScore: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -167,6 +176,15 @@ export default defineSchema({
     reason: v.optional(v.string()),
     note: v.optional(v.string()),
     history: v.optional(v.array(v.any())),
+    /** آخر إرسال من هذا العميل — أساس كشف «العميل السابق» */
+    lastSubmissionAt: v.optional(v.number()),
+    /** وقت إشعار العميل بأنه عميل سابق (تنشيط أو إضافة جديد) */
+    returningNotifiedAt: v.optional(v.number()),
+    /** عدد الملفات المؤرشفة في قناة التلجرام لصالح هذا العميل */
+    archivedFiles: v.optional(v.number()),
+    archivedAt: v.optional(v.number()),
+    /** متوسط/أفضل تقييم نجوم لمقدم التوظيف */
+    stars: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -241,4 +259,73 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_entity", ["entityType", "entityId"])
     .index("by_created", ["createdAt"]),
+
+  /**
+   * 🧠 محرك التوافق والمطابقة — أفضل التطابقات بين العروض والطلبات.
+   * يبنيها النظام تلقائياً (وعند الطلب من لوحة الكنترول) فتُحفظ كأرشيف
+   * قابل للتتبع: من أُبلغ، من تم التواصل معه، ومن اكتمل توافقه.
+   * status: new | notified | contacted | matched | closed
+   */
+  matchSuggestions: defineTable({
+    category: v.string(),
+    requestId: v.string(),
+    requestTitle: v.string(),
+    requestName: v.string(),
+    requestPhone: v.string(),
+    offerId: v.string(),
+    offerTitle: v.string(),
+    offerName: v.string(),
+    offerPhone: v.string(),
+    score: v.number(),
+    reasons: v.array(v.string()),
+    status: v.string(),
+    notifiedAt: v.optional(v.number()),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_created", ["createdAt"])
+    .index("by_category", ["category"])
+    .index("by_status", ["status"])
+    .index("by_pair", ["requestId", "offerId"]),
+
+  /**
+   * ⭐ أرشيف مقدمي التوظيف وتقييمهم بالنجوم (مؤهلات + خبرات + موثوقية).
+   * يُحتسب آلياً من طلبات المنشأة، ويمكن للإدارة تعديله يدوياً.
+   */
+  employerRatings: defineTable({
+    name: v.string(),
+    phone: v.string(),
+    stars: v.number(),
+    score: v.number(),
+    qualifications: v.number(),
+    experience: v.number(),
+    reliability: v.number(),
+    jobsPosted: v.number(),
+    jobsFilled: v.number(),
+    verified: v.boolean(),
+    manual: v.boolean(),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_phone", ["phone"])
+    .index("by_stars", ["stars"])
+    .index("by_updated", ["updatedAt"]),
+
+  /**
+   * 🗂️ سجل الأرشفة والفهرسة — كل عملية أرشفة أو بناء فهرس تُقيّد هنا
+   * كي يُظهر لوحة الكنترول أثراً كاملاً وقابلاً للتتبع.
+   */
+  archiveLog: defineTable({
+    kind: v.string(), // submission | ad | offer | client | index
+    entityId: v.string(),
+    title: v.string(),
+    category: v.optional(v.string()),
+    reason: v.string(),
+    files: v.number(),
+    channels: v.array(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_created", ["createdAt"])
+    .index("by_kind", ["kind"]),
 });

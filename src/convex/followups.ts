@@ -1,4 +1,4 @@
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { requireAdmin } from "./auth";
@@ -16,6 +16,46 @@ export function isValidStatus(status: string): status is FollowupStatus {
   return (FOLLOWUP_STATUSES as readonly string[]).includes(status);
 }
 
+/** كشف «العميل السابق»: من أرسل عرضاً أو طلباً في السابق (قبل أي إرسال جديد). */
+export interface ReturningClient {
+  id: string;
+  count: number;
+  lastTitle?: string;
+  lastAt: number;
+  category?: string;
+  archivedFiles: number;
+  /** معرّف آخر طلب/عرض أرسله العميل — للتنشيط المباشر */
+  lastSubmissionId?: string;
+  lastStatus?: string;
+}
+
+export async function findReturningClient(
+  ctx: Pick<QueryCtx, "db">,
+  phone: string
+): Promise<ReturningClient | null> {
+  const existing = await ctx.db
+    .query("followups")
+    .withIndex("by_phone", (q) => q.eq("phone", phone))
+    .first();
+  if (!existing || (existing.submissionCount ?? 0) < 1) return null;
+  const recent = await ctx.db
+    .query("submissions")
+    .withIndex("by_created")
+    .order("desc")
+    .take(120);
+  const last = recent.find((row) => row.phone === phone);
+  return {
+    id: String(existing._id),
+    count: existing.submissionCount ?? 0,
+    lastTitle: existing.lastSubmissionTitle ?? last?.title,
+    lastAt: existing.lastSubmissionAt ?? last?.createdAt ?? existing.updatedAt,
+    category: existing.category ?? last?.category,
+    archivedFiles: existing.archivedFiles ?? 0,
+    lastSubmissionId: last ? String(last._id) : undefined,
+    lastStatus: last?.status,
+  };
+}
+
 /** Upsert a client record whenever a new submission arrives (by phone). */
 export async function touchFollowup(
   ctx: Pick<MutationCtx, "db">,
@@ -27,7 +67,7 @@ export async function touchFollowup(
     submissionTitle: string;
     adminName?: string;
   }
-) {
+): Promise<{ id: string; isReturning: boolean; previousCount: number; previousTitle?: string }> {
   const now = Date.now();
   const existing = await ctx.db
     .query("followups")
@@ -43,18 +83,27 @@ export async function touchFollowup(
     const history = existing.history ?? [];
     history.push(historyEntry);
     while (history.length > 60) history.shift();
+    const previousCount = existing.submissionCount ?? 0;
     await ctx.db.patch(existing._id, {
       fullName: input.fullName,
       address: input.address,
       category: input.category,
       lastSubmissionTitle: input.submissionTitle,
-      submissionCount: (existing.submissionCount ?? 0) + 1,
+      submissionCount: previousCount + 1,
+      lastSubmissionAt: now,
+      // عميل سابق: لا يُكرَّر الإشعار في كل مرة — يُجدَّد الوقت فقط
+      returningNotifiedAt: previousCount >= 1 ? now : existing.returningNotifiedAt,
       updatedAt: now,
       history,
     });
-    return existing._id;
+    return {
+      id: String(existing._id),
+      isReturning: previousCount >= 1,
+      previousCount,
+      previousTitle: existing.lastSubmissionTitle,
+    };
   }
-  return ctx.db.insert("followups", {
+  const id = await ctx.db.insert("followups", {
     fullName: input.fullName,
     phone: input.phone,
     address: input.address,
@@ -63,10 +112,12 @@ export async function touchFollowup(
     lastSubmissionTitle: input.submissionTitle,
     submissionCount: 1,
     status: "pending",
+    lastSubmissionAt: now,
     history: [historyEntry],
     createdAt: now,
     updatedAt: now,
   });
+  return { id: String(id), isReturning: false, previousCount: 0 };
 }
 
 export const listFollowups = query({

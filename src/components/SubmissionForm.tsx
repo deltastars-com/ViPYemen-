@@ -5,8 +5,10 @@ import { api } from "../convex/_generated/api";
 import { queueSubmission } from "@/lib/outbox";
 import {
   CheckCircle2,
+  History,
   MessageCircle,
   PhoneCall,
+  RefreshCw,
   ShieldCheck,
   UploadCloud,
   X,
@@ -17,6 +19,7 @@ import {
 import { Button, Input, Label, Select, Textarea } from "./ui";
 import { getType, type CategoryConfig } from "@/lib/categories";
 import { fileKindOf, whatsappLink, PLATFORM_WHATSAPP_DISPLAY } from "@/lib/utils";
+import { liveText } from "@/lib/liveLabels";
 import { useLang } from "@/lib/i18n";
 
 interface Attachment {
@@ -26,10 +29,11 @@ interface Attachment {
 }
 
 export function SubmissionForm({ category }: { category: CategoryConfig }) {
-  const { t, tField, tOption } = useLang();
+  const { t, tField, tOption, lang } = useLang();
   const [typeValue, setTypeValue] = useState(category.types[0].value);
   const submit = useMutation(api.submissions.submit);
   const requestOtp = useMutation(api.submissions.requestPhoneOtp);
+  const reactivate = useMutation(api.submissions.reactivate);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
   const typeConfig = useMemo(() => getType(category, typeValue), [category, typeValue]);
@@ -50,6 +54,15 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
   const [queuedOffline, setQueuedOffline] = useState(false);
+  // 🔁 العميل السابق: يُكشف عند التحقق من رقم الهاتف وعند الإرسال
+  const [returning, setReturning] = useState<{
+    count: number;
+    lastTitle?: string | null;
+    archivedFiles?: number;
+    lastSubmissionId?: string;
+  } | null>(null);
+  const [reactivatedTitle, setReactivatedTitle] = useState("");
+  const [reactivating, setReactivating] = useState(false);
 
   async function handleOtp() {
     setError("");
@@ -60,8 +73,37 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
     try {
       const res = await requestOtp({ phone });
       setOtpState({ code: res.code, phone: res.phone });
+      // إشعار تلقائي: العميل معروف مسبقاً ⇢ تنشيط أو إضافة جديد
+      setReturning(
+        res.returning
+          ? {
+              count: res.returning.count,
+              lastTitle: res.returning.lastTitle,
+              archivedFiles: res.returning.archivedFiles,
+              lastSubmissionId: res.returning.lastSubmissionId,
+            }
+          : null
+      );
     } catch (e: any) {
       setError(e.message ?? t("otpSendError"));
+    }
+  }
+
+  async function handleReactivate() {
+    if (!returning?.lastSubmissionId) {
+      setError(liveText("returningError", lang));
+      return;
+    }
+    setReactivating(true);
+    setError("");
+    try {
+      const res = await reactivate({ phone, id: returning.lastSubmissionId });
+      setReactivatedTitle(res.title);
+      setReturning(null);
+    } catch (e: any) {
+      setError(e?.message ?? liveText("returningError", lang));
+    } finally {
+      setReactivating(false);
     }
   }
 
@@ -127,7 +169,17 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
       otpCode: otpCode.trim() || undefined,
     };
     try {
-      await submit(payload);
+      const result: any = await submit(payload);
+      if (result?.returning && !returning) {
+        setReturning(
+          result.returning.lastSubmissionId
+            ? result.returning
+            : {
+                count: result.returning.previousCount,
+                lastTitle: result.returning.lastTitle,
+              }
+        );
+      }
       setQueuedOffline(false);
       setDone(true);
     } catch (err: any) {
@@ -176,6 +228,30 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
             ? "لا يوجد اتصال بالخادم الآن — لم يضيع طلبك. سيُرسَل تلقائياً فور عودة الشبكة دون أي إدخال إضافي منك."
             : t("submissionSuccessSub")}
         </p>
+        {/* إشعار العميل السابق بعد الإرسال: تنشيط بدل إعادة كل شيء */}
+        {returning && !reactivatedTitle && (
+          <div className="w-full max-w-md rounded-2xl border border-gold-500/30 bg-gold-500/5 p-4 text-[12px] leading-relaxed text-ink-200">
+            <p className="font-black text-gold-200">{liveText("returningTitle", lang)}</p>
+            <p className="mt-1">{liveText("returningBody", lang)}</p>
+            {returning.lastSubmissionId && (
+              <Button
+                type="button"
+                variant="gold"
+                className="mt-3 w-full !py-2 text-xs"
+                loading={reactivating}
+                onClick={handleReactivate}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                {liveText("returningReactivate", lang)}
+              </Button>
+            )}
+          </div>
+        )}
+        {reactivatedTitle && (
+          <p className="max-w-md text-xs font-bold leading-relaxed text-emerald-300">
+            {liveText("returningReactivated", lang)} — «{reactivatedTitle}»
+          </p>
+        )}
         <Button type="button" onClick={() => { setDone(false); setQueuedOffline(false); setOtpState(null); setOtpCode(""); setAttachments([]); }}>
           {t("submitAnother")}
         </Button>
@@ -185,6 +261,58 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
 
   return (
     <form onSubmit={handleSubmit} className="card-surface space-y-5 p-5 sm:p-6">
+      {/* 🔁 عميل سابق: تنشيط الطلب السابق أو إضافة جديد — بلا إعادة إرسال */}
+      {returning && !reactivatedTitle && (
+        <div className="rounded-2xl border border-gold-500/35 bg-gold-500/5 p-4">
+          <div className="flex items-start gap-3">
+            <History className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-gold-200">{liveText("returningTitle", lang)}</p>
+              <p className="mt-1 text-xs leading-relaxed text-ink-200">{liveText("returningBody", lang)}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold">
+                <span className="chip">
+                  {liveText("returningCount", lang)}: <b className="text-cream">{returning.count}</b>
+                </span>
+                {returning.lastTitle && (
+                  <span className="chip">
+                    {liveText("returningLast", lang)}: <b className="text-cream">{returning.lastTitle}</b>
+                  </span>
+                )}
+                <span className="chip">
+                  {liveText("returningArchived", lang)}:{" "}
+                  <b className="text-emerald-300">{returning.archivedFiles ?? 0}</b>
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="gold"
+                  className="!px-3 !py-2 text-xs"
+                  loading={reactivating}
+                  onClick={handleReactivate}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {liveText("returningReactivate", lang)}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="!px-3 !py-2 text-xs"
+                  onClick={() => setReturning(null)}
+                >
+                  {liveText("returningAddNew", lang)}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {reactivatedTitle && (
+        <div className="rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-4 text-xs font-bold leading-relaxed text-emerald-200">
+          <CheckCircle2 className="mb-0.5 ml-1 inline h-4 w-4" />
+          {liveText("returningReactivated", lang)} — «{reactivatedTitle}»
+        </div>
+      )}
       <div>
         <div className="mb-3 flex flex-wrap gap-2">
           {category.types.map((tp) => (

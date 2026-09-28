@@ -16,7 +16,7 @@
 // the publish flow — the item is still live on the platform, and the
 // channels that succeeded are recorded on the document so the admin can see
 // the status and re-push with one click.
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 
@@ -348,6 +348,60 @@ export const getChannelSetup = action({
         envFbToken: !!process.env.FACEBOOK_ACCESS_TOKEN?.trim(),
       },
     };
+  },
+});
+
+/**
+ * 📣 تنبيه نصي إلى كل قنوات المنصة (تلجرام · واتساب · فيسبوك)
+ *
+ * داخلي فقط (internalAction): يُستدعى من النظام عبر المجدول — لا يمكن
+ * لأي زائر استدعاؤه مباشرة، فلا يمكن استخدامه لإغراق قنوات المنصة.
+ * يُستخدم في: تنبيهات المطابقة، أرشفة العملاء السابقين، التنبيهات الحية.
+ */
+export const publishNotice = internalAction({
+  args: {
+    title: v.string(),
+    message: v.string(),
+    category: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let fbToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
+    if (!fbToken) {
+      try {
+        const settings: Record<string, unknown> = await ctx.runQuery(
+          (await import("./_generated/api" as string)).api.settings.getAll,
+          { token: "__channel_notice__" }
+        ) as Record<string, unknown>;
+        for (const key of ["facebookAccessToken", "facebook_access_token", "FB_ACCESS_TOKEN"]) {
+          const val = settings[key];
+          if (typeof val === "string" && val.trim().length > 10) {
+            fbToken = val.trim();
+            break;
+          }
+        }
+      } catch { /* fallback: no token */ }
+    }
+
+    const text = [
+      `🔔 ${args.title}`,
+      "",
+      args.message,
+      "",
+      `🌐 المنصة: ${PLATFORM_BASE}`,
+      `📱 واتساب المنصة: ${PLATFORM_PHONE_DISPLAY} (${PLATFORM_PHONE_LINK})`,
+    ].join("\n");
+
+    const done: string[] = [];
+    const failed: string[] = [];
+    if (await postToTelegram(text)) done.push("telegram"); else failed.push("telegram");
+    if (await postToWhatsApp(text)) done.push("whatsapp"); else failed.push("whatsapp");
+    if (await postToFacebookPage(text, undefined, fbToken || undefined)) done.push("facebook_page");
+    else failed.push("facebook_page");
+    if (await postToFacebookGroup(text, fbToken || undefined)) done.push("facebook_group");
+    else failed.push("facebook_group");
+
+    console.log(`[ChannelNotice] title="${args.title}" done=[${done}] failed=[${failed}]`);
+    return { ok: done.length > 0, published: done, failed };
   },
 });
 

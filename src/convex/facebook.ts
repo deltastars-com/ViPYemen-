@@ -22,6 +22,58 @@ const RENEW_WINDOW_DAYS = 20;
 const DAY = 86_400_000;
 
 /**
+ * 🌱 تهيئة أولية: لو غاب توكن اللوحة تماماً، تُستخدم متغيرات البيئة
+ * (FACEBOOK_ACCESS_TOKEN/APP_ID/APP_SECRET) كبذرة، فتستفيد دورة التجديد
+ * الذاتي منها حتى بدون أي ربط يدوي من اللوحة.
+ */
+export const bootstrapFromEnv = internalAction({
+  args: {},
+  handler: async (ctx: ActionCtx) => {
+    const config = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as FacebookConfig;
+    if (config.facebookAccessToken?.trim() || config.facebookUserToken?.trim()) {
+      return { ok: false, reason: "settings-already-present" };
+    }
+    const envToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
+    const envAppId = process.env.FACEBOOK_APP_ID?.trim() ?? "";
+    const envAppSecret = process.env.FACEBOOK_APP_SECRET?.trim() ?? "";
+    if (!envToken) return { ok: false, reason: "no-env-token" };
+
+    // فحص التوكن البيئي: إن كان توكن مستخدم نحفظه للتجديد الذاتي؛
+    // وإن كان توكن صفحة نحفظه كما هو للنشر.
+    const inspected = await inspectToken(envToken, envAppId || undefined, envAppSecret || undefined);
+    const values: Record<string, unknown> = { facebookConnectedAt: Date.now() };
+    if (envAppId && envAppSecret) {
+      values.facebookAppId = envAppId;
+      values.facebookAppSecret = envAppSecret;
+    }
+    if (inspected.type === "USER" && envAppId && envAppSecret) {
+      const long = await exchangeForLongLived(envAppId, envAppSecret, envToken);
+      if (long.token) {
+        values.facebookUserToken = long.token;
+        values.facebookUserTokenExpiresAt = long.expiresAt ?? 0;
+        const pages = await listPages(long.token);
+        const chosen =
+          pages.find((p) => p.id === "102672588647591") ??
+          pages.find((p) => /vip\s*yemen/i.test(p.name)) ??
+          pages.find((p) => !!p.token);
+        if (chosen?.token) {
+          values.facebookAccessToken = chosen.token;
+          values.facebookPageId = chosen.id;
+          values.facebookPageName = chosen.name;
+          values.facebookTokenExpiresAt = 0;
+        }
+      } else {
+        values.facebookAccessToken = envToken;
+      }
+    } else {
+      values.facebookAccessToken = envToken;
+    }
+    await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values });
+    return { ok: true, reason: "bootstrapped" };
+  },
+});
+
+/**
  * الصلاحية الوحيدة التي تفصل بين «ربط ناجح» و«نشر ناجح». بدونها يُوصل فيسبوك
  * الخطأ (#200): If posting to a page, requires both pages_read_engagement and
  * pages_manage_posts. لذلك نفحصها صراحةً ونخبر بها بوضوح.
@@ -342,6 +394,16 @@ export const connectFacebook = action({
       await ctx.scheduler.runAfter(0, internal.channels.checkChannels, {});
     } catch {
       /* الفحص إضافة — لا يُسقط الربط */
+    }
+
+    // 📴 رفع إيقاف قنوات فيسبوك تلقائياً عند ربط توكن صالح يمنح صلاحية النشر:
+    // المنصة تبدأ بقنوات فيسبوك متوقفة، وتعمل فور ربط التوكن الجديد.
+    if (posting.canPost === true) {
+      try {
+        await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
+      } catch {
+        /* رفع الإيقاف إضافة — لا يُسقط الربط */
+      }
     }
 
     const daysLeft =

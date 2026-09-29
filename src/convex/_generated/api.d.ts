@@ -12,6 +12,8 @@ import type * as ads from "../ads.js";
 import type * as ai from "../ai.js";
 import type * as auth from "../auth.js";
 import type * as automation from "../automation.js";
+import type * as campaigns from "../campaigns.js";
+import type * as channelPolicy from "../channelPolicy.js";
 import type * as channelPush from "../channelPush.js";
 import type * as channels from "../channels.js";
 import type * as controlPanel from "../controlPanel.js";
@@ -52,6 +54,8 @@ declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   auth: typeof auth;
   automation: typeof automation;
+  campaigns: typeof campaigns;
+  channelPolicy: typeof channelPolicy;
   channelPush: typeof channelPush;
   channels: typeof channels;
   controlPanel: typeof controlPanel;

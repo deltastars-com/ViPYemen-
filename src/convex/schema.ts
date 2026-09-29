@@ -366,4 +366,83 @@ export default defineSchema({
   })
     .index("by_created", ["createdAt"])
     .index("by_kind", ["kind"]),
+
+  /**
+   * 📮 مشتركو النشرة البريدية — قاعدة حملات البريد الأوتوماتيكية.
+   * unsubToken: رمز إلغاء اشتراك فريد يُوضع في تذييل كل رسالة
+   * (رابط إلغاء الاشتراك إلزامي في أي حملة بريد حقيقية).
+   */
+  emailSubscribers: defineTable({
+    email: v.string(),
+    name: v.optional(v.string()),
+    source: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    status: v.union(v.literal("active"), v.literal("unsubscribed")),
+    unsubToken: v.string(),
+    createdAt: v.number(),
+    lastSentAt: v.optional(v.number()),
+    unsubscribedAt: v.optional(v.number()),
+  })
+    .index("by_email", ["email"])
+    .index("by_status", ["status"])
+    .index("by_created", ["createdAt"]),
+
+  /**
+   * 📣 حملة بريد — من الإنشاء إلى الإرسال الكامل، على دفعات مع إعادة محاولة،
+   * فلا تضيع رسالة ولا يُرسل المرسل مرتين في الحملة نفسها.
+   */
+  emailCampaigns: defineTable({
+    subject: v.string(),
+    preview: v.optional(v.string()),
+    body: v.string(),
+    fromName: v.optional(v.string()),
+    replyTo: v.optional(v.string()),
+    audience: v.optional(v.string()), // all | tag:<name>
+    status: v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("sending"),
+      v.literal("paused"),
+      v.literal("sent"),
+      v.literal("stopped")
+    ),
+    scheduledAt: v.optional(v.number()),
+    startedAt: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+    total: v.number(),
+    sent: v.number(),
+    failed: v.number(),
+    cursor: v.number(),
+    lastError: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_scheduled", ["scheduledAt"])
+    .index("by_created", ["createdAt"]),
+
+  /** 📴 سجل تغيّرات حالة القنوات (إيقاف/تشغيل) — أثر تدقيق واضح. */
+  channelPauseLog: defineTable({
+    channel: v.string(),
+    paused: v.boolean(),
+    reason: v.string(),
+    at: v.number(),
+  })
+    .index("by_channel", ["channel"])
+    .index("by_at", ["at"]),
+
+  /** 📋 سجل الإرسال التفصيلي لكل حملة — يضمن عدم التكرار ويكشف الفشل. */
+  emailLog: defineTable({
+    campaignId: v.id("emailCampaigns"),
+    email: v.string(),
+    status: v.union(v.literal("sent"), v.literal("failed")),
+    error: v.optional(v.string()),
+    attempts: v.number(),
+    createdAt: v.number(),
+    sentAt: v.optional(v.number()),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_status", ["status"])
+    .index("by_email", ["email"])
+    .index("by_created", ["createdAt"]),
 });

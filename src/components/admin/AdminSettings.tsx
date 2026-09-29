@@ -12,6 +12,8 @@ import {
   RefreshCw,
   Send,
   XCircle,
+  Mail,
+  Power,
 } from "lucide-react";
 import {
   enrollBiometric,
@@ -19,6 +21,11 @@ import {
   isBiometricSupported,
   isBiometricEnrolled,
 } from "@/lib/biometric";
+import {
+  DEFAULT_WHATSAPP_CHANNEL_LINK,
+  getWhatsAppChannelLink,
+  setWhatsAppChannelLink,
+} from "@/lib/whatsappChannel";
 import { api } from "../../convex/_generated/api";
 import { Button, Card, Input, Label, Spinner } from "@/components/ui";
 
@@ -238,6 +245,10 @@ export function AdminSettings({ token }: { token: string }) {
 
       <FacebookConnectCard token={token} />
 
+      <EmailSetupCard token={token} />
+
+      <ChannelSwitchesCard token={token} />
+
       <BiometricCard accountName={values.brandName || "admin"} />
 
       <div className="flex items-center gap-3">
@@ -253,6 +264,230 @@ export function AdminSettings({ token }: { token: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * 📧 إعداد البريد الإلكتروني — مفتاح Resend وهوية المُرسل
+ *
+ * تُحفظ القيم في جدول settings (مفاتيح emailProviderKey · emailFromName ·
+ * emailFromAddress · emailReplyTo) فيُشغَّل نظام الحملات البريدية بلا أي متغير
+ * بيئة ولا إعادة نشر.
+ */
+function EmailSetupCard({ token }: { token: string }) {
+  const updateSetting = useMutation(api.settings.updateSetting);
+  const status = useQuery(api.campaigns.getEmailStatus, { token });
+  const sendTest = useAction(api.campaigns.sendTestEmail);
+
+  const [apiKey, setApiKey] = useState("");
+  const [fromName, setFromName] = useState("");
+  const [fromAddress, setFromAddress] = useState("");
+  const [replyTo, setReplyTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [testTo, setTestTo] = useState("");
+  const [testBusy, setTestBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  async function save() {
+    setBusy(true);
+    setErr("");
+    setMsg("");
+    try {
+      if (apiKey.trim()) await updateSetting({ token, key: "emailProviderKey", value: apiKey.trim() });
+      if (fromName.trim()) await updateSetting({ token, key: "emailFromName", value: fromName.trim() });
+      if (fromAddress.trim()) await updateSetting({ token, key: "emailFromAddress", value: fromAddress.trim() });
+      if (replyTo.trim()) await updateSetting({ token, key: "emailReplyTo", value: replyTo.trim() });
+      setApiKey("");
+      setMsg("تم الحفظ — قناة البريد جاهزة");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runTest() {
+    setTestBusy(true);
+    setErr("");
+    setMsg("");
+    try {
+      const r = await sendTest({ token, to: testTo.trim() || undefined });
+      if (r.ok) setMsg(`وصلت رسالة الاختبار إلى ${r.to}`);
+      else setErr(r.error ?? "فشل الإرسال التجريبي");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setTestBusy(false);
+    }
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-sky-500/40 bg-sky-500/15 text-sky-300">
+          <Mail className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-base font-extrabold text-cream">إعداد البريد الإلكتروني (حملات النشرة)</h3>
+          <p className="text-xs text-ink-400">
+            ألصق مفتاح Resend API مرة واحدة — تُرسَل الحملات البريدية آلياً بعدها من تبويب
+            «الحملات البريدية» بلا أي متغير بيئة
+          </p>
+        </div>
+        {status === undefined ? null : status.configured ? (
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black text-emerald-300">
+            <CheckCircle2 className="h-3 w-3" />
+            مضبوط {status.keyPrefix}
+          </span>
+        ) : (
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[10px] font-black text-amber-300">
+            <AlertTriangle className="h-3 w-3" />
+            غير مضبوط
+          </span>
+        )}
+      </div>
+
+      {status && status.configured && (
+        <div className="mb-3 grid gap-2 text-[11px] sm:grid-cols-2">
+          <div className="rounded-lg border border-ink-700/50 bg-ink-800/40 px-3 py-2 text-ink-200">
+            <span className="text-ink-400">اسم المُرسل: </span>
+            {status.fromName}
+          </div>
+          <div className="rounded-lg border border-ink-700/50 bg-ink-800/40 px-3 py-2 text-ink-200" dir="ltr">
+            <span className="text-ink-400">From: </span>
+            {status.fromAddress}
+          </div>
+          <div className="rounded-lg border border-ink-700/50 bg-ink-800/40 px-3 py-2 text-ink-200">
+            <span className="text-ink-400">المشتركون: </span>
+            {status.subscribers} نشط · {status.unsubscribed} منسحب
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <div>
+          <Label>مفتاح Resend API</Label>
+          <Input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            dir="ltr"
+            className="text-left"
+            placeholder="re_… (اتركه فارغاً للإبقاء على المحفوظ)"
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <Label>اسم المُرسل</Label>
+            <Input value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder={status?.fromName || "ViP Yemen"} />
+          </div>
+          <div>
+            <Label>بريد المُرسل (From)</Label>
+            <Input value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} dir="ltr" className="text-left" placeholder={status?.fromAddress || "noreply@yourdomain.com"} />
+          </div>
+          <div>
+            <Label>الرد على (Reply-To) — اختياري</Label>
+            <Input value={replyTo} onChange={(e) => setReplyTo(e.target.value)} dir="ltr" className="text-left" placeholder={status?.replyTo || "vipservicesyemen@gmail.com"} />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-48 flex-1">
+            <Label>بريد الاختبار (افتراضياً بريد المنصة)</Label>
+            <Input value={testTo} onChange={(e) => setTestTo(e.target.value)} dir="ltr" className="text-left" placeholder="you@example.com" />
+          </div>
+          <Button variant="ghost" loading={testBusy} onClick={runTest} className="!py-2 text-xs">
+            <Send className="h-4 w-4 text-gold-400" />
+            رسالة تجريبية
+          </Button>
+          <Button onClick={save} loading={busy} className="!py-2 text-xs">
+            <Save className="h-4 w-4" />
+            حفظ إعدادات البريد
+          </Button>
+        </div>
+        {msg && (
+          <p className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs font-bold text-emerald-300">
+            <CheckCircle2 className="h-4 w-4" />
+            {msg}
+          </p>
+        )}
+        {err && (
+          <p className="flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs font-bold text-rose-300">
+            <XCircle className="h-4 w-4" />
+            {err}
+          </p>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * 🔀 مفاتيح تشغيل/إيقاف القنوات — إيقاف يدوي آمن لكل قناة.
+ *
+ * القنوات الموقوفة لا تُرسل شيئاً وتظهر «متوقفة» في فحص الصحة بلا تنبيه خاطئ.
+ * تُستأنف قنوات فيسبوك تلقائياً بمجرد ربط توكن صالح بنشر ممنوح.
+ */
+function ChannelSwitchesCard({ token }: { token: string }) {
+  const switches = useQuery(api.channelPush.getChannelSwitches, { token });
+  const setPaused = useMutation(api.channelPush.setChannelPaused);
+  const [busy, setBusy] = useState("");
+
+  const LABEL: Record<string, string> = {
+    telegram_channel: "تلجرام",
+    whatsapp: "واتساب",
+    facebook_page: "صفحة فيسبوك",
+    facebook_group: "مجموعة فيسبوك",
+  };
+
+  if (!switches) return null;
+
+  return (
+    <Card className="p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-gold-500/40 bg-gold-500/15 text-gold-300">
+          <Power className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-base font-extrabold text-cream">مفاتيح القنوات (تشغيل / إيقاف)</h3>
+          <p className="text-xs text-ink-400">
+            أوقف أي قناة مؤقتاً بضغطة — مثلاً فيسبوك حتى تحدّث التوكن — وتبقى القنوات
+            الأخرى تنشر طبيعياً. قنوات فيسبوك تعود وحدها عند ربط توكن صالح.
+          </p>
+        </div>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {switches.channels.map((c) => (
+          <div key={c.channel} className="flex items-center justify-between gap-3 rounded-lg border border-ink-700/50 bg-ink-800/40 px-3 py-2.5">
+            <div>
+              <p className="text-xs font-black text-cream">{LABEL[c.channel] ?? c.channel}</p>
+              <p className={`text-[10px] font-bold ${c.paused ? "text-amber-300" : "text-emerald-300"}`}>
+                {c.paused ? c.reason || "متوقفة" : "تعمل"}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!c.paused}
+              disabled={busy === c.channel}
+              onClick={async () => {
+                setBusy(c.channel);
+                try {
+                  await setPaused({ token, channel: c.channel, paused: !c.paused });
+                } finally {
+                  setBusy("");
+                }
+              }}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${c.paused ? "bg-ink-600" : "bg-emerald-500"}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-cream transition-all ${c.paused ? "right-0.5" : "right-[1.375rem]"}`}
+              />
+            </button>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -557,9 +792,15 @@ function WhatsAppConnectCard({ token }: { token: string }) {
   const [templateName, setTemplateName] = useState("");
   const [templateLang, setTemplateLang] = useState("ar");
   const [sendTest, setSendTest] = useState(true);
+  const [channelLink, setChannelLink] = useState("");
+  const [linkSaved, setLinkSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setChannelLink(getWhatsAppChannelLink());
+  }, []);
 
   async function submit() {
     setBusy(true);
@@ -701,6 +942,37 @@ function WhatsAppConnectCard({ token }: { token: string }) {
           />
           إرسال رسالة تجريبية للمستلم الأول للتأكد من الوصول
         </label>
+
+        <div>
+          <Label>رابط قناة واتساب (WhatsApp Channel) للنشر بنقرة واحدة</Label>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              value={channelLink}
+              onChange={(e) => {
+                setChannelLink(e.target.value);
+                setLinkSaved(false);
+              }}
+              dir="ltr"
+              className="text-left flex-1 min-w-48"
+              placeholder={DEFAULT_WHATSAPP_CHANNEL_LINK}
+            />
+            <Button
+              variant="ghost"
+              className="!py-2 text-xs"
+              onClick={() => {
+                setWhatsAppChannelLink(channelLink || DEFAULT_WHATSAPP_CHANNEL_LINK);
+                setLinkSaved(true);
+                setTimeout(() => setLinkSaved(false), 2500);
+              }}
+            >
+              {linkSaved ? "✓ حُفظ الرابط" : "حفظ رابط القناة"}
+            </Button>
+          </div>
+          <p className="mt-1.5 text-[10px] text-ink-400">
+            أزرار «نشر في قناة واتساب» في العروض والإعلانات تفتح هذا الرابط وتنسخ نص المنشور تلقائياً
+            للّصق بنقرة واحدة — بلا توكن ولا Cloud API.
+          </p>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <Button variant="gold" loading={busy} onClick={submit} className="!py-2 text-xs">

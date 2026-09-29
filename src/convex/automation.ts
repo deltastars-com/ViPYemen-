@@ -48,6 +48,16 @@ export const tick = internalMutation({
     await ctx.scheduler.runAfter(0, internal.matching.runAutoMatchInternal, { limit: 30 });
     await ctx.scheduler.runAfter(0, internal.employers.recalcInternal, {});
 
+    // ── 3c. تهيئة فيسبوك من متغيرات البيئة (مرة واحدة فقط) ───────────
+    // لو توفر توكن في البيئة ولم يُربط من اللوحة بعد، يُستورد آلياً ليبدأ
+    // مسار التجديد الذاتي (توكن مستخدم → توكن صفحة دائم).
+    await ctx.scheduler.runAfter(0, internal.facebook.bootstrapFromEnv, {});
+
+    // ── 3d. تجديد ذاتي لتوكن فيسبوك عند الحاجة ──────────────────────
+    // يفحص كل دورة (كل 5 دقائق)؛ لا يفعل شيئاً إلا عند اقتراب انتهاء توكن
+    // المستخدم (أقل من 20 يوماً) أو انتهاء توكن الصفحة — فلا يتوقف النشر أبداً.
+    await ctx.scheduler.runAfter(0, internal.facebook.refreshTokenInternal, {});
+
     // ── 4. Notify admin about stale pending submissions (>7 days) ────
     const staleCutoff = now - 7 * 24 * 60 * 60 * 1000;
     const stalePending = await ctx.db

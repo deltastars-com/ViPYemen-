@@ -22,6 +22,7 @@ import {
   Lock,
   ArrowDownToLine,
   Terminal,
+  Mail,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { getAdminToken, clearAdminToken, CONVEX_URL, CONVEX_DEPLOY_KEY } from "@/lib/convex";
@@ -39,6 +40,7 @@ import { AdminOffers } from "@/components/admin/AdminOffers";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { AdminClients } from "@/components/admin/AdminClients";
 import { AdminDeveloper } from "@/components/admin/AdminDeveloper";
+import { EmailCampaigns } from "@/components/admin/EmailCampaigns";
 
 export type AdminTab =
   | "overview"
@@ -52,12 +54,13 @@ export type AdminTab =
   | "offers"
   | "notifications"
   | "clients"
+  | "email_campaigns"
   | "developer";
 
 function getTabs(lang: "ar" | "en") {
   const L = {
-    ar: { overview: "نظرة عامة", control: "لوحة الكنترول", jobs: "طلبات التوظيف", real_estate: "طلبات العقارات", emarket: "طلبات التسويق الإلكتروني", software: "طلبات البرمجيات", archived: "الأرشيف", ads: "الإعلانات الترويجية", offers: "العروض", notifications: "الإشعارات", clients: "بيانات العملاء", developer: "قسم المطور" },
-    en: { overview: "Overview", control: "Control Panel", jobs: "Job Requests", real_estate: "Real Estate", emarket: "E-Marketing", software: "Software", archived: "Archive", ads: "Promotional Ads", offers: "Offers", notifications: "Notifications", clients: "Clients", developer: "Developer Hub" },
+    ar: { overview: "نظرة عامة", control: "لوحة الكنترول", jobs: "طلبات التوظيف", real_estate: "طلبات العقارات", emarket: "طلبات التسويق الإلكتروني", software: "طلبات البرمجيات", archived: "الأرشيف", ads: "الإعلانات الترويجية", offers: "العروض", notifications: "الإشعارات", clients: "بيانات العملاء", email_campaigns: "الحملات البريدية", developer: "قسم المطور" },
+    en: { overview: "Overview", control: "Control Panel", jobs: "Job Requests", real_estate: "Real Estate", emarket: "E-Marketing", software: "Software", archived: "Archive", ads: "Promotional Ads", offers: "Offers", notifications: "Notifications", clients: "Clients", email_campaigns: "Email Campaigns", developer: "Developer Hub" },
   };
   const t = L[lang];
   return [
@@ -72,6 +75,7 @@ function getTabs(lang: "ar" | "en") {
     { key: "offers" as AdminTab, label: t.offers, icon: Crown },
     { key: "notifications" as AdminTab, label: t.notifications, icon: Bell },
     { key: "clients" as AdminTab, label: t.clients, icon: Users2 },
+    { key: "email_campaigns" as AdminTab, label: t.email_campaigns, icon: Mail },
     { key: "developer" as AdminTab, label: t.developer, icon: Terminal },
   ];
 }
@@ -339,6 +343,7 @@ export function AdminPage() {
             {tab === "offers" && <AdminOffers token={token} />}
             {tab === "notifications" && <AdminNotifications token={token} />}
             {tab === "clients" && <AdminClients token={token} />}
+            {tab === "email_campaigns" && <EmailCampaigns token={token} />}
             {tab === "developer" && <AdminDeveloper token={token} />}
           </motion.div>
         </main>

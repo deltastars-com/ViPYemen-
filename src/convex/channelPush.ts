@@ -14,12 +14,109 @@ import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { requireAdmin } from "./auth";
 import { api, internal } from "./_generated/api";
+import { DEFAULT_PAUSE_REASON, isPausedByDefault } from "./channelPolicy";
 
 /** كل قنوات المنصة الرسمية. */
 export const CHANNEL_NAMES = ["telegram", "whatsapp", "facebook_page", "facebook_group"] as const;
 export type ChannelName = (typeof CHANNEL_NAMES)[number];
 
 const MAX_ATTEMPTS = 5;
+
+/**
+ * 📴 القنوات المتوقفة افتراضياً عند أول تشغيل للنظام.
+ * السياسة معرّفة في channelPolicy.ts حتى تشاركها قناة النشر ولوحة التحكم.
+ */
+type PauseMap = Record<string, boolean>;
+
+/** قراءة القنوات المتوقفة (داخلي). */
+export const getPausedInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const row = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", "channelPaused"))
+      .first();
+    const stored = (row?.value ?? {}) as PauseMap;
+    const out: PauseMap = {};
+    for (const channel of CHANNEL_NAMES) {
+      // القاعدة: فيسبوك متوقّف افتراضياً، إلا إذا خُزّن قرار صريح
+      const defaultPaused = isPausedByDefault(channel);
+      out[channel] = typeof stored[channel] === "boolean" ? stored[channel] : defaultPaused;
+    }
+    return out;
+  },
+});
+
+/** ضبط حالة قناة (متوقفة/مفعّلة) من لوحة التحكم. */
+export const setChannelPaused = mutation({
+  args: {
+    token: v.string(),
+    channel: v.string(),
+    paused: v.boolean(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { token, channel, paused, reason }) => {
+    await requireAdmin(ctx, token);
+    if (!(CHANNEL_NAMES as readonly string[]).includes(channel)) {
+      throw new ConvexError("قناة غير معروفة");
+    }
+    const existing = (await ctx.runQuery(internal.channelPush.getPausedInternal, {})) as PauseMap;
+    const next: PauseMap = { ...existing, [channel]: paused };
+    await ctx.db.insert("channelPauseLog", {
+      channel,
+      paused,
+      reason: reason?.trim() || (paused ? "إيقاف يدوي من لوحة التحكم" : "تشغيل يدوي من لوحة التحكم"),
+      at: Date.now(),
+    });
+    const row = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", "channelPaused"))
+      .first();
+    if (row) await ctx.db.patch(row._id, { value: next });
+    else await ctx.db.insert("settings", { key: "channelPaused", value: next });
+    // فحص صحة فوري حتى تنعكس الحالة في اللوحة فوراً
+    await ctx.scheduler.runAfter(0, internal.channels.checkChannels, {});
+    return { ok: true, paused: next };
+  },
+});
+
+/** حالة القنوات (مفعّلة/متوقفة) للمشرف. */
+export const getChannelSwitches = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    await requireAdmin(ctx, token);
+    const paused = (await ctx.runQuery(internal.channelPush.getPausedInternal, {})) as PauseMap;
+    return {
+      channels: CHANNEL_NAMES.map((channel) => ({
+        channel,
+        paused: paused[channel] === true,
+        reason: paused[channel] === true ? DEFAULT_PAUSE_REASON[channel] ?? "" : "",
+      })),
+    };
+  },
+});
+
+/** (داخلي) رفع الإيقاف تلقائياً بعد ربط توكن صالح — يُستدعى عند الربط. */
+export const unpauseIfTokenHealthy = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const fb = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as {
+      facebookAccessToken?: string;
+      facebookCanPost?: boolean;
+    };
+    const token = fb.facebookAccessToken?.trim() ?? "";
+    if (!token || fb.facebookCanPost !== true) return { ok: false, changed: [] };
+    const row = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", "channelPaused"))
+      .first();
+    const stored = ((row?.value ?? {}) as PauseMap) ?? {};
+    const next: PauseMap = { ...stored, facebook_page: false, facebook_group: false };
+    if (row) await ctx.db.patch(row._id, { value: next });
+    else await ctx.db.insert("settings", { key: "channelPaused", value: next });
+    return { ok: true, changed: ["facebook_page", "facebook_group"] };
+  },
+});
 
 /** Internal — records which channels received the item. */
 export const recordChannelPublish = mutation({

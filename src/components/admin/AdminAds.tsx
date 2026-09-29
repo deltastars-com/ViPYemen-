@@ -4,6 +4,7 @@ import { Megaphone, Trash2, Pencil, Play, Pause, Send } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Badge, Button, Card, EmptyState, Input, Label, Modal, Select, Spinner, Textarea } from "@/components/ui";
 import { formatDateTime, cn } from "@/lib/utils";
+import { publishToWhatsAppChannel, buildWhatsAppChannelMessage } from "@/lib/whatsappChannel";
 
 const AD_STATUS: Record<string, { label: string; className: string }> = {
   draft: { label: "مسودة", className: "border-ink-500/40 bg-ink-500/10 text-ink-300" },
@@ -168,6 +169,23 @@ export function AdminAds({ token }: { token: string }) {
                             >
                               <Send className="h-3 w-3" />
                               إعادة نشر للقنوات
+                            </button>
+                          )}
+                          {ad.status === "active" && (
+                            <button
+                              onClick={async () => {
+                                await publishToWhatsAppChannel(
+                                  buildWhatsAppChannelMessage(
+                                    ad.title,
+                                    ad.message,
+                                    ad.link || "https://vi-p-yemen.vercel.app"
+                                  )
+                                );
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg border border-[#25d366]/40 bg-[#25d366]/10 px-2 py-0.5 text-[10px] font-black text-[#4ade80] transition-colors hover:bg-[#25d366]/20"
+                              title="يفتح قناة واتساب وينسخ نص الإعلان للّصق بنقرة واحدة"
+                            >
+                              نشر في قناة واتساب
                             </button>
                           )}
                         </div>

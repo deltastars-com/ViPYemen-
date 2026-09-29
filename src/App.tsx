@@ -39,6 +39,9 @@ const AdminPage = lazy(() => import("./pages/AdminPage").then((m) => ({ default:
 const NotFoundPage = lazy(() =>
   import("./pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage }))
 );
+const UnsubscribePage = lazy(() =>
+  import("./pages/UnsubscribePage").then((m) => ({ default: m.UnsubscribePage }))
+);
 
 function RouteFallback() {
   return (
@@ -158,6 +161,7 @@ export default function App() {
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/payment" element={<PaymentPage />} />
+              <Route path="/unsubscribe" element={<UnsubscribePage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFoundPage />} />

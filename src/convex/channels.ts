@@ -25,6 +25,7 @@ import { api, internal } from "./_generated/api";
 import type { FacebookConfig } from "./facebookStore";
 import type { WhatsAppConfig } from "./whatsapp";
 import { buildMessageBody, normalizeRecipients } from "./whatsappBody";
+import { pauseReasonFor } from "./channelPolicy";
 
 export type ChannelKind = "submission" | "ad" | "offer";
 
@@ -349,6 +350,28 @@ export interface FacebookRuntimeConfig {
 
 /** إعدادات فيسبوك من البيئة أو من الإعدادات المحفوظة في اللوحة. */
 async function resolveFacebookConfig(ctx: ActionCtx): Promise<FacebookRuntimeConfig> {
+  // الأولوية لإعدادات اللوحة (توكن صفحة دائم + تجديد ذاتي) — ثم متغيرات البيئة
+  // كاحتياط. بهذا لا يحجب توكن بيئة قصير الأجل التوكن الدائم المحفوظ.
+  try {
+    const cfg = (await ctx.runQuery(
+      internal.facebookStore.getConfigInternal,
+      {}
+    )) as FacebookConfig;
+    const token = cfg.facebookAccessToken?.trim() ?? "";
+    if (token) {
+      return {
+        token,
+        pageId: cfg.facebookPageId?.trim() || FB_PAGE_ID_DEFAULT,
+        groupId: cfg.facebookGroupId?.trim() || FB_GROUP_ID_DEFAULT,
+        pageName: cfg.facebookPageName ?? "",
+        source: "settings",
+        canPost: typeof cfg.facebookCanPost === "boolean" ? cfg.facebookCanPost : null,
+        postingDetail: cfg.facebookPostingDetail ?? "",
+      };
+    }
+  } catch {
+    /* نكمل لمسار البيئة */
+  }
   const envToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
   if (envToken) {
     return {
@@ -361,32 +384,15 @@ async function resolveFacebookConfig(ctx: ActionCtx): Promise<FacebookRuntimeCon
       postingDetail: "",
     };
   }
-  try {
-    const cfg = (await ctx.runQuery(
-      internal.facebookStore.getConfigInternal,
-      {}
-    )) as FacebookConfig;
-    const token = cfg.facebookAccessToken?.trim() ?? "";
-    return {
-      token,
-      pageId: cfg.facebookPageId?.trim() || FB_PAGE_ID_DEFAULT,
-      groupId: cfg.facebookGroupId?.trim() || FB_GROUP_ID_DEFAULT,
-      pageName: cfg.facebookPageName ?? "",
-      source: token ? "settings" : "none",
-      canPost: typeof cfg.facebookCanPost === "boolean" ? cfg.facebookCanPost : null,
-      postingDetail: cfg.facebookPostingDetail ?? "",
-    };
-  } catch {
-    return {
-      token: "",
-      pageId: FB_PAGE_ID_DEFAULT,
-      groupId: FB_GROUP_ID_DEFAULT,
-      pageName: "",
-      source: "none",
-      canPost: null,
-      postingDetail: "",
-    };
-  }
+  return {
+    token: "",
+    pageId: FB_PAGE_ID_DEFAULT,
+    groupId: FB_GROUP_ID_DEFAULT,
+    pageName: "",
+    source: "none",
+    canPost: null,
+    postingDetail: "",
+  };
 }
 
 export interface WhatsAppRuntimeConfig {
@@ -452,6 +458,14 @@ export const ALL_CHANNELS: ChannelName[] = [
 
 /** إرسال نص واحد إلى قناة واحدة — يُستخدم للإرسال المباشر وإعادة المحاولة. */
 async function sendToChannel(ctx: ActionCtx, channel: string, text: string): Promise<boolean> {
+  const paused = (await ctx.runQuery(internal.channelPush.getPausedInternal, {})) as Record<
+    string,
+    boolean
+  >;
+  if (paused[channel] === true) {
+    console.log(`[Channel] SKIP ${channel} — القناة متوقفة (${pauseReasonFor(channel)})`);
+    return false;
+  }
   switch (channel) {
     case "telegram":
       return postToTelegram(text);
@@ -481,7 +495,16 @@ async function deliverEverywhere(
     entityId?: string;
     texts: Record<ChannelName, string>;
   }
-): Promise<{ done: string[]; failed: string[] }> {
+): Promise<{ done: string[]; failed: string[]; paused: string[] }> {
+  // 📴 القنوات المتوقفة لا تُجعل في الصندوق أصلاً — لا محاولة فاشلة ولا
+  // إعادة محاولة على قناة أوقفها المشرف عمداً (فيسبوك حالياً بانتظار التوكن الجديد).
+  const pausedMap = (await ctx.runQuery(
+    internal.channelPush.getPausedInternal,
+    {}
+  )) as Record<string, boolean>;
+  const skipped = ALL_CHANNELS.filter((c) => pausedMap[c] === true);
+  const active = ALL_CHANNELS.filter((c) => pausedMap[c] !== true);
+
   const rows = (await ctx.runMutation(internal.channelPush.enqueueOutbox, {
     title: payload.title,
     // الرسالة المحفوظة في الصندوق تُستخدم حرفياً في إعادة المحاولة
@@ -489,6 +512,7 @@ async function deliverEverywhere(
     category: payload.category,
     kind: payload.kind,
     entityId: payload.entityId,
+    channels: active,
   })) as { id: string; channel: string }[];
 
   const done: string[] = [];
@@ -515,8 +539,10 @@ async function deliverEverywhere(
     if (ok) done.push(row.channel);
     else failed.push(row.channel);
   }
-  console.log(`[ChannelOutbox] title="${payload.title}" done=[${done}] failed=[${failed}]`);
-  return { done, failed };
+  console.log(
+    `[ChannelOutbox] title="${payload.title}" done=[${done}] failed=[${failed}] paused=[${skipped}]`
+  );
+  return { done, failed, paused: skipped };
 }
 
 /** إعادة محاولة رسالة من الصندوق (تُستدعى من دورة الأتمتة أو من لوحة الكنترول). */
@@ -573,7 +599,7 @@ export const publishNotice = internalAction({
       `📱 واتساب المنصة: ${PLATFORM_PHONE_DISPLAY} (${PLATFORM_PHONE_LINK})`,
     ].join("\n");
 
-    const { done, failed } = await deliverEverywhere(ctx, {
+    const { done, failed, paused } = await deliverEverywhere(ctx, {
       title: args.title,
       kind: "notice",
       category: args.category,
@@ -585,8 +611,10 @@ export const publishNotice = internalAction({
       },
     });
 
-    console.log(`[ChannelNotice] title="${args.title}" done=[${done}] failed=[${failed}]`);
-    return { ok: done.length > 0, published: done, failed };
+    console.log(
+      `[ChannelNotice] title="${args.title}" done=[${done}] failed=[${failed}] paused=[${paused}]`
+    );
+    return { ok: done.length > 0, published: done, failed, paused };
   },
 });
 
@@ -594,7 +622,7 @@ export const publishNotice = internalAction({
 
 type ChannelHealthRow = {
   channel: string;
-  status: "ok" | "degraded" | "down";
+  status: "ok" | "degraded" | "down" | "paused";
   detail: string;
   latencyMs?: number;
 };
@@ -755,6 +783,18 @@ export const checkChannels = internalAction({
       await checkFacebookTarget("facebook_group", fb.groupId || FB_GROUP_ID_DEFAULT, fb),
     ];
 
+    // 📴 القنوات المتوقفة (إيقاف يدوي أو انتظار توكن صالح) تُعرض بحالة
+    // «متوقفة» لا «معطوبة» — فلا تنبيه إنذار ولا تكرار محاولة.
+    const pausedMap = (await ctx.runQuery(
+      internal.channelPush.getPausedInternal,
+      {}
+    )) as Record<string, boolean>;
+    const finalRows: ChannelHealthRow[] = rows.map((row) =>
+      pausedMap[row.channel] === true
+        ? { ...row, status: "paused", detail: pauseReasonFor(row.channel) }
+        : row
+    );
+
     // آخر حالة معروفة قبل التحديث — لكشف التحوّل (انقطاع/تعافي)
     let previous: Record<string, string> = {};
     try {
@@ -768,7 +808,10 @@ export const checkChannels = internalAction({
     }
 
     try {
-      await ctx.runMutation(internal.channelPush.saveChannelStatus, { rows, checkedAt });
+      await ctx.runMutation(internal.channelPush.saveChannelStatus, {
+        rows: finalRows,
+        checkedAt,
+      });
     } catch (err) {
       console.error("[ChannelHealth] save failed:", err);
     }
@@ -782,13 +825,15 @@ export const checkChannels = internalAction({
       /* التجديد إضافة — لا يُسقط الفحص */
     }
 
-    const healthy = rows.filter((row) => row.status === "ok").length;
-    const broken = rows.filter((row) => row.status !== "ok");
-    const healed = rows.filter(
+    // «متوقفة» ليست عطلاً: لا تُحتسب معطوبة ولا تُطلق إنذار انقطاع.
+    const isLive = (row: { status: string }) => row.status !== "paused";
+    const healthy = finalRows.filter((row) => row.status === "ok").length;
+    const broken = finalRows.filter((row) => row.status !== "ok" && isLive(row));
+    const healed = finalRows.filter(
       (row) => row.status === "ok" && previous[row.channel] && previous[row.channel] !== "ok"
     );
-    const broke = rows.filter(
-      (row) => row.status !== "ok" && previous[row.channel] === "ok"
+    const broke = finalRows.filter(
+      (row) => row.status !== "ok" && isLive(row) && previous[row.channel] === "ok"
     );
 
     if (broke.length > 0 || healed.length > 0) {
@@ -810,7 +855,7 @@ export const checkChannels = internalAction({
         .map((row) => `${row.channel}=${row.status}`)
         .join(", ")}`
     );
-    return { checkedAt, healthy, total: rows.length, rows };
+    return { checkedAt, healthy, total: finalRows.length, rows: finalRows };
   },
 });
 
@@ -832,7 +877,7 @@ export const publishToChannels = action({
     const text = buildMessage(args);
     const fbText = buildFacebookMessage(args) + `\n\n🔗 ${PLATFORM_BASE}${args.url}`;
 
-    const { done, failed } = await deliverEverywhere(ctx, {
+    const { done, failed, paused } = await deliverEverywhere(ctx, {
       title: args.title,
       kind: args.kind,
       entityId: args.itemId,
@@ -844,7 +889,9 @@ export const publishToChannels = action({
       },
     });
 
-    console.log(`[ChannelPublish] kind=${args.kind} title="${args.title}" done=[${done}] failed=[${failed}]`);
+    console.log(
+      `[ChannelPublish] kind=${args.kind} title="${args.title}" done=[${done}] failed=[${failed}] paused=[${paused}]`
+    );
 
     if (done.length > 0) {
       try {
@@ -858,6 +905,6 @@ export const publishToChannels = action({
         // recording is best-effort too
       }
     }
-    return { ok: done.length > 0, published: done, failed };
+    return { ok: done.length > 0, published: done, failed, paused };
   },
 });

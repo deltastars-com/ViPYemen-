@@ -30,4 +30,13 @@ crons.interval(
   internal.fileQueueInternal.processQueue
 );
 
+// ── 📮 دورة حملات البريد الإلكتروني (كل 5 دقائق) ─────────────────────
+// تُشغّل الحملات المستحقة، تُعيد متابعة الحملة التي توقّفت بسبب انقطاع
+// مؤقت، وتُنظّف سجل الإرسال القديم — بلا أي تدخل يدوي.
+crons.interval(
+  "email-campaigns",
+  { seconds: 300 },
+  internal.campaigns.emailTick
+);
+
 export default crons;

@@ -4,6 +4,7 @@ import { Crown, Trash2, Pencil, ImageIcon, PlayCircle, Send } from "lucide-react
 import { api } from "../../convex/_generated/api";
 import { Badge, Button, Card, EmptyState, Input, Label, Modal, Select, Spinner, Textarea } from "@/components/ui";
 import { formatDateTime, cn } from "@/lib/utils";
+import { publishToWhatsAppChannel, buildWhatsAppChannelMessage } from "@/lib/whatsappChannel";
 
 export function AdminOffers({ token }: { token: string }) {
   const offers = useQuery(api.offers.listAll, { token });
@@ -180,6 +181,27 @@ export function AdminOffers({ token }: { token: string }) {
                         >
                           <Send className="h-3 w-3" />
                           إعادة نشر للقنوات
+                        </button>
+                      )}
+                      {offer.status === "published" && (
+                        <button
+                          onClick={async () => {
+                            const price =
+                              offer.offerPrice !== undefined
+                                ? `السعر: ${offer.offerPrice.toLocaleString("en-US")} ريال`
+                                : "";
+                            await publishToWhatsAppChannel(
+                              buildWhatsAppChannelMessage(
+                                offer.title,
+                                price,
+                                `https://vi-p-yemen.vercel.app/offers`
+                              )
+                            );
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#25d366]/40 bg-[#25d366]/10 px-2 py-0.5 text-[10px] font-black text-[#4ade80] transition-colors hover:bg-[#25d366]/20"
+                          title="يفتح قناة واتساب وينسخ نص العرض للّصق بنقرة واحدة"
+                        >
+                          نشر في قناة واتساب
                         </button>
                       )}
                     </div>

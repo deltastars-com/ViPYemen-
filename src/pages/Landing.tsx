@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LogoMark } from "@/components/Logo";
 import { useMutation } from "convex/react";
 import { useSnapshotQuery } from "@/lib/snapshot";
@@ -16,6 +16,8 @@ import {
   LayoutGrid,
   Megaphone,
   MessageCircle,
+  Mail,
+  Send,
   Search,
   ShieldCheck,
   ShoppingBag,
@@ -348,8 +350,83 @@ export function Landing() {
               {t("watchOffers")}
             </Link>
           </div>
+          <NewsletterSection />
         </div>
       </section>
+    </div>
+  );
+}
+
+/** 📮 نشرة البريد — اشتراك بقاعدة المشتركين (حقل website فخّ للبوتات). */
+function NewsletterSection() {
+  const subscribe = useMutation(api.campaigns.subscribe);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [website, setWebsite] = useState(""); // honeypot
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setErr("");
+    setMsg("");
+    try {
+      const r = await subscribe({ email, name: name || undefined, source: "landing", website: website || undefined });
+      setMsg(r.message);
+      setEmail("");
+      setName("");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "تعذر الاشتراك، أعد المحاولة");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto mt-16 max-w-2xl rounded-3xl border border-gold-500/30 bg-ink-900/60 p-8 text-center">
+      <Mail className="mx-auto h-8 w-8 text-gold-400" />
+      <h3 className="mt-3 text-xl font-black text-cream">اشترك في نشرة ViP Yemen</h3>
+      <p className="mt-2 text-sm text-ink-300">
+        أحدث الوظائف والعقارات والعروض تصلك على بريدك أولاً بأول — يمكنك إلغاء الاشتراك
+        في أي وقت من تذييل أي رسالة.
+      </p>
+      <form onSubmit={submit} className="mt-5 flex flex-col gap-2 sm:flex-row">
+        {/* فخ البوتات: مخفي عن البشر */}
+        <input
+          type="text"
+          name="website"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="hidden"
+        />
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="الاسم (اختياري)"
+          className="w-full rounded-xl border border-ink-600/60 bg-ink-950/80 px-4 py-3 text-sm text-cream outline-none focus:border-gold-500/60 sm:w-40"
+        />
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="بريدك الإلكتروني"
+          dir="ltr"
+          className="min-w-0 flex-1 rounded-xl border border-ink-600/60 bg-ink-950/80 px-4 py-3 text-left text-sm text-cream outline-none focus:border-gold-500/60"
+        />
+        <button type="submit" disabled={busy} className="btn-gold shrink-0 disabled:opacity-60">
+          <Send className="h-4 w-4" />
+          اشتراك
+        </button>
+      </form>
+      {msg && <p className="mt-3 text-xs font-bold text-emerald-300">{msg}</p>}
+      {err && <p className="mt-3 text-xs font-bold text-rose-300">{err}</p>}
     </div>
   );
 }

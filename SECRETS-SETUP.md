@@ -42,7 +42,55 @@
 
 ---
 
-## 2️⃣ GitHub — Secrets (انسخ القيم من الخزنة)
+## 3️⃣ مفاتيح القنوات والبريد — أين تُضبط؟ (تحديث v6.7.40)
+
+**القاعدة الجديدة**: كل مفاتيح النشر تُضبط **من بطاقات لوحة التحكم** (`/admin` ← الإعدادات)
+وتُحفظ في جدول `settings` — بلا إعادة نشر ولا متغيرات بيئة. متغيرات بيئة GitHub
+تبقى خياراً بديلاً احتياطياً فقط.
+
+### قناة فيسبوك (موقوفة حالياً بانتظار توكن جديد)
+| المفتاح / المتغير | أين يُضبط | ملاحظة |
+|---|---|---|
+| توكن الصفحة + `App ID` + `App Secret` | الإعدادات ← «ربط فيسبوك بتوكن طويل الأجل» (المفضّل) | يُبدَّل آلياً لتوكن لا ينتهي ويجدّد نفسه |
+| `FACEBOOK_ACCESS_TOKEN` | GitHub Secrets — ⚠️ القيمة الحالية **قديم ومنتهي** | فقط إن اعتمدت مسار متغيرات البيئة |
+| `FACEBOOK_PAGE_ID` = `102672588647591` | GitHub Secrets | ثابت |
+| `FACEBOOK_GROUP_ID` = `346010664332427` | GitHub Secrets | النشر على المجموعات موقوف من Meta أصلاً |
+
+> ⚠️ **خطوة إلزامية لتشغيل فيسبوك**: في Graph API Explorer اكتب `pages_manage_posts`
+> في صندوق البحث «أدخل هنا» وأضِفها إلى الصلاحيات الحالية
+> (`pages_show_list, ads_management, business_management, pages_read_engagement`)،
+> ثم **أعد توليد التوكن**، وبعدها اربطه من بطاقة اللوحة (وضع التبديل مع App Secret).
+> ما دام التوكن قديماً، القناتان `facebook_page` و`facebook_group` **متوقفتان آلياً**
+> من «مفاتيح القنوات» فلا تحدث محاولات نشر فاشلة — وتعودان وحدهما عند ربط توكن صالح.
+
+### قناة واتساب
+| المفتاح (settings) | أين يُضبط |
+|---|---|
+| `whatsappAccessToken` · `whatsappPhoneNumberId` · `whatsappBroadcastTo` · `whatsappTemplateName/Lang` | الإعدادات ← «تشغيل قناة واتساب» |
+| بديل بيئة: `WHATSAPP_ACCESS_TOKEN` · `WHATSAPP_PHONE_NUMBER_ID` · `WHATSAPP_BROADCAST_TO` | GitHub Secrets / Convex env (اختياري) |
+
+### البريد الإلكتروني (جديد — محرك الحملات)
+| المفتاح (settings) | أين يُضبط | الوظيفة |
+|---|---|---|
+| `emailProviderKey` | الإعدادات ← «إعداد البريد الإلكتروني» | مفتاح **Resend API** — تُرسَل به كل رسائل النشرة والحملات |
+| `emailFromName` | نفس البطاقة | اسم المُرسل الظاهر (افتراضياً ViP Yemen) |
+| `emailFromAddress` | نفس البطاقة | بريد المُرسل (From) |
+| `emailReplyTo` | نفس البطاقة | بريد الرد (اختياري) |
+| بديل بيئة: `RESEND_API_KEY` | GitHub Secrets / Convex env | يُستخدم فقط إن غاب `emailProviderKey` |
+
+> للتسجيل الحقيقي على Resend: أنشئ حساباً مجانياً على resend.com، أضِف نطاقك
+> (أو استخدم `onboarding@resend.dev` للاختبار)، ثم انسخ مفتاح `re_…` وألصقه في البطاقة.
+
+### تلجرام (تعمل)
+| المتغير | أين يُضبط |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` · `TELEGRAM_CHAT_ID` | GitHub Secrets أو Convex env |
+
+### مفاتيح إيقاف/تشغيل القنوات
+- مفتاح settings واحد: `channelPaused` — يُكتب تلقائياً من بطاقة **«مفاتيح القنوات»**
+  في الإعدادات، مع سجل كامل لكل تبديل في جدول `channelPauseLog`.
+
+---
 
 أضِفها في: **المستودع → Settings → Secrets and variables → Actions**
 

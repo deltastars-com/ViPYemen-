@@ -127,9 +127,16 @@ http.route({
     } catch {
       /* لا سجل صحة بعد — نُعيد قائمة القنوات وحدها */
     }
+    let facebookBootstrap: unknown = null;
+    try {
+      facebookBootstrap = await ctx.runQuery(internal.channelPush.getBootstrapStatePublic, {});
+    } catch {
+      /* لا حالة استيراد بعد */
+    }
     const byChannel = new Map(health.map((row) => [row.channel, row]));
     return json({
       ok: true,
+      facebookBootstrap,
       channels: CHANNELS.map((c) => ({
         ...c,
         managed: (CHANNEL_NAMES as readonly string[]).includes(c.id),

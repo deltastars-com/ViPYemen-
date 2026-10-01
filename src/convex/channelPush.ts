@@ -270,6 +270,21 @@ export const listChannelStatusPublic = internalQuery({
   },
 });
 
+/**
+ * (عام) حالة آخر تشغيل لاستيراد توكن فيسبوك من البيئة — أرقام وحالة فقط،
+ * لا تحتوي أي سر: هل البيئة تحوي توكناً؟ ما القرار الذي اتُّخذ؟ هل النشر ممنوح؟
+ */
+export const getBootstrapStatePublic = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<Record<string, unknown> | null> => {
+    const row = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", "facebookBootstrapState"))
+      .first();
+    return (row?.value as Record<string, unknown>) ?? null;
+  },
+});
+
 /** آخر حالة مسجّلة لكل قناة (داخلي — يُستخدم لكشف التحوّل من انقطاع إلى تعافي). */
 export const getStatusesInternal = internalQuery({
   args: {},

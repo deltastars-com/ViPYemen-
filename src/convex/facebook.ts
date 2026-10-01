@@ -26,9 +26,7 @@ const DAY = 86_400_000;
  * (FACEBOOK_ACCESS_TOKEN/APP_ID/APP_SECRET) كبذرة، فتستفيد دورة التجديد
  * الذاتي منها حتى بدون أي ربط يدوي من اللوحة.
  */
-export const bootstrapFromEnv = internalAction({
-  args: {},
-  handler: async (ctx: ActionCtx): Promise<Record<string, unknown>> => {
+async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> {
     const config = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as FacebookConfig;
     const envToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
     const envAppId = process.env.FACEBOOK_APP_ID?.trim() ?? "";
@@ -64,7 +62,6 @@ export const bootstrapFromEnv = internalAction({
         >;
         if (paused.facebook_page === true || paused.facebook_group === true) {
           await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
-          await ctx.scheduler.runAfter(0, internal.channels.checkChannels, {});
           await ctx.runMutation(internal.channelPush.logChannelEvent, {
             title: "✅ رُفعت قناة فيسبوك من الإيقاف تلقائياً",
             message: "التوكن المحفوظ حيّ ويمنح صلاحية النشر — النشر التلقائي مستأنف للصفحة والمجموعة.",
@@ -149,8 +146,6 @@ export const bootstrapFromEnv = internalAction({
       await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
       resumed = true;
     }
-    // تحديث فحص الصحة فوراً ليعرض /channels الحقيقة لا البيانات القديمة.
-    await ctx.scheduler.runAfter(0, internal.channels.checkChannels, {});
     await ctx.runMutation(internal.channelPush.logChannelEvent, {
       title: storedToken ? "🔄 استُبدل توكن فيسبوك بتحديث الأسرار" : "🔗 استُورد توكن فيسبوك من البيئة تلقائياً",
       message:
@@ -167,6 +162,42 @@ export const bootstrapFromEnv = internalAction({
       canPost: finalEval.canPost,
       resumed,
     };
+}
+
+/**
+ * الغلاف: يسجّل نتيجة آخر تشغيل (حالة فقط — بلا أي سر) ويحدّث فحص صحة
+ * القنوات فوراً، حتى يعرض `/channels` الحقيقة لحظية لا بيانات قديمة.
+ */
+export const bootstrapFromEnv = internalAction({
+  args: {},
+  handler: async (ctx: ActionCtx): Promise<Record<string, unknown>> => {
+    const envPresent = !!(process.env.FACEBOOK_ACCESS_TOKEN ?? "").trim();
+    const result = await bootstrapInner(ctx);
+    let storedPresent = false;
+    try {
+      const cfg = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as FacebookConfig;
+      storedPresent = !!(cfg.facebookAccessToken?.trim() || cfg.facebookUserToken?.trim());
+    } catch {
+      /* تجاهل — يبقى false */
+    }
+    await ctx.runMutation(internal.facebookStore.saveConfigInternal, {
+      values: {
+        facebookBootstrapState: {
+          at: Date.now(),
+          ok: result.ok === true,
+          reason: String(result.reason ?? ""),
+          canPost: typeof result.canPost === "boolean" ? result.canPost : null,
+          resumed: result.resumed === true,
+          envPresent,
+          storedPresent,
+          detail: typeof result.detail === "string" ? result.detail.slice(0, 300) : "",
+        },
+      },
+    });
+    if (envPresent || storedPresent) {
+      await ctx.scheduler.runAfter(0, internal.channels.checkChannels, {});
+    }
+    return result;
   },
 });
 

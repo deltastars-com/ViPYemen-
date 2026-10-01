@@ -178,6 +178,10 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
 export const bootstrapFromEnv = internalAction({
   args: {},
   handler: async (ctx: ActionCtx): Promise<Record<string, unknown>> => {
+    // أسماء متغيرات البيئة المرئية فقط (لا قيم) — لتحديد نقصان أي مفتاح.
+    const envKeys = Object.keys(process.env)
+      .filter((k) => k.startsWith("FACEBOOK_"))
+      .sort();
     const envPresent = !!(process.env.FACEBOOK_ACCESS_TOKEN ?? "").trim();
     const result = await bootstrapInner(ctx);
     let storedPresent = false;
@@ -196,6 +200,7 @@ export const bootstrapFromEnv = internalAction({
           canPost: typeof result.canPost === "boolean" ? result.canPost : null,
           resumed: result.resumed === true,
           envPresent,
+          envKeys,
           storedPresent,
           detail: typeof result.detail === "string" ? result.detail.slice(0, 300) : "",
         },

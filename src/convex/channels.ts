@@ -678,6 +678,100 @@ export const publishNotice = internalAction({
   },
 });
 
+/** تشخيص القناة عند فشل النشر اليدوي — نفس منطق فحص الصحة. */
+async function explainChannelFailure(
+  ctx: ActionCtx,
+  channel: string
+): Promise<string> {
+  try {
+    if (channel === "telegram") return (await checkTelegram()).detail;
+    if (channel === "whatsapp") return (await checkWhatsApp(await resolveWhatsAppConfig(ctx))).detail;
+    const fb = await resolveFacebookConfig(ctx);
+    if (channel === "facebook_page") {
+      return (await checkFacebookTarget(channel, fb.pageId || FB_PAGE_ID_DEFAULT, fb)).detail;
+    }
+    if (channel === "facebook_group") {
+      return (await checkFacebookTarget(channel, fb.groupId || FB_GROUP_ID_DEFAULT, fb)).detail;
+    }
+  } catch (err: any) {
+    return `تعذّر الفحص — ${err?.message ?? String(err)}`;
+  }
+  return "القناة غير معروفة";
+}
+
+/**
+ * 🛠️ نشر يدوي احتياطي إلى قنوات المنصة (لوحة التحكم ← «نشر يدوي في القنوات»)
+ *
+ * المسار الآلي يبقى الأولوية (كل طلب/عرض/إعلان يُنشر تلقائياً فور اعتماده)،
+ * وهذا المسار الاحتياطي يمنح المشرف زراً واحداً ينشر نصاً حرفياً إلى أي قناة
+ * أو إلى كل القنوات دفعة واحدة مع النتيجة الحقيقية لكل قناة.
+ *
+ * لا يخضع لمفتاح الإيقاف اليدوي: intention المشرف صريح، فيُحاول الإرسال
+ * ويُعاد التحقق من صحة القناة وتُعرض النتيجة الدقيقة لكل قناة.
+ */
+export const publishManual = action({
+  args: {
+    text: v.string(),
+    title: v.optional(v.string()),
+    channels: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const text = args.text.trim();
+    if (!text) {
+      return { ok: false as const, error: "اكتب نص المنشور أولاً.", results: [] };
+    }
+    const targets = (args.channels?.length ? args.channels : ALL_CHANNELS).filter((c): c is ChannelName =>
+      (ALL_CHANNELS as readonly string[]).includes(c)
+    );
+    if (targets.length === 0) {
+      return { ok: false as const, error: "اختر قناة واحدة على الأقل.", results: [] };
+    }
+    const title = args.title?.trim() || "نشر يدوي من لوحة التحكم";
+    const pausedMap = (await ctx.runQuery(internal.channelPush.getPausedInternal, {})) as Record<
+      string,
+      boolean
+    >;
+
+    const results: {
+      channel: string;
+      ok: boolean;
+      paused: boolean;
+      detail: string;
+    }[] = [];
+    for (const channel of targets) {
+      let ok = false;
+      let detail = "";
+      try {
+        ok = await sendToChannel(ctx, channel, text);
+      } catch (err: any) {
+        ok = false;
+        detail = err?.message ?? String(err);
+      }
+      if (ok) {
+        detail = pausedMap[channel] === true ? "تم النشر (القناة متوقفة آلياً — أُوقف النشر التلقائي)" : "تم النشر بنجاح ✅";
+      } else {
+        detail = detail || (await explainChannelFailure(ctx, channel));
+      }
+      results.push({ channel, ok, paused: pausedMap[channel] === true, detail });
+      console.log(`[ChannelManual] ${channel} ${ok ? "OK" : "FAIL"} — ${detail}`);
+    }
+
+    const anyOk = results.some((r) => r.ok);
+    try {
+      await ctx.runMutation(internal.channelPush.logChannelEvent, {
+        title: anyOk ? "✅ نشر يدوي في قنوات المنصة" : "⚠️ فشل نشر يدوي في قناة",
+        message: results
+          .map((r) => `${r.channel}: ${r.ok ? "نجح" : "فشل"} — ${r.detail}`)
+          .join(" | "),
+      });
+    } catch {
+      /* التوثيق لا يُسقط النشر */
+    }
+
+    return { ok: anyOk, error: undefined as string | undefined, results };
+  },
+});
+
 // ── 🩺 فحص صحة قنوات المنصة (سيرفرات التواصل الاجتماعي) ──────────────────
 
 type ChannelHealthRow = {

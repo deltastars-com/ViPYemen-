@@ -82,15 +82,22 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
 
     // ── 2) استيراد/استبدال التوكن من البيئة (ببناء على ما أضيف في الأسرار) ──
     const inspected = await inspectToken(envToken, appId || undefined, appSecret || undefined);
-    const envAlive = inspected.valid || (await graphGet("/me", { fields: "id", access_token: envToken })).ok;
+    const probe = inspected.valid
+      ? { ok: true, error: undefined as string | undefined }
+      : await graphGet("/me", { fields: "id", access_token: envToken });
+    const envAlive = inspected.valid || probe.ok;
     if (!envAlive) {
+      // رسالة رفض /me هي الأدق (خطأ Graph الحقيقي للتوكن نفسه).
+      const why = probe.error ?? inspected.error ?? "رفض Graph التوكن (خطأ غير مفصّل)";
       await ctx.runMutation(internal.channelPush.logChannelEvent, {
         title: "⚠️ توكن البيئة غير صالح",
-        message: storedToken
-          ? "فشل فحص FACEBOOK_ACCESS_TOKEN في بيئة Convex — أُبقي التوكن المحفوظ كما هو. أعد ضبط المتغير في Convex Dashboard ← Settings ← Environment Variables."
-          : "FACEBOOK_ACCESS_TOKEN في بيئة Convex غير صالح — تحقق منه في Graph API Explorer ثم أعد ضبطه.",
+        message: `${why} — ${
+          storedToken
+            ? "أُبقي التوكن المحفوظ كما هو."
+            : "لا يوجد توكن بديل محفوظ."
+        } أعد توليد التوكن من Graph API Explorer مع pages_manage_posts ثم حدّث FACEBOOK_ACCESS_TOKEN في Convex Dashboard ← Settings ← Environment Variables.`,
       });
-      return { ok: false, reason: "env-token-invalid" };
+      return { ok: false, reason: "env-token-invalid", detail: why };
     }
 
     const values: Record<string, unknown> = { facebookConnectedAt: Date.now() };

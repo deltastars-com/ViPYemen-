@@ -711,11 +711,14 @@ async function explainChannelFailure(
  */
 export const publishManual = action({
   args: {
+    token: v.string(),
     text: v.string(),
     title: v.optional(v.string()),
     channels: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
+    // 🔐 لا يُنشر نص حرفي في قنوات المنصة إلا لجلسة إدارية صالحة.
+    await ctx.runQuery(api.settings.getAll, { token: args.token });
     const text = args.text.trim();
     if (!text) {
       return { ok: false as const, error: "اكتب نص المنشور أولاً.", results: [] };

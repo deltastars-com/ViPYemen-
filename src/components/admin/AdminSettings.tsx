@@ -250,7 +250,7 @@ export function AdminSettings({ token }: { token: string }) {
 
       <ChannelSwitchesCard token={token} />
 
-      <ChannelPublishCard />
+      <ChannelPublishCard token={token} />
 
       <BiometricCard accountName={values.brandName || "admin"} />
 
@@ -280,7 +280,7 @@ export function AdminSettings({ token }: { token: string }) {
  * زر «قناة واتساب (فتح + نسخ)» يفتح رابط قناة المنصة في نافذة جديدة وينسخ النص
  * إلى الحافظة — مسار بلا توكن يعمل دائماً كاحتياط أخير.
  */
-function ChannelPublishCard() {
+function ChannelPublishCard({ token }: { token: string }) {
   const publishManual = useAction(api.channels.publishManual);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -315,7 +315,7 @@ function ChannelPublishCard() {
     setError("");
     setResults([]);
     try {
-      const res = await publishManual({ text, title: "نشر يدوي من لوحة التحكم", channels: selected });
+      const res = await publishManual({ token, text, title: "نشر يدوي من لوحة التحكم", channels: selected });
       setResults(res.results as typeof results);
       if (!res.ok && !(res.results as typeof results).length) {
         setError(res.error ?? "تعذّر النشر — تحقق من القنوات المختارة.");

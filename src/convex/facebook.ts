@@ -28,26 +28,84 @@ const DAY = 86_400_000;
  */
 export const bootstrapFromEnv = internalAction({
   args: {},
-  handler: async (ctx: ActionCtx) => {
+  handler: async (ctx: ActionCtx): Promise<Record<string, unknown>> => {
     const config = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as FacebookConfig;
-    if (config.facebookAccessToken?.trim() || config.facebookUserToken?.trim()) {
-      return { ok: false, reason: "settings-already-present" };
-    }
     const envToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
     const envAppId = process.env.FACEBOOK_APP_ID?.trim() ?? "";
     const envAppSecret = process.env.FACEBOOK_APP_SECRET?.trim() ?? "";
-    if (!envToken) return { ok: false, reason: "no-env-token" };
+    const storedToken = config.facebookAccessToken?.trim() ?? "";
+    const appId = config.facebookAppId?.trim() || envAppId || "";
+    const appSecret = config.facebookAppSecret?.trim() || envAppSecret || "";
 
-    // فحص التوكن البيئي: إن كان توكن مستخدم نحفظه للتجديد الذاتي؛
-    // وإن كان توكن صفحة نحفظه كما هو للنشر.
-    const inspected = await inspectToken(envToken, envAppId || undefined, envAppSecret || undefined);
+    if (!envToken && !storedToken) return { ok: false, reason: "no-token-anywhere" };
+
+    /** تقييم توكن: حيّ؟ ويمنح صلاحية النشر؟ */
+    const evaluate = async (
+      token: string
+    ): Promise<{ alive: boolean; canPost: boolean | null; detail: string }> => {
+      const inspected = await inspectToken(token, appId || undefined, appSecret || undefined);
+      if (inspected.valid) {
+        const posting = evaluatePostingPermission(inspected.scopes ?? []);
+        return { alive: true, canPost: posting.canPost, detail: posting.detail };
+      }
+      // debug_token غير متاح (بلا سرّ التطبيق) — نختبر حياة التوكن مباشرة.
+      const probe = await graphGet("/me", { fields: "id", access_token: token });
+      return { alive: probe.ok, canPost: null, detail: probe.ok ? "" : inspected.error ?? probe.error ?? "" };
+    };
+
+    // ── 1) التوكن المحفوظ أولاً: إن كان حياً وممنوحاً للنشر فلا حاجة لشيء ──
+    let storedEval: { alive: boolean; canPost: boolean | null; detail: string } | null = null;
+    if (storedToken) {
+      storedEval = await evaluate(storedToken);
+      if (storedEval.alive && storedEval.canPost === true) {
+        const paused = (await ctx.runQuery(internal.channelPush.getPausedInternal, {})) as Record<
+          string,
+          boolean
+        >;
+        if (paused.facebook_page === true || paused.facebook_group === true) {
+          await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
+          await ctx.scheduler.runAfter(0, internal.channels.checkChannels, {});
+          await ctx.runMutation(internal.channelPush.logChannelEvent, {
+            title: "✅ رُفعت قناة فيسبوك من الإيقاف تلقائياً",
+            message: "التوكن المحفوظ حيّ ويمنح صلاحية النشر — النشر التلقائي مستأنف للصفحة والمجموعة.",
+          });
+          return { ok: true, reason: "stored-resumed", canPost: true };
+        }
+        return { ok: true, reason: "stored-healthy", canPost: true };
+      }
+    }
+
+    if (!envToken) {
+      return {
+        ok: false,
+        reason: "stored-unverified-no-env",
+        detail: storedEval?.detail || "لا يوجد توكن في بيئة Convex للتحقق منه",
+      };
+    }
+
+    // ── 2) استيراد/استبدال التوكن من البيئة (ببناء على ما أضيف في الأسرار) ──
+    const inspected = await inspectToken(envToken, appId || undefined, appSecret || undefined);
+    const envAlive = inspected.valid || (await graphGet("/me", { fields: "id", access_token: envToken })).ok;
+    if (!envAlive) {
+      await ctx.runMutation(internal.channelPush.logChannelEvent, {
+        title: "⚠️ توكن البيئة غير صالح",
+        message: storedToken
+          ? "فشل فحص FACEBOOK_ACCESS_TOKEN في بيئة Convex — أُبقي التوكن المحفوظ كما هو. أعد ضبط المتغير في Convex Dashboard ← Settings ← Environment Variables."
+          : "FACEBOOK_ACCESS_TOKEN في بيئة Convex غير صالح — تحقق منه في Graph API Explorer ثم أعد ضبطه.",
+      });
+      return { ok: false, reason: "env-token-invalid" };
+    }
+
     const values: Record<string, unknown> = { facebookConnectedAt: Date.now() };
     if (envAppId && envAppSecret) {
       values.facebookAppId = envAppId;
       values.facebookAppSecret = envAppSecret;
     }
-    if (inspected.type === "USER" && envAppId && envAppSecret) {
-      const long = await exchangeForLongLived(envAppId, envAppSecret, envToken);
+
+    let publishToken = envToken;
+    if (inspected.type === "USER" && appId && appSecret) {
+      // توكن مستخدم → توكن طويل الأجل (60 يوماً) → توكن الصفحة الدائم.
+      const long = await exchangeForLongLived(appId, appSecret, envToken);
       if (long.token) {
         values.facebookUserToken = long.token;
         values.facebookUserTokenExpiresAt = long.expiresAt ?? 0;
@@ -57,19 +115,58 @@ export const bootstrapFromEnv = internalAction({
           pages.find((p) => /vip\s*yemen/i.test(p.name)) ??
           pages.find((p) => !!p.token);
         if (chosen?.token) {
+          publishToken = chosen.token;
           values.facebookAccessToken = chosen.token;
           values.facebookPageId = chosen.id;
           values.facebookPageName = chosen.name;
           values.facebookTokenExpiresAt = 0;
+        } else {
+          publishToken = long.token;
+          values.facebookAccessToken = long.token;
         }
-      } else {
-        values.facebookAccessToken = envToken;
       }
     } else {
       values.facebookAccessToken = envToken;
     }
+
+    // تقييم صلاحية النشر على توكن النشر النهائي قبل الحفظ.
+    const finalEval =
+      publishToken === envToken
+        ? { canPost: inspected.valid ? evaluatePostingPermission(inspected.scopes ?? []).canPost : null, detail: "" }
+        : await evaluate(publishToken);
+    if (finalEval.canPost !== null) {
+      values.facebookCanPost = finalEval.canPost;
+      values.facebookPostingDetail =
+        finalEval.detail ||
+        (finalEval.canPost === true ? "صلاحية النشر ممنوحة (pages_manage_posts)" : "");
+      values.facebookLastError = finalEval.canPost === true ? "" : finalEval.detail;
+    }
+
     await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values });
-    return { ok: true, reason: "bootstrapped" };
+
+    let resumed = false;
+    if (finalEval.canPost === true) {
+      await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
+      resumed = true;
+    }
+    // تحديث فحص الصحة فوراً ليعرض /channels الحقيقة لا البيانات القديمة.
+    await ctx.scheduler.runAfter(0, internal.channels.checkChannels, {});
+    await ctx.runMutation(internal.channelPush.logChannelEvent, {
+      title: storedToken ? "🔄 استُبدل توكن فيسبوك بتحديث الأسرار" : "🔗 استُورد توكن فيسبوك من البيئة تلقائياً",
+      message:
+        finalEval.canPost === true
+          ? `صلاحية النشر ممنوحة — النشر التلقائي مفعّل${resumed ? " ورُفعت القناتان من الإيقاف" : ""}.`
+          : finalEval.canPost === false
+            ? finalEval.detail
+            : "حُفظ التوكن وسيُقيَّم عند أول فحص — تأكد من وجود FACEBOOK_APP_ID و FACEBOOK_APP_SECRET للفحص التفصيلي.",
+    });
+
+    return {
+      ok: true,
+      reason: storedToken ? "replaced-from-env" : "bootstrapped",
+      canPost: finalEval.canPost,
+      resumed,
+    };
   },
 });
 
@@ -502,6 +599,11 @@ export const refreshTokenInternal = internalAction({
         ? `تم تجديد التوكن واستخراج توكن الصفحة "${chosen.name}" (لا ينتهي) — النشر مستمر بلا انقطاع.`
         : "تم تجديد توكن المستخدم طويل الأجل، وسيُعاد استخراج توكن الصفحة عند أول نشر.",
     });
+    // بعد التجديد: إن منح التوكن الجديد صلاحية النشر، ارفع الإيقاف وحدّث فحص الصحة.
+    if (values.facebookCanPost === true) {
+      await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
+      await ctx.scheduler.runAfter(0, internal.channels.checkChannels, {});
+    }
 
     return {
       ok: true,

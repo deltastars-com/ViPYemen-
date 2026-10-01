@@ -285,6 +285,52 @@ export const getBootstrapStatePublic = internalQuery({
   },
 });
 
+/**
+ * 🔄 حالة التجديد الذاتي لتوكن فيسبوك — بلا كشف أي سر (قيم منطقية فقط).
+ * تُستخدم في نقطة التشخيص `/channels` ليعرف المشرف فوراً:
+ *   • هل بيانات اعتماد التطبيق (App ID + App Secret) موجودة؟
+ *   • هل التجديد الآلي مُفعّل فعلاً؟ وكم يوماً متبقياً على التوكن؟
+ */
+export const getRenewalStatePublic = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<Record<string, unknown>> => {
+    const keys = [
+      "facebookAppId",
+      "facebookAppSecret",
+      "facebookUserToken",
+      "facebookAccessToken",
+      "facebookTokenExpiresAt",
+      "facebookUserTokenExpiresAt",
+      "facebookCanPost",
+      "facebookPageName",
+    ];
+    const config: Record<string, string | number | boolean | undefined> = {};
+    for (const key of keys) {
+      const row = await ctx.db
+        .query("settings")
+        .withIndex("by_key", (q) => q.eq("key", `facebook${key.slice("facebook".length)}`))
+        .first();
+      config[key] = row?.value as string | number | boolean | undefined;
+    }
+    const appId = (config.facebookAppId as string | undefined)?.trim() ?? "";
+    const appSecret = (config.facebookAppSecret as string | undefined)?.trim() ?? "";
+    const userToken = (config.facebookUserToken as string | undefined)?.trim() ?? "";
+    const token = (config.facebookAccessToken as string | undefined)?.trim() ?? "";
+    const tokenExpiresAt = Number(config.facebookTokenExpiresAt ?? 0);
+    const now = Date.now();
+    return {
+      hasAppCredentials: appId.length > 0 && appSecret.length > 0,
+      hasUserToken: userToken.length > 0,
+      hasToken: token.length > 0,
+      autoRenew: appId.length > 0 && appSecret.length > 0 && userToken.length > 0,
+      permanent: token.length > 0 && tokenExpiresAt === 0,
+      tokenDaysLeft: tokenExpiresAt > 0 ? Math.ceil((tokenExpiresAt - now) / 86_400_000) : null,
+      canPost: typeof config.facebookCanPost === "boolean" ? config.facebookCanPost : null,
+      pageName: (config.facebookPageName as string | undefined) ?? "",
+    };
+  },
+});
+
 /** آخر حالة مسجّلة لكل قناة (داخلي — يُستخدم لكشف التحوّل من انقطاع إلى تعافي). */
 export const getStatusesInternal = internalQuery({
   args: {},

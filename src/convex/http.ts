@@ -133,10 +133,17 @@ http.route({
     } catch {
       /* لا حالة استيراد بعد */
     }
+    let facebookRenewal: unknown = null;
+    try {
+      facebookRenewal = await ctx.runQuery(internal.channelPush.getRenewalStatePublic, {});
+    } catch {
+      /* لا حالة تجديد بعد */
+    }
     const byChannel = new Map(health.map((row) => [row.channel, row]));
     return json({
       ok: true,
       facebookBootstrap,
+      facebookRenewal,
       channels: CHANNELS.map((c) => ({
         ...c,
         managed: (CHANNEL_NAMES as readonly string[]).includes(c.id),

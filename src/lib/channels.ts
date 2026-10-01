@@ -32,7 +32,7 @@ export const CHANNELS: Channel[] = [
     name: "قناة واتساب",
     description:
       "كل جديد المنصة — إعلانات، عروض، ومنشورات معتمدة تُنشر لحظياً عبر قناة الواتساب الرسمية.",
-    href: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x",
+    href: "https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb",
     color: "text-[#4ade80]",
     bg: "bg-[#25d366]/15",
     hover: "hover:border-[#25d366]/50",

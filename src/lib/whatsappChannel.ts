@@ -6,15 +6,21 @@
 // وهو المسار الاحتياطي الدائم لنشر العروض والإعلانات على القناة.
 import { openExternal } from "@/lib/utils";
 
-export const DEFAULT_WHATSAPP_CHANNEL_LINK = "https://whatsapp.com/channel/0029VaYourChannelID";
+/** الرابط الرسمي الحقيقي لقناة واتساب في هذا المشروع (Footer · /channels · صفحة القنوات). */
+export const DEFAULT_WHATSAPP_CHANNEL_LINK = "https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb";
 
-/** رابط قناة الواتساب المحفوظ في إعدادات اللوحة (أو الرابط الافتراضي). */
+/** نموذج المعاينة — يُتجاهل إن حُفظ ليحل محل الرابط الرسمي. */
+const SAMPLE_CHANNEL_LINK = "https://whatsapp.com/channel/0029VaYourChannelID";
+
+/** رابط قناة الواتساب المحفوظ في إعدادات اللوحة (أو الرابط الرسمي الافتراضي). */
 export function getWhatsAppChannelLink(): string {
   try {
-    return localStorage.getItem("vip_whatsapp_channel_link") || DEFAULT_WHATSAPP_CHANNEL_LINK;
+    const saved = localStorage.getItem("vip_whatsapp_channel_link")?.trim() ?? "";
+    if (saved && saved !== SAMPLE_CHANNEL_LINK) return saved;
   } catch {
-    return DEFAULT_WHATSAPP_CHANNEL_LINK;
+    /* التخزين المحلي غير متاح */
   }
+  return DEFAULT_WHATSAPP_CHANNEL_LINK;
 }
 
 /** يحفظ رابط قناة الواتساب (يُستدعى من بطاقة إعدادات واتساب). */

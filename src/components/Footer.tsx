@@ -72,7 +72,7 @@ function StoreBadges() {
 }
 
 const SOCIALS = [
-  { icon: WhatsAppIcon, href: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x", labelAr: "قناة واتساب", labelEn: "WhatsApp Channel" },
+  { icon: WhatsAppIcon, href: "https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb", labelAr: "قناة واتساب", labelEn: "WhatsApp Channel" },
   { icon: TelegramIcon, href: "https://t.me/vipyemen77", labelAr: "قناة تيليجرام", labelEn: "Telegram Channel" },
   { icon: Facebook, href: "https://www.facebook.com/ViPservicesYemen/", labelAr: "صفحة فيسبوك", labelEn: "Facebook Page" },
   { icon: Facebook, href: "https://www.facebook.com/groups/346010664332427", labelAr: "مجموعة فيسبوك", labelEn: "Facebook Group" },

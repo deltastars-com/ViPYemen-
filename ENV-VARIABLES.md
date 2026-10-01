@@ -25,6 +25,13 @@
 - `WHATSAPP_PHONE_NUMBER_ID` — Business phone number ID
 - `WHATSAPP_BROADCAST_TO` — Recipient phone numbers, comma-separated
 
+## WHATSAPP — Free OpenWA Gateway (alternative to Cloud API)
+Saved in Convex `settings` table from Dashboard → Settings → WhatsApp card (no env needed):
+- `openwaBaseUrl` — e.g. `https://openwa.onrender.com` (self-hosted, free)
+- `openwaApiKey` — `X-API-Key` created in the OpenWA dashboard (OPERATOR role)
+- `openwaSessionId` — session UUID from `POST /api/sessions` (pair via QR)
+Source: https://github.com/rmyndharis/OpenWA — used automatically when Meta Cloud API is not configured.
+
 ## FACEBOOK (Page + Group Auto-Publishing)
 - `FACEBOOK_ACCESS_TOKEN` — Permanent **Page** Access Token with `pages_manage_posts` + `publish_to_groups` permissions
 - `FACEBOOK_PAGE_ID` — Page numeric ID: `102672588647591` (https://facebook.com/vipyemen1)

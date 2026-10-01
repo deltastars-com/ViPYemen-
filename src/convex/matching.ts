@@ -650,6 +650,21 @@ export const updateSuggestion = mutation({
     if (status && !(MATCH_STATUSES as readonly string[]).includes(status)) {
       throw new ConvexError("حالة مطابقة غير صالحة");
     }
+    // 📜 قاعدة المنصة: لا تُعلَّم المطابقة «مكتملة» قبل التوثيق الإلكتروني
+    //    بالبصمة (الاسم + الهاتف + التوقيع + البصمة + سند المبلغ) داخل
+    //    قائمة إتمام التوافق — ضماناً للحقوق المالية للطرفين والمنصة.
+    if (status === "matched" && existing.status !== "matched") {
+      const signed = await ctx.db
+        .query("contracts")
+        .withIndex("by_match", (q) => q.eq("matchId", id))
+        .take(20);
+      const hasContract = signed.some((c) => c.status === "signed" || c.status === "paid");
+      if (!hasContract) {
+        throw new ConvexError(
+          "🚫 قبل إتمام المطابقة: أكمل التوثيق الإلكتروني للمستفيد (الاسم الكامل + الهاتف + التوقيع الإلكتروني + تأكيد البصمة + المبلغ المتفق عليه) من زر «توثيق» في جدول التوافق."
+        );
+      }
+    }
     await ctx.db.patch(id, {
       ...(status ? { status } : {}),
       ...(note !== undefined ? { note } : {}),

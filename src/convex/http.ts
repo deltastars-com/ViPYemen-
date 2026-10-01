@@ -32,7 +32,7 @@ const MIRRORS: { label: string; url: string; role: string }[] = [
 
 const CHANNELS: { id: string; label: string; url: string }[] = [
   { id: "telegram", label: "قناة تيليجرام", url: "https://t.me/vipyemen77" },
-  { id: "whatsapp", label: "قناة واتساب", url: "https://chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x" },
+  { id: "whatsapp", label: "قناة واتساب", url: "https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb" },
   { id: "facebook_page", label: "صفحة فيسبوك", url: "https://www.facebook.com/profile.php?id=102672588647591" },
   { id: "facebook_group", label: "مجموعة فيسبوك", url: "https://www.facebook.com/groups/346010664332427" },
   { id: "youtube", label: "قناة يوتيوب", url: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw" },

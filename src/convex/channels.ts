@@ -133,10 +133,53 @@ async function postToTelegram(text: string): Promise<boolean> {
 }
 
 // ── WhatsApp ──────────────────────────────────────────────────────────
+/** معرّف محادثة واتساب بصيغة OpenWA: `771234567@c.us` للمجموعة `…@g.us`. */
+function openwaChatId(to: string): string {
+  if (to.includes("@")) return to;
+  const digits = to.replace(/\D/g, "");
+  return digits.includes("-") || digits.length > 15 ? `${digits}@g.us` : `${digits}@c.us`;
+}
+
+/** النشر عبر بوابة OpenWA المجانية (بديل بلا توكن Meta). */
+async function postViaOpenWA(
+  text: string,
+  recipients: string[],
+  openwa: NonNullable<WhatsAppRuntimeConfig["openwa"]>
+): Promise<boolean> {
+  const base = openwa.baseUrl.replace(/\/+$/, "");
+  let any = false;
+  for (const to of recipients) {
+    try {
+      const res = await fetch(`${base}/api/sessions/${openwa.sessionId}/messages/send-text`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": openwa.apiKey,
+        },
+        body: JSON.stringify({ chatId: openwaChatId(to), text }),
+      });
+      if (res.ok) {
+        any = true;
+        console.log(`[Channel:WhatsApp/OpenWA] OK → ${to}`);
+      } else {
+        const body = await res.text();
+        console.error(`[Channel:WhatsApp/OpenWA] FAIL → ${to}: ${res.status} ${body.slice(0, 200)}`);
+      }
+    } catch (err) {
+      console.error(`[Channel:WhatsApp/OpenWA] ERROR → ${to}:`, err);
+    }
+  }
+  return any;
+}
+
 async function postToWhatsApp(text: string, wa: WhatsAppRuntimeConfig): Promise<boolean> {
+  if ((!wa.token || !wa.phoneNumberId) && wa.openwa && wa.recipients.length > 0) {
+    // مسار مجاني بالكامل: بوابة OpenWA بدل Cloud API.
+    return postViaOpenWA(text, wa.recipients, wa.openwa);
+  }
   if (!wa.token || !wa.phoneNumberId || wa.recipients.length === 0) {
     console.log(
-      "[Channel:WhatsApp] SKIP — القناة غير مهيأة (لوحة التحكم ← الإعدادات ← تشغيل قناة واتساب)"
+      "[Channel:WhatsApp] SKIP — القناة غير مهيأة (لوحة التحكم ← الإعدادات ← تشغيل قناة واتساب أو بوابة OpenWA)"
     );
     return false;
   }
@@ -403,10 +446,24 @@ export interface WhatsAppRuntimeConfig {
   templateLang: string;
   displayPhone: string;
   source: "env" | "settings" | "none";
+  /** بوابة OpenWA المجانية (بديل مجاني عن Cloud API). */
+  openwa: { baseUrl: string; apiKey: string; sessionId: string } | null;
 }
 
 /** إعدادات واتساب من البيئة أو من الإعدادات المحفوظة في اللوحة. */
 async function resolveWhatsAppConfig(ctx: ActionCtx): Promise<WhatsAppRuntimeConfig> {
+  // بوابة OpenWA المجانية (إن كانت مهيأة) تُستخدم كمسار بديل بلا توكن Meta.
+  let openwa: WhatsAppRuntimeConfig["openwa"] = null;
+  try {
+    const ow = (await ctx.runQuery(internal.openwa.getConfigInternal, {})) as {
+      baseUrl: string;
+      apiKey: string;
+      sessionId: string;
+    };
+    if (ow?.baseUrl && ow?.apiKey && ow?.sessionId) openwa = ow;
+  } catch {
+    /* البوابة غير مهيأة */
+  }
   const envToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim() ?? "";
   if (envToken) {
     return {
@@ -417,6 +474,7 @@ async function resolveWhatsAppConfig(ctx: ActionCtx): Promise<WhatsAppRuntimeCon
       templateLang: process.env.WHATSAPP_TEMPLATE_LANG?.trim() || "ar",
       displayPhone: "",
       source: "env",
+      openwa,
     };
   }
   try {
@@ -433,6 +491,7 @@ async function resolveWhatsAppConfig(ctx: ActionCtx): Promise<WhatsAppRuntimeCon
       templateLang: cfg.whatsappTemplateLang?.trim() || "ar",
       displayPhone: cfg.whatsappDisplayPhone ?? "",
       source: token ? "settings" : "none",
+      openwa,
     };
   } catch {
     return {
@@ -443,6 +502,7 @@ async function resolveWhatsAppConfig(ctx: ActionCtx): Promise<WhatsAppRuntimeCon
       templateLang: "ar",
       displayPhone: "",
       source: "none",
+      openwa,
     };
   }
 }
@@ -681,6 +741,39 @@ async function checkTelegram(): Promise<ChannelHealthRow> {
 }
 
 async function checkWhatsApp(wa: WhatsAppRuntimeConfig): Promise<ChannelHealthRow> {
+  if ((!wa.token || !wa.phoneNumberId) && wa.openwa) {
+    // بوابة OpenWA المجانية — فحص مباشر للجلسة.
+    const base = wa.openwa.baseUrl.replace(/\/+$/, "");
+    const started = Date.now();
+    try {
+      const res = await fetch(`${base}/api/sessions/${wa.openwa.sessionId}`, {
+        headers: { "X-API-Key": wa.openwa.apiKey, Accept: "application/json" },
+        cache: "no-store" as RequestCache,
+      });
+      const latencyMs = Date.now() - started;
+      if (res.ok) {
+        return {
+          channel: "whatsapp",
+          status: "ok",
+          detail: `بوابة OpenWA المجانية — جلسة نشطة · ${wa.recipients.length} مستلم · بلا تكاليف Meta`,
+          latencyMs,
+        };
+      }
+      return {
+        channel: "whatsapp",
+        status: "down",
+        detail: `بوابة OpenWA لا تستجيب (${res.status}) — تأكد أن الخادم يعمل والجلسة مُصرَّحة`,
+        latencyMs,
+      };
+    } catch (err) {
+      return {
+        channel: "whatsapp",
+        status: "down",
+        detail: `تعذّر الوصول إلى بوابة OpenWA — ${err instanceof Error ? err.message : "خطأ شبكة"}`,
+        latencyMs: Date.now() - started,
+      };
+    }
+  }
   if (!wa.token || !wa.phoneNumberId) {
     return {
       channel: "whatsapp",

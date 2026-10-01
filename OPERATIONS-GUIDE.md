@@ -108,7 +108,7 @@ bun run icons            # توليد الأيقونات الرسمية لكل �
 | واتساب الأعمال | +967 711 780 999 |
 | اتصال مباشر | +967 773 597 404 |
 | البريد | vipservicesyemen@gmail.com |
-| قناة واتساب | chat.whatsapp.com/i5vycbmxwyykhctc8tsn9x |
+| قناة واتساب | chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb |
 | قناة تيليجرام | t.me/VIPservices2 |
 | يوتيوب | youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw |
 | سياسة الخصوصية | /privacy-policy |

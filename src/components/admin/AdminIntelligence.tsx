@@ -8,10 +8,12 @@ import {
   Archive,
   BadgeCheck,
   CheckCircle2,
+  FileSignature,
   Layers,
   MessageCircle,
   RefreshCw,
   Search,
+  ShieldCheck,
   Star,
   Target,
   Trophy,
@@ -20,6 +22,7 @@ import {
   Zap,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
+import { ContractModal } from "@/components/admin/ContractModal";
 import { Badge, Button, EmptyState, Input, Select, Spinner, StatCard } from "@/components/ui";
 import { cn, formatDateTime, timeAgo, whatsappLink } from "@/lib/utils";
 import { useLang } from "@/lib/i18n";
@@ -67,6 +70,9 @@ export function ControlMatching({ token }: { token: string }) {
   const [minScore, setMinScore] = useState(40);
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("all");
+  const [contractRow, setContractRow] = useState<any | null>(null);
+  const [contractOpen, setContractOpen] = useState(false);
+  const [statusError, setStatusError] = useState("");
 
   const board = useQuery(api.matching.listMatches, {
     token,
@@ -82,6 +88,21 @@ export function ControlMatching({ token }: { token: string }) {
   const notifyPair = useMutation(api.matching.notifyPair);
   const updateSuggestion = useMutation(api.matching.updateSuggestion);
   const notifySuggestion = useMutation(api.matching.notifyMatchedParties);
+  const contracts = useQuery(api.contracts.list, { token });
+
+  // أحدث وثيقة توثيق فعّالة لكل مطابقة (تُفضَّل الموقّعة/المسدَّدة على المسودة).
+  const contractByMatch = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const c of contracts ?? []) {
+      if (!c.matchId) continue;
+      const cur = map[c.matchId];
+      if (!cur) map[c.matchId] = c;
+      else if (cur.status === "draft" && (c.status === "signed" || c.status === "paid")) {
+        map[c.matchId] = c;
+      }
+    }
+    return map;
+  }, [contracts]);
 
   async function notify(categoryKey: string, requestId: string, offerId: string) {
     setBusy(`${requestId}|${offerId}`);
@@ -278,6 +299,12 @@ export function ControlMatching({ token }: { token: string }) {
         ) : suggestions.length === 0 ? (
           <EmptyState title={L("لا توجد مطابقات محفوظة", "No saved matches")} hint={L("شغّل المحرك لبناء الأرشيف", "Run the engine to build the archive")} />
         ) : (
+          <>
+          {statusError && (
+            <p className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[12px] font-bold leading-relaxed text-amber-300">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /> {statusError}
+            </p>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-right text-[12px]">
               <thead>
@@ -325,7 +352,16 @@ export function ControlMatching({ token }: { token: string }) {
                       <div className="flex flex-col gap-1.5">
                         <Select
                           value={row.status}
-                          onChange={(event) => updateSuggestion({ token, id: row._id, status: event.target.value })}
+                          onChange={(event) => {
+                            const next = event.target.value;
+                            updateSuggestion({ token, id: row._id, status: next })
+                              .then(() => setStatusError(""))
+                              .catch((err: any) =>
+                                setStatusError(
+                                  err?.data ?? err?.message ?? L("تعذّر تحديث الحالة", "Status update failed")
+                                )
+                              );
+                          }}
                           className="!w-36 !py-1 !text-[11px]"
                         >
                           {Object.entries(MATCH_STATUS_LABELS).map(([key, value]) => (
@@ -335,6 +371,30 @@ export function ControlMatching({ token }: { token: string }) {
                           ))}
                         </Select>
                         <div className="flex gap-1.5">
+                          <button
+                            onClick={() => {
+                              setContractRow(row);
+                              setContractOpen(true);
+                            }}
+                            className={cn(
+                              "rounded-lg border px-2.5 py-1 text-[10px] font-bold transition-colors",
+                              contractByMatch[row._id] && contractByMatch[row._id].status !== "draft"
+                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                                : "border-gold-500/40 bg-gold-500/10 text-gold-300 hover:bg-gold-500/20"
+                            )}
+                            title={L("التوثيق الإلكتروني بالبصمة + سند الدفع", "E-certification + payment receipt")}
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              <FileSignature className="h-3 w-3" />
+                              {contractByMatch[row._id]
+                                ? contractByMatch[row._id].status === "paid"
+                                  ? L("مسدَّد", "Paid")
+                                  : contractByMatch[row._id].status === "signed"
+                                    ? L("موثّق ✓", "Certified ✓")
+                                    : L("توقيع معلّق", "Pending sign")
+                                : L("توثيق", "Certify")}
+                            </span>
+                          </button>
                           <button
                             onClick={() => notifySuggestion({ token, id: row._id })}
                             className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-[10px] font-bold text-sky-300 transition-colors hover:bg-sky-500/20"
@@ -357,8 +417,21 @@ export function ControlMatching({ token }: { token: string }) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
+
+      {contractRow && (
+        <ContractModal
+          token={token}
+          open={contractOpen}
+          onClose={() => setContractOpen(false)}
+          matchTitle={`${contractRow.offerTitle} ⇄ ${contractRow.requestTitle}`}
+          requestName={contractRow.requestName}
+          requestPhone={contractRow.requestPhone}
+          contract={contractByMatch[contractRow._id] ?? null}
+        />
+      )}
     </div>
   );
 }

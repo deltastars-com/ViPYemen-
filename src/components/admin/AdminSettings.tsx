@@ -785,6 +785,13 @@ function FacebookConnectCard({ token }: { token: string }) {
 function WhatsAppConnectCard({ token }: { token: string }) {
   const connect = useAction(api.whatsapp.connectWhatsApp);
   const status = useQuery(api.whatsapp.getWhatsAppStatus, { token });
+  const testOpenWA = useAction(api.openwa.testConnection);
+  const saveOpenWA = useMutation(api.openwa.saveConfig);
+  const [owUrl, setOwUrl] = useState("");
+  const [owKey, setOwKey] = useState("");
+  const [owSession, setOwSession] = useState("");
+  const [owBusy, setOwBusy] = useState(false);
+  const [owMsg, setOwMsg] = useState<{ ok: boolean; message: string } | null>(null);
 
   const [accessToken, setAccessToken] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
@@ -822,6 +829,20 @@ function WhatsAppConnectCard({ token }: { token: string }) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function submitOpenWA() {
+    setOwBusy(true);
+    setOwMsg(null);
+    try {
+      await saveOpenWA({ token, baseUrl: owUrl.trim(), apiKey: owKey.trim(), sessionId: owSession.trim() });
+      const r = await testOpenWA({ baseUrl: owUrl.trim(), apiKey: owKey.trim() });
+      setOwMsg(r);
+    } catch (e: unknown) {
+      setOwMsg({ ok: false, message: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setOwBusy(false);
     }
   }
 
@@ -1037,6 +1058,61 @@ function WhatsAppConnectCard({ token }: { token: string }) {
               أضف أرقام المستلمين بالصيغة الدولية <span dir="ltr">9677xxxxxxxx</span> ثم اضغط «تحقق وشغّل قناة واتساب».
             </li>
           </ol>
+        </details>
+
+        <details className="rounded-lg border border-emerald-500/40 bg-emerald-950/20 p-3">
+          <summary className="cursor-pointer text-[11px] font-bold text-emerald-300 hover:text-emerald-200">
+            🔌 بوابة OpenWA المجانية — بديل 100% مجاني عن Cloud API (وصول تلقائي للنشر)
+          </summary>
+          <p className="mt-2 text-[11px] leading-relaxed text-ink-300">
+            خادم مفتوح المصدر <span dir="ltr" className="text-cream">github.com/rmyndharis/OpenWA</span> يعمل
+            مجاناً على Render/Docker بجلسة واتساب واحدة (QR). إن لم يتوفر توكن Meta، ينشر النظام تلقائياً
+            عبر البوابة إلى نفس أرقام المستلمين. خطواته: شغّل الخادم ← أنشئ مفتاح API (OPERATOR) ←
+            أنشئ جلسة وامسح QR ← ضع البيانات هنا.
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            <Input
+              value={owUrl}
+              onChange={(e) => setOwUrl(e.target.value)}
+              dir="ltr"
+              className="text-left"
+              placeholder="https://openwa.onrender.com"
+              aria-label="رابط بوابة OpenWA"
+            />
+            <Input
+              type="password"
+              value={owKey}
+              onChange={(e) => setOwKey(e.target.value)}
+              dir="ltr"
+              className="text-left"
+              placeholder="مفتاح API (X-API-Key)"
+              aria-label="مفتاح OpenWA"
+            />
+            <Input
+              value={owSession}
+              onChange={(e) => setOwSession(e.target.value)}
+              dir="ltr"
+              className="text-left"
+              placeholder="معرّف الجلسة UUID"
+              aria-label="جلسة OpenWA"
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Button variant="success" loading={owBusy} onClick={submitOpenWA} className="!py-2 text-xs">
+              حفظ واختبار الاتصال بالبوابة
+            </Button>
+            {owMsg && (
+              <span
+                className={`rounded-lg border px-3 py-1.5 text-[11px] font-bold ${
+                  owMsg.ok
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                    : "border-rose-500/40 bg-rose-500/10 text-rose-300"
+                }`}
+              >
+                {owMsg.message}
+              </span>
+            )}
+          </div>
         </details>
       </div>
     </Card>

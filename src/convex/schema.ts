@@ -445,4 +445,41 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_email", ["email"])
     .index("by_created", ["createdAt"]),
+
+  /**
+   * 📜 التوثيق الإلكتروني الموثق بالبصمة — يُستكمل داخل قائمة إتمام التوافق
+   *    قبل إتمام المطابقة وتسليم الطالب/العميل. يثبت الحقوق المالية:
+   *    الاسم الكامل · الهاتف · التوقيع الإلكتروني · البصمة (WebAuthn) ·
+   *    والمبلغ المتفق عليه كعمولة للمنصة، ويُصدر منه سند الدفع (PDF).
+   *    status: draft (بانتظار توقيع المستفيد عن بُعد) | signed | paid | void
+   */
+  contracts: defineTable({
+    matchId: v.optional(v.string()),
+    title: v.string(),
+    beneficiaryName: v.string(),
+    phone: v.string(),
+    amount: v.number(),
+    commission: v.number(),
+    currency: v.string(),
+    signature: v.string(),
+    signatureType: v.string(),
+    fingerprint: v.optional(
+      v.object({
+        mode: v.string(),
+        credentialId: v.optional(v.string()),
+        verified: v.boolean(),
+      })
+    ),
+    signToken: v.optional(v.string()),
+    receiptNo: v.optional(v.string()),
+    status: v.string(),
+    signedAt: v.optional(v.number()),
+    paidAt: v.optional(v.number()),
+    voidReason: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_match", ["matchId"])
+    .index("by_status", ["status"])
+    .index("by_signToken", ["signToken"])
+    .index("by_created", ["createdAt"]),
 });

@@ -38,11 +38,17 @@ jobs:
           FAILED=""
           check() {
             local name="$1" url="$2"
-            local code
-            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 25 "$url" 2>/dev/null || echo 000)
-            printf '%-24s %s\n' "$name" "$code"
+            local code attempt
+            # محاولة مزدوجة + اتّباع التحويلات: نافذة النشر قد تُظهر 404/000
+            # للحظات — لا نرفع إنذاراً كاذباً قبل إعادة الفحص.
+            for attempt in 1 2; do
+              code=$(curl -sS -L -o /dev/null -w "%{http_code}" --max-time 25 "$url" 2>/dev/null || true)
+              [ "$code" = "200" ] && break
+              [ "$attempt" = "1" ] && sleep 15
+            done
+            printf '%-24s %s\n' "$name" "${code:-000}"
             # real newline ("\n" inside quotes stays literal and breaks printf)
-            [ "$code" = "200" ] || FAILED="${FAILED}- **${name}** → HTTP ${code} (${url})"$'\n'
+            [ "$code" = "200" ] || FAILED="${FAILED}- **${name}** → HTTP ${code:-000} (${url})"$'\n'
           }
 
           check "Vercel mirror"   "https://vi-p-yemen.vercel.app"

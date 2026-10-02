@@ -38,7 +38,7 @@ Source: https://github.com/rmyndharis/OpenWA — used automatically when Meta Cl
 - `FACEBOOK_PAGE_ID` — Page numeric ID: `102672588647591` (https://facebook.com/vipyemen1)
 - `FACEBOOK_PAGE_NAME` — اسم الصفحة كما يظهر في المنشورات (اختياري)
 - `FACEBOOK_GROUP_ID` — Group ID: `346010664332427` (https://facebook.com/groups/346010664332427/)
-- `FACEBOOK_APP_ID` — معرّف التطبيق *(يُستخرج آلياً من التوكن فلا حاجة لإضافته يدوياً)*
+- `FACEBOOK_APP_ID` — معرّف التطبيق *(يُستخرج آلياً من التوكن، والقيمة الافتراضية في الكود هي `1142667409976840` — معرّف عام وليس سرّاً)*
 - `FACEBOOK_APP_SECRET` — سرّ التطبيق — **المتغير الوحيد الملزم يدوياً** لتفعيل التبديل والتجديد الذاتي (لا يُكشف أبداً ولا يمكن استنباطه)
 
 > 🛑 **الوحيد الذي يهم للنشر هو متغيرات نشر Convex** (Convex Dashboard ← Settings ←
@@ -79,7 +79,7 @@ Set these in **Convex Dashboard → Settings → Environment Variables**:
 | `TELEGRAM_CHAT_ID` | `@vipyemen77` |
 | `FACEBOOK_ACCESS_TOKEN` | *(your permanent PAGE token — see above. Must be Page Token, not User Token!)* |
 | `FACEBOOK_PAGE_ACCESS_TOKEN` | *(بديل: توكن صفحة دائم مباشرة — بلا حاجة لبيانات اعتماد التطبيق)* |
-| `FACEBOOK_APP_ID` | *(App ID من developers.facebook.com → الإعدادات → أساسي)* |
+| `FACEBOOK_APP_ID` | `1142667409976840` *(مضبوط كافتراضي في الكود — لا حاجة لإضافته)* |
 | `FACEBOOK_APP_SECRET` | *(App Secret — يُستخدم سرّياً للتبديل والتجديد الذاتي)* |
 | `FACEBOOK_PAGE_ID` | `102672588647591` (numeric ID for Vipservicesyemen page) |
 | `FACEBOOK_PAGE_NAME` | `Vipyemen للتوظيف والتسويق الإلكتروني والعقاري والخدمات البرمجية` |

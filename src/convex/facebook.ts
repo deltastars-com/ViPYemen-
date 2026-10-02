@@ -24,6 +24,15 @@ const DAY = 86_400_000;
 const PROBE_THROTTLE = 6 * 60 * 60 * 1000;
 
 /**
+ * معرّف تطبيق فيسبوك «Vipyemen» — **معرّف عام وليس سرّاً** (يظهر في أي رابط
+ * facebook.com/dialog/oauth?client_id=…). وجوده هنا يُقلّل ما يجب إدخاله يدوياً
+ * إلى متغير **واحد** فقط: `FACEBOOK_APP_SECRET`، لأن التبديل إلى توكن طويل
+ * الأجل يحتاج (client_id + client_secret) معاً.
+ * المعرّف المكتشف من التوكن نفسه يتقدّم على هذا الافتراضي دائماً.
+ */
+const DEFAULT_FACEBOOK_APP_ID = "1142667409976840";
+
+/**
  * 🌱 تهيئة أولية: لو غاب توكن اللوحة تماماً، تُستخدم متغيرات البيئة
  * (FACEBOOK_ACCESS_TOKEN/APP_ID/APP_SECRET) كبذرة، فتستفيد دورة التجديد
  * الذاتي منها حتى بدون أي ربط يدوي من اللوحة.
@@ -37,7 +46,8 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
     const envAppId = process.env.FACEBOOK_APP_ID?.trim() ?? "";
     const envAppSecret = process.env.FACEBOOK_APP_SECRET?.trim() ?? "";
     const storedToken = config.facebookAccessToken?.trim() ?? "";
-    const appId = config.facebookAppId?.trim() || envAppId || "";
+    const appId =
+      config.facebookAppId?.trim() || envAppId || DEFAULT_FACEBOOK_APP_ID;
     const appSecret = config.facebookAppSecret?.trim() || envAppSecret || "";
 
     if (!envToken && !envPageToken && !storedToken) {
@@ -844,8 +854,14 @@ export const refreshTokenInternal = internalAction({
   args: { force: v.optional(v.boolean()) },
   handler: async (ctx: ActionCtx, { force }) => {
     const config = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as FacebookConfig;
-    const appId = config.facebookAppId?.trim();
-    const appSecret = config.facebookAppSecret?.trim();
+    // معرّف التطبيق: من الإعدادات ← ثم البيئة ← ثم المعرّف العام الافتراضي
+    // (المعرّف ليس سرّاً)، فلا يحتاج التجديد الذاتي إلا سرّ التطبيق وحده.
+    const appId =
+      config.facebookAppId?.trim() ||
+      (process.env.FACEBOOK_APP_ID ?? "").trim() ||
+      DEFAULT_FACEBOOK_APP_ID;
+    const appSecret =
+      config.facebookAppSecret?.trim() || (process.env.FACEBOOK_APP_SECRET ?? "").trim();
     const userToken = config.facebookUserToken?.trim();
     if (!appId || !appSecret || !userToken) {
       return { ok: false, reason: "no-app-credentials", renewed: false };

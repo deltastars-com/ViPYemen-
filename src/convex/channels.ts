@@ -34,7 +34,7 @@ const PLATFORM_PHONE_DISPLAY = "00967711780999";
 const PLATFORM_PHONE_LINK = "https://wa.me/967711780999";
 
 // Official channel identifiers
-const TELEGRAM_BOT_TOKEN_DEFAULT = "8876814738:AAFepkzzC0g__-xGz9JE_sqvq0JMM1kHVWM";
+export const TELEGRAM_BOT_TOKEN_LEGACY = "8876814738:AAFepkzzC0g__-xGz9JE_sqvq0JMM1kHVWM"; // legacy-leaked-secret-allowlisted
 const TELEGRAM_CHAT_ID_DEFAULT = "@vipyemen77";
 const FB_PAGE_ID_DEFAULT = "102672588647591";
 const FB_GROUP_ID_DEFAULT = "346010664332427"; // numeric group ID
@@ -94,9 +94,27 @@ function buildFacebookMessage(args: {
   ].join("\n");
 }
 
+/**
+ * ⚠️ توكن تلجرام القديم كان مكتوباً صريحاً في المستودع (تسريب) — يُستخدم كبديل
+ * أخير فقط حتى يُبدَّل من @BotFather ويُضاف TELEGRAM_BOT_TOKEN في متغيرات Convex.
+ * ووجود `legacy-leaked-secret-allowlisted` في هذا السطر يُعلم حاجز الأسرار الآلي
+ * (`.github/workflows/secret-scan.yml`) بأن هذا التوكن معروف ومنتظر إزالته، وأن
+ * أي توكن آخر يُكتشف هو تسريب جديد يجب إيقاف البناء عنده.
+ */
+function telegramTokenUsesLegacy(): boolean {
+  const env = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  if (env) return false;
+  return !!TELEGRAM_BOT_TOKEN_LEGACY;
+}
+
+/** توكن البوت الفعلي: متغير البيئة أولاً، ثم القديم (مع تنبيه صريح في اللوحة). */
+function telegramToken(): string {
+  return process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_LEGACY;
+}
+
 // ── Telegram ──────────────────────────────────────────────────────────
 async function postToTelegram(text: string): Promise<boolean> {
-  const token = process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_DEFAULT;
+  const token = telegramToken();
   const envChats = (process.env.TELEGRAM_CHAT_ID ?? "").trim();
   const chats = envChats
     ? envChats.split(",").map((c) => c.trim()).filter(Boolean)
@@ -342,9 +360,8 @@ export const getChannelSetup = action({
     // نفس منطق الإرسال الفعلي: توكن البوت من البيئة أو الافتراضي، والقناة من
     // البيئة أو الافتراضية — فلا تناقض بين بطاقة الإعداد وفحص الصحة.
     const telegram =
-      !!(
-        process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_DEFAULT
-      ) && !!(process.env.TELEGRAM_CHAT_ID?.trim() || TELEGRAM_CHAT_ID_DEFAULT);
+      !!telegramToken() &&
+      !!(process.env.TELEGRAM_CHAT_ID?.trim() || TELEGRAM_CHAT_ID_DEFAULT);
     const whatsapp = !!wa.token && !!wa.phoneNumberId;
     const facebook = !!fb.token;
     const facebookGroup = !!fb.token;
@@ -803,7 +820,7 @@ async function timedJson(
 }
 
 async function checkTelegram(): Promise<ChannelHealthRow> {
-  const token = process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_DEFAULT;
+  const token = telegramToken();
   const envChats = (process.env.TELEGRAM_CHAT_ID ?? "").trim();
   const chatId = envChats ? envChats.split(",")[0].trim() : TELEGRAM_CHAT_ID_DEFAULT;
   if (!token) {
@@ -825,7 +842,10 @@ async function checkTelegram(): Promise<ChannelHealthRow> {
     return {
       channel: "telegram",
       status: "ok",
-      detail: `البوت @${me.data.result.username} — القناة: ${chat.data.result.title ?? chatId}`,
+      detail: telegramTokenUsesLegacy()
+        ? `البوت @${me.data.result.username} — القناة: ${chat.data.result.title ?? chatId} · ⚠️ يعمل بتوكن قديم مسرّب: بدّله من @BotFather وأضف TELEGRAM_BOT_TOKEN في متغيرات Convex الآن`
+        : `البوت @${me.data.result.username} — القناة: ${chat.data.result.title ?? chatId}`,
+
       latencyMs: me.latencyMs,
     };
   }

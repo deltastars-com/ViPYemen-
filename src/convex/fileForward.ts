@@ -22,7 +22,9 @@ import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 
 // ── Constants ─────────────────────────────────────────────────────────
-const TELEGRAM_BOT_TOKEN_DEFAULT = "8876814738:AAFepkzzC0g__-xGz9JE_sqvq0JMM1kHVWM";
+// ⚠️ توكن قديم مسرّب (كان مكتوباً في المستودع) — يُبدَّل من @BotFather ويُضاف
+// TELEGRAM_BOT_TOKEN في متغيرات Convex. يوجد كبديل أخير فقط كي لا تتوقف القناة.
+const TELEGRAM_BOT_TOKEN_LEGACY = "8876814738:AAFepkzzC0g__-xGz9JE_sqvq0JMM1kHVWM"; // legacy-leaked-secret-allowlisted
 const TELEGRAM_CHAT_ID_DEFAULT = "@vipyemen77";
 const FB_GROUP_ID_DEFAULT = "346010664332427";
 
@@ -36,7 +38,7 @@ const TG_MAX_VIDEO_MB = 50;
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function getTelegramConfig() {
-  const token = process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_DEFAULT;
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_LEGACY;
   const chatId = process.env.TELEGRAM_CHAT_ID?.trim() || TELEGRAM_CHAT_ID_DEFAULT;
   return { token, chatId };
 }

@@ -28,6 +28,9 @@ const AssistantPage = lazy(() =>
 const PrivacyPolicyPage = lazy(() =>
   import("./pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage }))
 );
+const DataDeletionPage = lazy(() =>
+  import("./pages/DataDeletionPage").then((m) => ({ default: m.DataDeletionPage }))
+);
 const TermsPage = lazy(() =>
   import("./pages/TermsPage").then((m) => ({ default: m.TermsPage }))
 );
@@ -162,6 +165,7 @@ export default function App() {
               <Route path="/channels" element={<ChannelsPage />} />
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+              <Route path="/data-deletion" element={<DataDeletionPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/payment" element={<PaymentPage />} />
               <Route path="/unsubscribe" element={<UnsubscribePage />} />

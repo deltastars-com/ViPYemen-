@@ -345,6 +345,10 @@ export const getRenewalStatePublic = internalQuery({
       tokenDaysLeft: tokenExpiresAt > 0 ? Math.ceil((tokenExpiresAt - now) / 86_400_000) : null,
       canPost: typeof config.facebookCanPost === "boolean" ? config.facebookCanPost : null,
       pageName: (config.facebookPageName as string | undefined) ?? "",
+      // نتيجة آخر اختبار نشر فعلي (لا تحوي أي سر — رسالة Graph نفسها).
+      lastProbeAt: Number(config.facebookLastProbeAt ?? 0) || null,
+      probeDetail: (config.facebookPostingDetail as string | undefined) ?? "",
+      pageIdSaved: ((config.facebookPageId as string | undefined) ?? "").length > 0,
     };
   },
 });

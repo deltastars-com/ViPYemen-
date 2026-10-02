@@ -33,6 +33,7 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
     const envToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
     const envPageToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN?.trim() ?? "";
     const envPageName = process.env.FACEBOOK_PAGE_NAME?.trim() ?? "";
+    const envPageId = process.env.FACEBOOK_PAGE_ID?.trim() ?? "";
     const envAppId = process.env.FACEBOOK_APP_ID?.trim() ?? "";
     const envAppSecret = process.env.FACEBOOK_APP_SECRET?.trim() ?? "";
     const storedToken = config.facebookAccessToken?.trim() ?? "";
@@ -54,6 +55,11 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
       credsValues.facebookAppSecret = envAppSecret;
     }
     if (envPageName) credsValues.facebookPageName = envPageName;
+    // معرّف الصفحة من متغيرات البيئة يُثبّت في الإعدادات إن لم يكن محفوظاً،
+    // وإلا تعطّل اختبار النشر الفعلي والنشر على الصفحة معاً.
+    if (envPageId && !config.facebookPageId) credsValues.facebookPageId = envPageId;
+    const envGroupId = (process.env.FACEBOOK_GROUP_ID ?? "").trim();
+    if (envGroupId && !config.facebookGroupId) credsValues.facebookGroupId = envGroupId;
 
     /** تقييم توكن: حيّ؟ ويمنح صلاحية النشر؟ */
     const evaluate = async (
@@ -183,7 +189,9 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
       if (!appId) values.facebookAppId = discoveredAppId;
       if (inspected.appName) values.facebookTokenAppName = inspected.appName;
     }
-    if (inspected.profileId && !config.facebookPageId) {
+    // معرّف الصفحة من التوكن — لتوكنات الصفحات فقط (profile_id لتوكن المستخدم
+    // هو معرّف المستخدم، وليس صفحة).
+    if (inspected.type === "PAGE" && inspected.profileId && !config.facebookPageId) {
       values.facebookPageId = inspected.profileId;
     }
 
@@ -400,7 +408,12 @@ async function runProbePosting(
 ): Promise<{ ok: boolean; canPost: boolean | null; detail: string; skipped?: boolean }> {
   const config = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as FacebookConfig;
   const token = config.facebookAccessToken?.trim() ?? "";
-  const pageId = config.facebookPageId?.trim() ?? "";
+  // معرّف الصفحة: من الإعدادات أولاً، ثم من متغيرات البيئة، ثم الافتراضي — فلا
+  // يتعطّل الاختبار إن كان الربط قد جاء من متغيرات Convex وحدها.
+  const pageId =
+    config.facebookPageId?.trim() ||
+    (process.env.FACEBOOK_PAGE_ID ?? "").trim() ||
+    DEFAULT_PAGE_ID;
   if (!token || !pageId) {
     return { ok: false, canPost: null, detail: "لا يوجد توكن أو معرّف صفحة للاختبار" };
   }

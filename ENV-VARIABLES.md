@@ -38,8 +38,8 @@ Source: https://github.com/rmyndharis/OpenWA — used automatically when Meta Cl
 - `FACEBOOK_PAGE_ID` — Page numeric ID: `102672588647591` (https://facebook.com/vipyemen1)
 - `FACEBOOK_PAGE_NAME` — اسم الصفحة كما يظهر في المنشورات (اختياري)
 - `FACEBOOK_GROUP_ID` — Group ID: `346010664332427` (https://facebook.com/groups/346010664332427/)
-- `FACEBOOK_APP_ID` — معرّف التطبيق (لتبديل التوكن إلى 60 يوماً ثم توكن صفحة دائم)
-- `FACEBOOK_APP_SECRET` — سرّ التطبيق (لا يُكشف أبداً — يُستخدم للتبديل والتجديد الذاتي فقط)
+- `FACEBOOK_APP_ID` — معرّف التطبيق *(يُستخرج آلياً من التوكن فلا حاجة لإضافته يدوياً)*
+- `FACEBOOK_APP_SECRET` — سرّ التطبيق — **المتغير الوحيد الملزم يدوياً** لتفعيل التبديل والتجديد الذاتي (لا يُكشف أبداً ولا يمكن استنباطه)
 
 > 🛑 **الوحيد الذي يهم للنشر هو متغيرات نشر Convex** (Convex Dashboard ← Settings ←
 > Environment Variables). متغيرات GitHub/Vercel/Render تُصلح فقط واجهة الموقع ولا تصل

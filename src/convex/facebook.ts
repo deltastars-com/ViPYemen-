@@ -20,6 +20,8 @@ import type { FacebookConfig } from "./facebookStore";
 const GRAPH = "https://graph.facebook.com/v21.0";
 const RENEW_WINDOW_DAYS = 20;
 const DAY = 86_400_000;
+/** لا نُكرّر اختبار النشر الفعلي أكثر من مرة كل ٦ ساعات (حماية من الإفراط). */
+const PROBE_THROTTLE = 6 * 60 * 60 * 1000;
 
 /**
  * 🌱 تهيئة أولية: لو غاب توكن اللوحة تماماً، تُستخدم متغيرات البيئة
@@ -114,22 +116,22 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
               : "توكن صفحة دائم لا ينتهي — تُتأكد صلاحية النشر عند أول نشر فعلي";
         }
         await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values: pageValues });
-        const resumed = pageEval.canPost !== false;
-        if (resumed) {
-          await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
-        }
+        // 🎯 توكن الصفحة لا تُقرأ صلاحياته من debug_token — الحكم القاطع هو اختبار
+        // نشر فعلي: منشور مخفي يُحذف فوراً. عند النجاح يرتفع الإيقاف تلقائياً.
+        const pageProbe = await runProbePosting(ctx, true);
         await ctx.runMutation(internal.channelPush.logChannelEvent, {
           title: "🔗 رُبط توكن صفحة دائم من متغيرات البيئة",
-          message: resumed
-            ? "توكن الصفحة من FACEBOOK_PAGE_ACCESS_TOKEN لا ينتهي — النشر التلقائي على الصفحة مستأنف بلا حاجة إلى App ID أو App Secret."
-            : pageEval.detail,
+          message:
+            pageProbe.canPost === true
+              ? "توكن الصفحة لا ينتهي، وتأكدت صلاحية النشر باختبار فعلي — النشر التلقائي على الصفحة مستأنف بلا حاجة إلى App ID أو App Secret."
+              : `توكن الصفحة لا ينتهي، لكن اختبار النشر الفعلي لم ينجح: ${pageProbe.detail}`,
         });
         return {
-          ok: resumed,
+          ok: pageProbe.canPost === true,
           reason: "page-token-from-env",
-          canPost: pageEval.canPost,
-          resumed,
-          detail: pageEval.detail,
+          canPost: pageProbe.canPost,
+          resumed: pageProbe.canPost === true,
+          detail: pageProbe.detail,
         };
       }
     }
@@ -170,6 +172,19 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
     if (envAppId && envAppSecret) {
       values.facebookAppId = envAppId;
       values.facebookAppSecret = envAppSecret;
+    }
+
+    // 🧠 معرّف التطبيق يُستخرج آلياً من debug_token — فلا نُثقل على المشرف طلبه.
+    // ولكن سرّ التطبيق لا يمكن استنباطه أبداً (بتصميم Meta)؛ لذا نوضّح في اللوحة
+    // أن المتبقي هو السر وحده تسميةً.
+    const discoveredAppId = inspected.appId?.trim() ?? "";
+    if (discoveredAppId) {
+      values.facebookTokenAppId = discoveredAppId;
+      if (!appId) values.facebookAppId = discoveredAppId;
+      if (inspected.appName) values.facebookTokenAppName = inspected.appName;
+    }
+    if (inspected.profileId && !config.facebookPageId) {
+      values.facebookPageId = inspected.profileId;
     }
 
     let publishToken = envToken;
@@ -221,14 +236,20 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
         finalEval.detail ||
         (finalEval.canPost === true ? "صلاحية النشر ممنوحة (pages_manage_posts)" : "");
       values.facebookLastError = finalEval.canPost === true ? "" : finalEval.detail;
-    }
-
-    await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values });
+    }    await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values });
 
     let resumed = false;
     if (finalEval.canPost === true) {
       await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
       resumed = true;
+    } else {
+      // 🎯 ما زالت الصلاحية غير مؤكدة — نُشغّل اختبار النشر الفعلي (مرة كل ٦ ساعات
+      // كحد أقصى) فيحسمها النظام بنفسه: إما يرفع الإيقاف، أو يسجّل خطأ Meta
+      // الحقيقي بالعربية في اللوحة وسجل القنوات.
+      const probed = await runProbePosting(ctx, false);
+      if (probed.canPost === true) resumed = true;
+      if (probed.canPost !== null) finalEval.canPost = probed.canPost;
+      finalEval.detail = probed.detail || finalEval.detail;
     }
     await ctx.runMutation(internal.channelPush.logChannelEvent, {
       title: storedToken ? "🔄 استُبدل توكن فيسبوك بتحديث الأسرار" : "🔗 استُورد توكن فيسبوك من البيئة تلقائياً",
@@ -327,6 +348,138 @@ interface GraphResult {
   error?: string;
 }
 
+/** إرسال POST إلى Graph (يُستخدم لاختبار النشر الفعلي). */
+async function graphPost(path: string, body: Record<string, unknown>): Promise<GraphResult> {
+  try {
+    const res = await fetch(`${GRAPH}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store" as RequestCache,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.error) {
+      return { ok: false, status: res.status, data, error: data?.error?.message ?? `HTTP ${res.status}` };
+    }
+    return { ok: true, status: res.status, data };
+  } catch (err: any) {
+    return { ok: false, status: 0, data: {}, error: err?.message ?? String(err) };
+  }
+}
+
+/** حذف كائن من Graph (لتنظيف مسودة الاختبار فوراً). */
+async function graphDelete(id: string, token: string): Promise<GraphResult> {
+  try {
+    const url = new URL(`${GRAPH}/${id}`);
+    url.searchParams.set("access_token", token);
+    const res = await fetch(url, { method: "DELETE", cache: "no-store" as RequestCache });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.error) {
+      return { ok: false, status: res.status, data, error: data?.error?.message ?? `HTTP ${res.status}` };
+    }
+    return { ok: true, status: res.status, data };
+  } catch (err: any) {
+    return { ok: false, status: 0, data: {}, error: err?.message ?? String(err) };
+  }
+}
+
+/**
+ * 🎯 الحكم القاطع على صلاحية النشر.
+ *
+ * `debug_token` لا يُظهر صلاحيات توكن الصفحة إطلاقاً، ولهذا تبقى الحالة
+ * «غير معروفة» أبدياً ما لم يُنشر شيء فعلاً. الحل المستعمل هنا: إنشاء منشور
+ * **غير منشور** (published=false) على الصفحة، ثم حذفه فوراً — فلا يراه الجمهور
+ * ولا يبقى له أثر، والنتيجة قاطعة: إما يُنشأ فعلاً، أو يُعيد فيسبوك خطأه
+ * الحقيقي بالعربية في السجل.
+ *
+ * وعند النجاح يرتفع الإيقاف عن قناة فيسبوك تلقائياً بلا أي تدخل.
+ */
+async function runProbePosting(
+  ctx: ActionCtx,
+  force = false
+): Promise<{ ok: boolean; canPost: boolean | null; detail: string; skipped?: boolean }> {
+  const config = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as FacebookConfig;
+  const token = config.facebookAccessToken?.trim() ?? "";
+  const pageId = config.facebookPageId?.trim() ?? "";
+  if (!token || !pageId) {
+    return { ok: false, canPost: null, detail: "لا يوجد توكن أو معرّف صفحة للاختبار" };
+  }
+  if (!force && config.facebookCanPost === true) {
+    return { ok: true, canPost: true, detail: "الصلاحية مؤكدة سابقاً", skipped: true };
+  }
+  const last = config.facebookLastProbeAt ?? 0;
+  if (!force && Date.now() - last < PROBE_THROTTLE) {
+    return {
+      ok: true,
+      canPost: typeof config.facebookCanPost === "boolean" ? config.facebookCanPost : null,
+      detail: "اختُبر خلال آخر ٦ ساعات",
+      skipped: true,
+    };
+  }
+
+  const res = await graphPost(`/${pageId}/feed`, {
+    message: "فحص آلي لصلاحية النشر — يُحذف فوراً",
+    published: false,
+    access_token: token,
+  });
+  const values: Record<string, unknown> = { facebookLastProbeAt: Date.now() };
+
+  if (res.ok && res.data?.id) {
+    const cleanup = await graphDelete(String(res.data.id), token);
+    values.facebookCanPost = true;
+    values.facebookPostingDetail =
+      "✅ تأكدت صلاحية النشر باختبار فعلي (أُنشئ منشور مخفي وحُذف فوراً)";
+    values.facebookLastError = "";
+    await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values });
+    await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
+    await ctx.runMutation(internal.channelPush.logChannelEvent, {
+      title: "✅ تأكدت صلاحية النشر على الصفحة باختبار فعلي",
+      message: cleanup.ok
+        ? "أُنشئ منشور مخفي على الصفحة وحُذف فوراً — صلاحية pages_manage_posts مؤكدة، ورُفعت قناة فيسبوك من الإيقاف تلقائياً."
+        : `كُتب المنشور المخفي ونجح الاختبار، لكن تعذّر حذفه آلياً (${cleanup.error ?? "سبب غير معروف"}) — احذفه من إدارة الصفحة.`,
+    });
+    return { ok: true, canPost: true, detail: "صلاحية النشر مؤكدة باختبار فعلي" };
+  }
+
+  const detail = res.error ?? "فشل غير معروف";
+  // خطأ الصلاحية يظهر بصور متعددة: (#200) أو (#3) أو permission أو نفس رسالة Meta
+  const permissionIssue =
+    res.status === 403 ||
+    /permission|pages_manage_posts|#200|#3\b|pages_read_engagement/i.test(detail);
+  values.facebookPostingDetail = permissionIssue
+    ? `⛔ اختبار النشر الفعلي رُفض: ${detail} — الصلاحية المطلوبة غير ممنوحة للتوكن`
+    : `⚠️ اختبار النشر الفعلي لم يكتمل: ${detail}`;
+  values.facebookLastError = String(values.facebookPostingDetail);
+  if (permissionIssue) values.facebookCanPost = false;
+  await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values });
+  await ctx.runMutation(internal.channelPush.logChannelEvent, {
+    title: permissionIssue
+      ? "⛔ اختبار النشر الفعلي: صلاحية النشر غير ممنوحة"
+      : "🧲 اختبار النشر الفعلي لم يكتمل",
+    message: String(values.facebookPostingDetail),
+  });
+  return { ok: false, canPost: permissionIssue ? false : null, detail };
+}
+
+/** داخلي — يُشغّل اختبار النشر الدورى من دورة الأتمتة. */
+export const probePostingInternal = internalAction({
+  args: {},
+  handler: async (ctx: ActionCtx) => await runProbePosting(ctx, false),
+});
+
+/**
+ * 🔬 اختبار النشر الفعلي بطلب المشرف — يحسم صلاحية `pages_manage_posts` نهائياً
+ * (منشور مخفي يُحذف فوراً)، ويُرفع الإيقاف عن القناة عند النجاح.
+ */
+export const testPosting = action({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    // يرمي خطأً إن لم تكن الجلسة إدارية
+    await ctx.runQuery(api.settings.getAll, { token });
+    return await runProbePosting(ctx, true);
+  },
+});
+
 async function graphGet(path: string, params: Record<string, string>): Promise<GraphResult> {
   const url = new URL(`${GRAPH}${path}`);
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
@@ -380,6 +533,11 @@ async function inspectToken(
   expiresAt: number;
   scopes: string[];
   userId?: string;
+  /** معرّف التطبيق المالك للتوكن — يُستخرج آلياً فلا يُطلب من المشرف. */
+  appId?: string;
+  appName?: string;
+  /** معرّف الصفحة/الملف الذي يخصّه توكن الصفحة. */
+  profileId?: string;
   error?: string;
 }> {
   const accessToken = appId && appSecret ? `${appId}|${appSecret}` : token;
@@ -393,6 +551,9 @@ async function inspectToken(
     expires_at?: number;
     scopes?: string[];
     user_id?: string;
+    app_id?: string | number;
+    application?: string;
+    profile_id?: string | number;
   };
   return {
     valid: !!data.is_valid,
@@ -400,6 +561,9 @@ async function inspectToken(
     expiresAt: Number(data.expires_at ?? 0) * 1000,
     scopes: data.scopes ?? [],
     userId: data.user_id,
+    appId: data.app_id !== undefined ? String(data.app_id) : undefined,
+    appName: data.application,
+    profileId: data.profile_id !== undefined ? String(data.profile_id) : undefined,
   };
 }
 

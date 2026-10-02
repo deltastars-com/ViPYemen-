@@ -58,6 +58,13 @@ export const tick = internalMutation({
     // المستخدم (أقل من 20 يوماً) أو انتهاء توكن الصفحة — فلا يتوقف النشر أبداً.
     await ctx.scheduler.runAfter(0, internal.facebook.refreshTokenInternal, {});
 
+    // ── 3e. 🎯 اختبار النشر الفعلي على صفحة فيسبوك ───────────────────
+    // توكن الصفحة لا تُقرأ صلاحياته من debug_token، فالاختبار الفعلي (منشور
+    // مخفي يُحذف فوراً) هو الحكم القاطع. يعمل مرة كل ٦ ساعات كحد أقصى،
+    // ولا يعمل إطلاقاً إذا كانت الصلاحية مؤكدة سابقاً — وعند نجاحه يرتفع
+    // الإيقاف عن قناة فيسبوك تلقائياً بلا أي تدخل يدوي.
+    await ctx.scheduler.runAfter(0, internal.facebook.probePostingInternal, {});
+
     // ── 4. Notify admin about stale pending submissions (>7 days) ────
     const staleCutoff = now - 7 * 24 * 60 * 60 * 1000;
     const stalePending = await ctx.db

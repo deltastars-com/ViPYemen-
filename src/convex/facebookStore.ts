@@ -32,6 +32,9 @@ export const KEYS = [
   "facebookCanPost",
   "facebookPostingDetail",
   "facebookTokenType",
+  "facebookLastProbeAt",
+  "facebookTokenAppId",
+  "facebookTokenAppName",
 ] as const;
 
 export type FacebookKey = (typeof KEYS)[number];
@@ -53,6 +56,12 @@ export interface FacebookConfig {
   facebookPostingDetail?: string;
   /** نوع التوكن المخزّن كما أفادت Graph API: PAGE (دائم) أو USER (ينتهي). */
   facebookTokenType?: string;
+  /** وقت آخر اختبار نشر فعلي (منشور مخفي يُحذف فوراً) — ms. */
+  facebookLastProbeAt?: number;
+  /** معرّف التطبيق المالك للتوكن — يُستخرج آلياً من debug_token. */
+  facebookTokenAppId?: string;
+  /** اسم التطبيق المالك للتوكن — للعرض فقط. */
+  facebookTokenAppName?: string;
 }
 
 async function readConfig(ctx: { db: any }): Promise<FacebookConfig> {
@@ -190,9 +199,22 @@ export const getFacebookStatus = query({
         detail:
           config.facebookAppId && config.facebookAppSecret
             ? "محفوظان — التجديد الذاتي ممكن"
-            : appCredsInEnv
-              ? "موجودان في متغيرات Convex — سيُستوردان في الدورة القادمة (٥ دقائق)"
-              : "أضف FACEBOOK_APP_ID و FACEBOOK_APP_SECRET في متغيرات Convex لإعمال التبديل والتجديد الآلي",
+            : config.facebookAppId && !config.facebookAppSecret
+              ? `معرّف التطبيق مُستخرج آلياً (${config.facebookTokenAppName || config.facebookAppId}) — المتبقي: سرّ التطبيق FACEBOOK_APP_SECRET في متغيرات Convex`
+              : appCredsInEnv
+                ? "موجودان في متغيرات Convex — سيُستوردان في الدورة القادمة (٥ دقائق)"
+                : "أضف FACEBOOK_APP_SECRET في متغيرات Convex (معرّف التطبيق يُستخرج آلياً من التوكن)",
+      },
+      {
+        id: "posting-probe",
+        label: "اختبار النشر الفعلي (منشور مخفي يُحذف) — الحكم القاطع",
+        state: config.facebookCanPost === true ? "ok" : config.facebookCanPost === false ? "fail" : "warn",
+        detail:
+          config.facebookCanPost === true
+            ? "نجح الاختبار الفعلي — النشر على الصفحة ممكن"
+            : config.facebookLastProbeAt
+              ? `${config.facebookPostingDetail || "لم ينجح"} (آخر اختبار: ${new Date(config.facebookLastProbeAt).toISOString().slice(0, 16).replace("T", " ")} UTC)`
+              : "لم يُجرَ بعد — سيُجرى آلياً كل ٦ ساعات، ويمكن تشغيله فوراً بزر «اختبار النشر الفعلي»",
       },
       {
         id: "auto-renew",

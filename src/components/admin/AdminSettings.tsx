@@ -14,6 +14,7 @@ import {
   XCircle,
   Mail,
   Power,
+  FlaskConical,
 } from "lucide-react";
 import {
   enrollBiometric,
@@ -649,6 +650,7 @@ function ChannelSwitchesCard({ token }: { token: string }) {
 function FacebookConnectCard({ token }: { token: string }) {
   const connect = useAction(api.facebook.connectFacebook);
   const refresh = useAction(api.facebookStore.refreshNow);
+  const probe = useAction(api.facebook.testPosting);
   const status = useQuery(api.facebookStore.getFacebookStatus, { token });
 
   const [mode, setMode] = useState<"exchange" | "direct">("exchange");
@@ -659,7 +661,27 @@ function FacebookConnectCard({ token }: { token: string }) {
   const [groupId, setGroupId] = useState("");
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<any>(null);
+  const [probeMsg, setProbeMsg] = useState("");
   const [error, setError] = useState("");
+
+  /** 🔬 اختبار النشر الفعلي — منشور مخفي يُحذف فوراً، ويُرفع الإيقاف عند النجاح. */
+  async function runProbe() {
+    setBusy(true);
+    setError("");
+    setProbeMsg("");
+    try {
+      const result = await probe({ token });
+      setProbeMsg(
+        result.canPost === true
+          ? "✅ تأكدت صلاحية النشر فعلياً: أُنشئ منشور مخفي وحُذف فوراً، ورفعت المنصة قناة فيسبوك من الإيقاف تلقائياً."
+          : `⛔ الاختبار الفعلي لم ينجح: ${result.detail}`
+      );
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function renewNow() {
     setBusy(true);
@@ -856,7 +878,25 @@ function FacebookConnectCard({ token }: { token: string }) {
               جدّد التوكن الآن
             </Button>
           )}
+          {status?.connected && (
+            <Button variant="ghost" loading={busy} onClick={runProbe} className="!py-2 text-xs">
+              <FlaskConical className="h-4 w-4" />
+              اختبار النشر الفعلي
+            </Button>
+          )}
         </div>
+
+        {probeMsg && (
+          <p
+            className={`rounded-lg border px-3 py-2 text-[11px] font-bold ${
+              probeMsg.startsWith("✅")
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                : "border-rose-500/40 bg-rose-500/10 text-rose-200"
+            }`}
+          >
+            {probeMsg}
+          </p>
+        )}
 
         {error && (
           <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[11px] font-bold text-rose-300">

@@ -313,6 +313,12 @@ export const getRenewalStatePublic = internalQuery({
       "facebookUserTokenExpiresAt",
       "facebookCanPost",
       "facebookPageName",
+      // مفاتيح التشخيص التي كانت ناقصة هنا، فكانت نقطة /channels تُعلنها
+      // «غير موجودة» حتى لو كانت محفوظة فعلاً (رسائل مضلّلة).
+      "facebookPageId",
+      "facebookTokenType",
+      "facebookLastProbeAt",
+      "facebookPostingDetail",
     ];
     const config: Record<string, string | number | boolean | undefined> = {};
     for (const key of keys) {

@@ -4,6 +4,25 @@
 
 ---
 
+## v6.7.51 — صفحة حذف البيانات كملف HTML حقيقي على كل المرايا
+
+صفحة `/data-deletion` كانت موجودة كمكوّن React فقط، ومعطوبة على بعض المرايا:
+**GitHub Pages = 404** و**Render = 404** و**Vercel = 200 لكن واجهة فارغة بلا JavaScript** —
+وهذا يفشل عند زواحف مراجعة Meta وGoogle Play التي لا تُنفّذ JavaScript أصلاً.
+
+- **جديد:** `public/data-deletion.html` — صفحة مستقلة ثنائية اللغة (عربي/إنجليزي) بلا أي
+  JavaScript: طريقة الطلب · ما يُحذف · المدة (٣٠ يوماً) · الحذف عبر فيسبوك مع رمز تأكيد،
+  بالطريقة المعتمدة نفسها لصفحة سياسة الخصوصية.
+- **صارت تُخدَم بـ 200 على المرايا كلها:** Vercel (`/data-deletion` و `/data-deletion.html`
+  عبر `cleanUrls`) · GitHub Pages (`/data-deletion` و`/data-deletion/` و`/data-deletion.html`)
+  · Render (‏`/data-deletion` — حلّ تلقائي للامتداد) · Netlify وEdgeOne (قواعد إعادة كتابة
+  صريحة أُضيفت لإستثناء الصفحتين من تحويل SPA).
+- `vercel.json`: `cleanUrls: true` — روابط نظيفة بلا `.html` وملفات HTML حقيقية لزواحف المتاجر.
+- `pages.yml`: نسخ `data-deletion.html` إلى `dist/data-deletion/index.html` مثل سياسة الخصوصية.
+- `META-DATA-ACCESS-RENEWAL.md`: تحديث الرابط المُختبر مع نسخة `.html` صريحة كخطة بديلة.
+
+---
+
 ## v6.7.50 — حاجز الأسرار · صفحة حذف البيانات · معرّف التطبيق الجاهز · دليل تجديد Meta
 
 ### 🔐 حاجز الأسرار الآلي (منع تكرار التسريب)

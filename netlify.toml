@@ -2,6 +2,17 @@
   command = "npm ci && npm run build"
   publish = "dist"
 
+# صفحات HTML حقيقية (لا تحتاج JavaScript) لمراجعي المتاجر وMeta
+[[redirects]]
+  from = "/privacy-policy"
+  to = "/privacy-policy.html"
+  status = 200
+
+[[redirects]]
+  from = "/data-deletion"
+  to = "/data-deletion.html"
+  status = 200
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

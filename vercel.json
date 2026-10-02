@@ -8,8 +8,9 @@
       "gh-pages": false
     }
   },
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/((?!assets/|icons/|qr/|llms.txt|robots.txt|sitemap.xml|privacy-policy.html).*)", "destination": "/index.html" }
+    { "source": "/((?!assets/|icons/|qr/|llms.txt|robots.txt|sitemap.xml|privacy-policy|data-deletion).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

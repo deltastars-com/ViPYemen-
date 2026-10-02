@@ -32,6 +32,10 @@
    - **Privacy Policy URL** → `https://vi-p-yemen.vercel.app/privacy-policy`
    - **Terms of Service URL** → `https://vi-p-yemen.vercel.app/terms`
    - **Data Deletion Instructions URL** → `https://vi-p-yemen.vercel.app/data-deletion` *(صفحة أنشئت لهذا الشرط بالتحديد)*
+     — وإن رفض الرفع الرابط، جُرّب النسخة الصريحة `https://vi-p-yemen.vercel.app/data-deletion.html`
+     (ملف HTML حقيقي بلا JavaScript — وهو ما تفضّله زواحف المراجعة).
+     > الروابط مُختبرة على المرايا الثلاث: Vercel · GitHub Pages · Render — وكلها تُخدم من
+     > نفس المصدر (`public/data-deletion.html`)، وعلى Netlify وEdgeOne مع قواعد إعادة كتابة صريحة.
    - **App Domains** → `vi-p-yemen.vercel.app`
    - **Category** → Business and Pages / Employment
    - **App Icon** (1024×1024) و**Business Verification** إن ظهر مطلوباً.

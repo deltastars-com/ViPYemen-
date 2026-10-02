@@ -154,6 +154,14 @@ jobs:
           mkdir -p dist/privacy-policy
           cp dist/privacy-policy.html dist/privacy-policy/index.html
 
+      # Same treatment for the data-deletion page Meta requires as
+      # "Data Deletion Instructions URL" during data access renewal, and that
+      # Google Play review crawlers fetch (they do not run JavaScript).
+      - name: Publish standalone data deletion page
+        run: |
+          mkdir -p dist/data-deletion
+          cp dist/data-deletion.html dist/data-deletion/index.html
+
       # Vercel previews every branch push by default, including this
       # generated gh-pages branch. That branch holds only build output (no
       # package.json), so Vercel's install step fails there and paints the

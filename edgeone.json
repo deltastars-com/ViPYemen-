@@ -6,7 +6,7 @@
   "installCommand": "npm ci",
   "rewrites": [
     {
-      "source": "/((?!assets|qr|icons|sw.js|manifest.webmanifest|robots.txt|sitemap.xml|llms.txt|favicon.ico).*)",
+      "source": "/((?!assets|qr|icons|sw.js|manifest.webmanifest|robots.txt|sitemap.xml|llms.txt|favicon.ico|privacy-policy|data-deletion).*)",
       "destination": "/index.html"
     }
   ],

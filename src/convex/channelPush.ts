@@ -103,9 +103,19 @@ export const unpauseIfTokenHealthy = internalMutation({
     const fb = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as {
       facebookAccessToken?: string;
       facebookCanPost?: boolean;
+      facebookTokenExpiresAt?: number;
+      facebookTokenType?: string;
     };
     const token = fb.facebookAccessToken?.trim() ?? "";
-    if (!token || fb.facebookCanPost !== true) return { ok: false, changed: [] };
+    if (!token) return { ok: false, changed: [] };
+    // نرفع الإيقاف عند تأكيد صلاحية النشر، أو عند توكن صفحة دائم (لا ينتهي)
+    // وصلاحيته غير مؤكدة — لأن تأكيدها العملي الوحيد هو محاولة نشر فعلية،
+    // وأي فشل يُسجّل فوراً في سجل القنوات مع سببه الدقيق.
+    const pageTokenUnverified =
+      fb.facebookTokenType === "PAGE" &&
+      fb.facebookCanPost === null &&
+      Number(fb.facebookTokenExpiresAt ?? 0) === 0;
+    if (fb.facebookCanPost !== true && !pageTokenUnverified) return { ok: false, changed: [] };
     const row = await ctx.db
       .query("settings")
       .withIndex("by_key", (q) => q.eq("key", "channelPaused"))
@@ -318,8 +328,16 @@ export const getRenewalStatePublic = internalQuery({
     const token = (config.facebookAccessToken as string | undefined)?.trim() ?? "";
     const tokenExpiresAt = Number(config.facebookTokenExpiresAt ?? 0);
     const now = Date.now();
+    // وجود الأسرار في بيئة Convex نفسه (قيم منطقية فقط — لا تُكشف أي قيمة).
+    const appCredsInEnv =
+      (process.env.FACEBOOK_APP_ID ?? "").trim().length > 0 &&
+      (process.env.FACEBOOK_APP_SECRET ?? "").trim().length > 0;
+    const pageTokenInEnv = (process.env.FACEBOOK_PAGE_ACCESS_TOKEN ?? "").trim().length > 0;
     return {
       hasAppCredentials: appId.length > 0 && appSecret.length > 0,
+      appCredentialsInEnv: appCredsInEnv,
+      pageTokenInEnv,
+      tokenType: (config.facebookTokenType as string | undefined) ?? "",
       hasUserToken: userToken.length > 0,
       hasToken: token.length > 0,
       autoRenew: appId.length > 0 && appSecret.length > 0 && userToken.length > 0,

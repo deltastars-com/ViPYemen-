@@ -768,6 +768,35 @@ function FacebookConnectCard({ token }: { token: string }) {
         </div>
       )}
 
+      {/* 🔎 قائمة تحقق التفعيل الحيّة — تقرأ طويل الأجل ووضع التوكن معاً
+          فتُظهر البند الناقص بالضبط بدل تخمين سبب توقف النشر. */}
+      {status?.activation && (
+        <div className="mb-3 space-y-2 rounded-lg border border-gold-500/25 bg-ink-950/60 p-3">
+          <p className="text-[11px] font-black text-gold-300">
+            🩺 قائمة تحقق التفعيل التلقائي الدائم
+          </p>
+          <div className="grid gap-1.5 text-[11px]">
+            {status.activation.map((row) => (
+              <div key={row.id} className="flex items-start gap-2">
+                <span className="mt-[1px] shrink-0">
+                  {row.state === "ok" ? "✅" : row.state === "fail" ? "⛔" : "⚠️"}
+                </span>
+                <span className={row.state === "ok" ? "text-emerald-200" : "text-ink-200"}>
+                  <span className="font-bold">{row.label}: </span>
+                  {row.detail}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] leading-relaxed text-ink-400">
+            متغيرات Convex الآن: توكن الوصول {status.accessTokenInEnv ? "موجود ✅" : "غائب ⛔"} · بيانات اعتماد
+            التطبيق {status.appCredsInEnv ? "موجودة ✅" : "غائبة ⛔"} · توكن صفحة دائم{" "}
+            {status.pageTokenInEnv ? "موجود ✅" : "غائب"} — تُدار من Convex Dashboard ← Settings ← Environment
+            Variables؛ متغيرات GitHub/Vercel/Render لا تصل إلى مُنشر القنوات.
+          </p>
+        </div>
+      )}
+
       <div className="mb-3 flex flex-wrap gap-2">
         {([
           { key: "exchange" as const, label: "تبديل توكن قصير الأجل (موصى به)" },

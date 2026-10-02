@@ -11,6 +11,7 @@
 //   facebookConnectedAt        وقت آخر ربط ناجح
 //   facebookPageName           اسم الصفحة كما أكّدته Graph API
 //   facebookLastError          آخر خطأ تحقق (للعرض في اللوحة)
+//   facebookTokenType          نوع التوكن المخزّن: PAGE (دائم) أو USER (ينتهي)
 import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./auth";
@@ -30,6 +31,7 @@ export const KEYS = [
   "facebookLastError",
   "facebookCanPost",
   "facebookPostingDetail",
+  "facebookTokenType",
 ] as const;
 
 export type FacebookKey = (typeof KEYS)[number];
@@ -49,6 +51,8 @@ export interface FacebookConfig {
   /** هل يمنح التوكن صلاحية النشر على الصفحة (pages_manage_posts)؟ */
   facebookCanPost?: boolean;
   facebookPostingDetail?: string;
+  /** نوع التوكن المخزّن كما أفادت Graph API: PAGE (دائم) أو USER (ينتهي). */
+  facebookTokenType?: string;
 }
 
 async function readConfig(ctx: { db: any }): Promise<FacebookConfig> {
@@ -135,9 +139,85 @@ export const getFacebookStatus = query({
     const daysLeft = expiresAt > 0 ? Math.ceil((expiresAt - now) / 86_400_000) : null;
     const userDaysLeft =
       userExpiresAt > 0 ? Math.ceil((userExpiresAt - now) / 86_400_000) : null;
+    // أسماء متغيرات البيئة — قيم منطقية فقط، لا تُكشف أي قيمة سرية.
+    const envAppId = (process.env.FACEBOOK_APP_ID ?? "").trim();
+    const envAppSecret = (process.env.FACEBOOK_APP_SECRET ?? "").trim();
+    const appCredsInEnv = envAppId.length > 0 && envAppSecret.length > 0;
+    const accessTokenInEnv = (process.env.FACEBOOK_ACCESS_TOKEN ?? "").trim().length > 0;
+    const pageTokenInEnv = (process.env.FACEBOOK_PAGE_ACCESS_TOKEN ?? "").trim().length > 0;
+
+    // قائمة تحقق التفعيل — كل بند بحالة صريحة ليعرف المشرف الناقص بالضبط.
+    const activation = [
+      {
+        id: "env-token",
+        label: "توكن فيسبوك متاح للنظام",
+        state: accessToken.length > 0 || accessTokenInEnv || pageTokenInEnv ? "ok" : "fail",
+        detail:
+          accessToken.length > 0 || accessTokenInEnv || pageTokenInEnv
+            ? accessToken.length > 0
+              ? "محفوظ في المنصة"
+              : "موجود في متغيرات Convex"
+            : "أضف FACEBOOK_ACCESS_TOKEN في Convex Dashboard ← Settings ← Environment Variables",
+      },
+      {
+        id: "token-permanent",
+        label: "التوكن لا ينتهي (توكن صفحة دائم)",
+        state: expiresAt === 0 && accessToken.length > 0 ? "ok" : "warn",
+        detail:
+          expiresAt === 0 && accessToken.length > 0
+            ? config.facebookTokenType === "PAGE"
+              ? "توكن صفحة دائم"
+              : "لا ينتهي"
+            : daysLeft !== null
+              ? `ينتهي خلال ${daysLeft} يوماً`
+              : "غير مثبّت بعد",
+      },
+      {
+        id: "posting-permission",
+        label: "صلاحية النشر pages_manage_posts",
+        state: config.facebookCanPost === true ? "ok" : config.facebookCanPost === false ? "fail" : "warn",
+        detail:
+          config.facebookCanPost === true
+            ? "ممنوحة — النشر التلقائي يعمل"
+            : config.facebookCanPost === false
+              ? config.facebookPostingDetail || "غير ممنوحة — أعد توليد التوكن مع تحديد pages_manage_posts"
+              : "ستُتأكد عند أول نشر فعلي (توكن صفحة لا تُقرأ صلاحياته من debug_token)",
+      },
+      {
+        id: "app-credentials",
+        label: "App ID + App Secret (التبديل والتجديد الذاتي)",
+        state: config.facebookAppId && config.facebookAppSecret ? "ok" : appCredsInEnv ? "warn" : "fail",
+        detail:
+          config.facebookAppId && config.facebookAppSecret
+            ? "محفوظان — التجديد الذاتي ممكن"
+            : appCredsInEnv
+              ? "موجودان في متغيرات Convex — سيُستوردان في الدورة القادمة (٥ دقائق)"
+              : "أضف FACEBOOK_APP_ID و FACEBOOK_APP_SECRET في متغيرات Convex لإعمال التبديل والتجديد الآلي",
+      },
+      {
+        id: "auto-renew",
+        label: "التجديد التلقائي الدائم",
+        state:
+          !!config.facebookAppId && !!config.facebookAppSecret && !!config.facebookUserToken
+            ? "ok"
+            : "warn",
+        detail:
+          !!config.facebookAppId && !!config.facebookAppSecret && !!config.facebookUserToken
+            ? `مُفعّل${userDaysLeft !== null ? ` — توكن المستخدم يبقى ${userDaysLeft} يوماً ويُجدَّد آلياً` : ""}`
+            : config.facebookTokenType === "PAGE" && accessToken.length > 0
+              ? "غير مطلوب: توكن الصفحة الدائم لا ينتهي فلا يحتاج تبديلاً"
+              : "يُفعَّل تلقائياً عند أول تبديل ناجح (App ID + Secret + توكن مستخدم)",
+      },
+    ];
+
     return {
       connected: accessToken.length > 0,
       tokenPrefix: accessToken.length > 4 ? `${accessToken.slice(0, 4)}…` : "",
+      tokenType: config.facebookTokenType ?? "",
+      appCredsInEnv,
+      accessTokenInEnv,
+      pageTokenInEnv,
+      activation,
       pageId: config.facebookPageId ?? "",
       pageName: config.facebookPageName ?? "",
       groupId: config.facebookGroupId ?? "",

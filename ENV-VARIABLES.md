@@ -34,8 +34,16 @@ Source: https://github.com/rmyndharis/OpenWA — used automatically when Meta Cl
 
 ## FACEBOOK (Page + Group Auto-Publishing)
 - `FACEBOOK_ACCESS_TOKEN` — Permanent **Page** Access Token with `pages_manage_posts` + `publish_to_groups` permissions
+- `FACEBOOK_PAGE_ACCESS_TOKEN` — *(بديل اختياري)* توكن صفحة دائم يُلصق مباشرة — لا يحتاج App ID ولا App Secret
 - `FACEBOOK_PAGE_ID` — Page numeric ID: `102672588647591` (https://facebook.com/vipyemen1)
+- `FACEBOOK_PAGE_NAME` — اسم الصفحة كما يظهر في المنشورات (اختياري)
 - `FACEBOOK_GROUP_ID` — Group ID: `346010664332427` (https://facebook.com/groups/346010664332427/)
+- `FACEBOOK_APP_ID` — معرّف التطبيق (لتبديل التوكن إلى 60 يوماً ثم توكن صفحة دائم)
+- `FACEBOOK_APP_SECRET` — سرّ التطبيق (لا يُكشف أبداً — يُستخدم للتبديل والتجديد الذاتي فقط)
+
+> 🛑 **الوحيد الذي يهم للنشر هو متغيرات نشر Convex** (Convex Dashboard ← Settings ←
+> Environment Variables). متغيرات GitHub/Vercel/Render تُصلح فقط واجهة الموقع ولا تصل
+> إلى مُنشِر القنوات إطلاقاً — إضافة التوكن هناك لن تفعّل النشر الآلي.
 
 ### How to get the Facebook Access Token:
 1. Go to https://developers.facebook.com/apps → Create App → Business type
@@ -67,10 +75,14 @@ Set these in **Convex Dashboard → Settings → Environment Variables**:
 
 | Variable | Value |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` | `8876814738:AAFepkzzC0g__-xGz9JE_sqvq0JMM1kHVWM` |
+| `TELEGRAM_BOT_TOKEN` | *(من @BotFather — لا تُكتب قيمته في المستودع؛ كانت قيمة قديمة مكتوبة هنا ويجب تبديلها)* |
 | `TELEGRAM_CHAT_ID` | `@vipyemen77` |
 | `FACEBOOK_ACCESS_TOKEN` | *(your permanent PAGE token — see above. Must be Page Token, not User Token!)* |
+| `FACEBOOK_PAGE_ACCESS_TOKEN` | *(بديل: توكن صفحة دائم مباشرة — بلا حاجة لبيانات اعتماد التطبيق)* |
+| `FACEBOOK_APP_ID` | *(App ID من developers.facebook.com → الإعدادات → أساسي)* |
+| `FACEBOOK_APP_SECRET` | *(App Secret — يُستخدم سرّياً للتبديل والتجديد الذاتي)* |
 | `FACEBOOK_PAGE_ID` | `102672588647591` (numeric ID for Vipservicesyemen page) |
+| `FACEBOOK_PAGE_NAME` | `Vipyemen للتوظيف والتسويق الإلكتروني والعقاري والخدمات البرمجية` |
 | `FACEBOOK_GROUP_ID` | `346010664332427` |
 | `WHATSAPP_ACCESS_TOKEN` | *(your WhatsApp Cloud API token)* |
 | `WHATSAPP_PHONE_NUMBER_ID` | *(your WhatsApp phone number ID)* |

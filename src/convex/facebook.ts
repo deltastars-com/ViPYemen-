@@ -29,13 +29,29 @@ const DAY = 86_400_000;
 async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> {
     const config = (await ctx.runQuery(internal.facebookStore.getConfigInternal, {})) as FacebookConfig;
     const envToken = process.env.FACEBOOK_ACCESS_TOKEN?.trim() ?? "";
+    const envPageToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN?.trim() ?? "";
+    const envPageName = process.env.FACEBOOK_PAGE_NAME?.trim() ?? "";
     const envAppId = process.env.FACEBOOK_APP_ID?.trim() ?? "";
     const envAppSecret = process.env.FACEBOOK_APP_SECRET?.trim() ?? "";
     const storedToken = config.facebookAccessToken?.trim() ?? "";
     const appId = config.facebookAppId?.trim() || envAppId || "";
     const appSecret = config.facebookAppSecret?.trim() || envAppSecret || "";
 
-    if (!envToken && !storedToken) return { ok: false, reason: "no-token-anywhere" };
+    if (!envToken && !envPageToken && !storedToken) {
+      return { ok: false, reason: "no-token-anywhere" };
+    }
+
+    /**
+     * بيانات اعتماد التطبيق واسم الصفحة تُثبّت في الإعدادات فور توفّرها في
+     * البيئة — حتى لو كان التوكن نفسه منتهياً — لأن العرض والتشخيص في اللوحة
+     * يجب أن يطابقا واقع متغيرات Convex، لا آخر توكن ناجح فقط.
+     */
+    const credsValues: Record<string, unknown> = {};
+    if (envAppId && envAppSecret) {
+      credsValues.facebookAppId = envAppId;
+      credsValues.facebookAppSecret = envAppSecret;
+    }
+    if (envPageName) credsValues.facebookPageName = envPageName;
 
     /** تقييم توكن: حيّ؟ ويمنح صلاحية النشر؟ */
     const evaluate = async (
@@ -72,6 +88,52 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
       }
     }
 
+    // ── 1.b) توكن صفحة دائم من البيئة (FACEBOOK_PAGE_ACCESS_TOKEN) ──
+    // توكن الصفحة لا يحتاج عملية تبديل ولا App Secret — لذلك هو أسرع مسار
+    // لتفعيل نشر دائم حين لا تتوفر بيانات اعتماد التطبيق. وهو دائم بطبيعته،
+    // وصلاحياته لا تُقرأ من debug_token، فيُعتمد عند نجاح النشر فعلياً.
+    if (envPageToken) {
+      const pageEval = await evaluate(envPageToken);
+      if (pageEval.alive) {
+        const pageValues: Record<string, unknown> = {
+          ...credsValues,
+          facebookAccessToken: envPageToken,
+          facebookTokenType: "PAGE",
+          facebookTokenExpiresAt: 0,
+          facebookConnectedAt: Date.now(),
+          facebookLastError: pageEval.canPost === false ? pageEval.detail : "",
+        };
+        if (pageEval.canPost === false) {
+          pageValues.facebookCanPost = false;
+          pageValues.facebookPostingDetail = pageEval.detail;
+        } else {
+          pageValues.facebookCanPost = pageEval.canPost === true ? true : null;
+          pageValues.facebookPostingDetail =
+            pageEval.canPost === true
+              ? "صلاحية النشر ممنوحة (توكن صفحة دائم)"
+              : "توكن صفحة دائم لا ينتهي — تُتأكد صلاحية النشر عند أول نشر فعلي";
+        }
+        await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values: pageValues });
+        const resumed = pageEval.canPost !== false;
+        if (resumed) {
+          await ctx.runMutation(internal.channelPush.unpauseIfTokenHealthy, {});
+        }
+        await ctx.runMutation(internal.channelPush.logChannelEvent, {
+          title: "🔗 رُبط توكن صفحة دائم من متغيرات البيئة",
+          message: resumed
+            ? "توكن الصفحة من FACEBOOK_PAGE_ACCESS_TOKEN لا ينتهي — النشر التلقائي على الصفحة مستأنف بلا حاجة إلى App ID أو App Secret."
+            : pageEval.detail,
+        });
+        return {
+          ok: resumed,
+          reason: "page-token-from-env",
+          canPost: pageEval.canPost,
+          resumed,
+          detail: pageEval.detail,
+        };
+      }
+    }
+
     if (!envToken) {
       return {
         ok: false,
@@ -97,10 +159,14 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
             : "لا يوجد توكن بديل محفوظ."
         } أعد توليد التوكن من Graph API Explorer مع pages_manage_posts ثم حدّث FACEBOOK_ACCESS_TOKEN في Convex Dashboard ← Settings ← Environment Variables.`,
       });
+      // نُثبّت بيانات الاعتماد إن وُجدت، فيعرف التشخيص أنها وصلت فعلاً.
+      if (Object.keys(credsValues).length > 0) {
+        await ctx.runMutation(internal.facebookStore.saveConfigInternal, { values: credsValues });
+      }
       return { ok: false, reason: "env-token-invalid", detail: why };
     }
 
-    const values: Record<string, unknown> = { facebookConnectedAt: Date.now() };
+    const values: Record<string, unknown> = { facebookConnectedAt: Date.now(), ...credsValues };
     if (envAppId && envAppSecret) {
       values.facebookAppId = envAppId;
       values.facebookAppSecret = envAppSecret;
@@ -131,6 +197,17 @@ async function bootstrapInner(ctx: ActionCtx): Promise<Record<string, unknown>> 
       }
     } else {
       values.facebookAccessToken = envToken;
+      if (inspected.type) values.facebookTokenType = inspected.type;
+      if (inspected.valid) values.facebookTokenExpiresAt = inspected.expiresAt || 0;
+      if (!(appId && appSecret) && inspected.type !== "PAGE") {
+        // توكن مستخدم (Graph API Explorer) بلا بيانات اعتماد التطبيق: لا يمكن
+        // قراءة صلاحياته ولا تمديد عمره، وهو ينتهي خلال ساعات فيتوقف النشر.
+        // نوضّح السبب صراحةً بدل ترك اللوحة صامتة.
+        values.facebookCanPost = null;
+        values.facebookPostingDetail =
+          "التوكن مقبول لكن غير قابل للتحقق: بدون FACEBOOK_APP_ID و FACEBOOK_APP_SECRET لا يستطيع النظام قراءة صلاحياته ولا تمديد عمره، وتوكن Graph API Explorer ينتهي خلال ساعات فيتوقف النشر. الحل: أضف FACEBOOK_APP_ID و FACEBOOK_APP_SECRET في متغيرات Convex، أو ألصق توكن صفحة دائم في FACEBOOK_PAGE_ACCESS_TOKEN.";
+        values.facebookLastError = values.facebookPostingDetail;
+      }
     }
 
     // تقييم صلاحية النشر على توكن النشر النهائي قبل الحفظ.
@@ -183,6 +260,10 @@ export const bootstrapFromEnv = internalAction({
       .filter((k) => k.startsWith("FACEBOOK_"))
       .sort();
     const envPresent = !!(process.env.FACEBOOK_ACCESS_TOKEN ?? "").trim();
+    const pageTokenInEnv = !!(process.env.FACEBOOK_PAGE_ACCESS_TOKEN ?? "").trim();
+    const appCredsInEnv =
+      !!(process.env.FACEBOOK_APP_ID ?? "").trim() &&
+      !!(process.env.FACEBOOK_APP_SECRET ?? "").trim();
     const result = await bootstrapInner(ctx);
     let storedPresent = false;
     try {
@@ -200,6 +281,8 @@ export const bootstrapFromEnv = internalAction({
           canPost: typeof result.canPost === "boolean" ? result.canPost : null,
           resumed: result.resumed === true,
           envPresent,
+          pageTokenInEnv,
+          appCredsInEnv,
           envKeys,
           storedPresent,
           detail: typeof result.detail === "string" ? result.detail.slice(0, 300) : "",

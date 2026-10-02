@@ -740,8 +740,10 @@ export const publishManual = action({
     if (!text) {
       return { ok: false as const, error: "اكتب نص المنشور أولاً.", results: [] };
     }
-    const targets = (args.channels?.length ? args.channels : ALL_CHANNELS).filter((c): c is ChannelName =>
-      (ALL_CHANNELS as readonly string[]).includes(c)
+    // 🏠 «platform» قناة إضافية: إشعار داخل المنصة يظهر لكل مستخدمي التطبيق.
+    const targets = (args.channels?.length ? args.channels : ALL_CHANNELS).filter(
+      (c): c is ChannelName | "platform" =>
+        c === "platform" || (ALL_CHANNELS as readonly string[]).includes(c)
     );
     if (targets.length === 0) {
       return { ok: false as const, error: "اختر قناة واحدة على الأقل.", results: [] };
@@ -761,6 +763,29 @@ export const publishManual = action({
     for (const channel of targets) {
       let ok = false;
       let detail = "";
+      if (channel === "platform") {
+        // إشعار داخل المنصة — لا يحتاج أي توكن ولا يخضع للإيقاف الآلي.
+        try {
+          await ctx.runMutation(internal.channelPush.publishPlatformNotice, {
+            title,
+            message: text,
+          });
+          results.push({
+            channel,
+            ok: true,
+            paused: false,
+            detail: "نُشر إشعاراً داخل المنصة لكل المستخدمين ✅",
+          });
+        } catch (err: any) {
+          results.push({
+            channel,
+            ok: false,
+            paused: false,
+            detail: err?.message ?? "تعذّر إنشاء الإشعار",
+          });
+        }
+        continue;
+      }
       try {
         ok = await sendToChannel(ctx, channel, text);
       } catch (err: any) {

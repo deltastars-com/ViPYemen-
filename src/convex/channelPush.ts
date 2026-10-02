@@ -359,6 +359,23 @@ export const getRenewalStatePublic = internalQuery({
   },
 });
 
+/**
+ * 🏠 نشر إشعار داخل المنصة — قناة منصة كاملة (تظهر لكل المستخدمين في التطبيق)
+ * تُستخدم من النشر اليدوي الاحتياطي إلى جانب القنوات الخارجية.
+ */
+export const publishPlatformNotice = internalMutation({
+  args: { title: v.string(), message: v.string() },
+  handler: async (ctx, { title, message }) => {
+    await ctx.db.insert("notifications", {
+      title: title.trim().slice(0, 120) || "إعلان من المنصة",
+      message: message.trim().slice(0, 4000),
+      category: "announcement",
+      createdAt: Date.now(),
+    });
+    return { ok: true };
+  },
+});
+
 /** آخر حالة مسجّلة لكل قناة (داخلي — يُستخدم لكشف التحوّل من انقطاع إلى تعافي). */
 export const getStatusesInternal = internalQuery({
   args: {},

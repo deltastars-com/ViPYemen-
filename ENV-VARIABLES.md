@@ -56,6 +56,19 @@ Source: https://github.com/rmyndharis/OpenWA — used automatically when Meta Cl
 > Environment Variables). متغيرات GitHub/Vercel/Render تُصلح فقط واجهة الموقع ولا تصل
 > إلى مُنشِر القنوات إطلاقاً — إضافة التوكن هناك لن تفعّل النشر الآلي.
 
+### 🔄 المزامنة الآلية: أسرار المستودع ← بيئة Convex (v6.7.55)
+سير عمل `Sync Convex environment (repo secrets → backend)`
+(`.github/workflows/convex-env-sync.yml`) يدفع **قيم** الأسرار التالية إلى متغيرات بيئة
+الناشر الحقيقية عند **كل دفع إلى main** (أو من تبويب Actions ← Run workflow) — بلا طباعة أي قيمة:
+`FACEBOOK_ACCESS_TOKEN` · `FACEBOOK_PAGE_ACCESS_TOKEN` · `FACEBOOK_APP_ID` ·
+`FACEBOOK_APP_SECRET` · `FACEBOOK_PAGE_ID` · `FACEBOOK_GROUP_ID` · `TELEGRAM_BOT_TOKEN` ·
+`TELEGRAM_CHAT_ID` · `WHATSAPP_GROUP_ID` · `YOUTUBE_CLIENT_ID` · `YOUTUBE_CLIENT_SECRET` ·
+`YOUTUBE_REFRESH_TOKEN`.
+
+**تحديث التوكن بعد تجديده:** ضع القيمة الجديدة في سرّ المستودع المطابق ثم ادفع أي تعديل
+إلى main (أو اضغط Run workflow) — تُزامَن خلال ثوانٍ، وخلال 5 دقائق تستورد النظام التوكن
+وتختبر النشر فعلياً ويرفع الإيقاف عن الصفحة تلقائياً. راجع الحالة في `…/site/channels`.
+
 ### How to get the Facebook Access Token:
 1. Go to https://developers.facebook.com/apps → Create App → Business type
 2. Add Product: Facebook Login + Pages

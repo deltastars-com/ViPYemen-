@@ -51,8 +51,11 @@ export type ControlSection =
 const CHANNEL_LABELS: Record<string, (L: (ar: string, en: string) => string) => string> = {
   telegram: (L) => L("قناة التلجرام", "Telegram channel"),
   whatsapp: (L) => L("قناة واتساب (بث Cloud API)", "WhatsApp channel (Cloud API broadcast)"),
+  whatsapp_group: (L) => L("مجتمع/جروب واتساب", "WhatsApp community/group"),
   facebook_page: (L) => L("صفحة فيسبوك", "Facebook page"),
   facebook_group: (L) => L("مجموعة فيسبوك", "Facebook group"),
+  platform: (L) => L("إشعار داخل المنصة", "In-app notice"),
+  youtube: (L) => L("قناة يوتيوب", "YouTube channel"),
 };
 
 const NOTICE_STYLES: Record<string, string> = {

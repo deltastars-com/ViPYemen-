@@ -440,10 +440,13 @@ function ChannelSwitchesCard({ token }: { token: string }) {
   const [busy, setBusy] = useState("");
 
   const LABEL: Record<string, string> = {
+    telegram: "تلجرام",
     telegram_channel: "تلجرام",
     whatsapp: "واتساب",
+    whatsapp_group: "مجتمع/جروب واتساب",
     facebook_page: "صفحة فيسبوك",
     facebook_group: "مجموعة فيسبوك",
+    platform: "إشعار داخل المنصة",
   };
 
   if (!switches) return null;

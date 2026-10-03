@@ -19,7 +19,10 @@ import type { FacebookConfig } from "./facebookStore";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 const RENEW_WINDOW_DAYS = 20;
+/** تجديد دوري إضافي: توكن 60 يوماً بلا تاريخ انتهاء محفوظ يُجدَّد كل 30 يوماً. */
+const RENEW_AGE_DAYS = 30;
 const DAY = 86_400_000;
+const HOUR = 3_600_000;
 /** لا نُكرّر اختبار النشر الفعلي أكثر من مرة كل ٦ ساعات (حماية من الإفراط). */
 const PROBE_THROTTLE = 6 * 60 * 60 * 1000;
 
@@ -862,14 +865,38 @@ export const refreshTokenInternal = internalAction({
       DEFAULT_FACEBOOK_APP_ID;
     const appSecret =
       config.facebookAppSecret?.trim() || (process.env.FACEBOOK_APP_SECRET ?? "").trim();
-    const userToken = config.facebookUserToken?.trim();
+    const storedUserToken = config.facebookUserToken?.trim();
+    // التوكن طويل الأجل (60 يوماً) قد يكون محفوظاً في الإعدادات أو مُدخَلاً في
+    // متغيرات البيئة — نجدّد أيٍّ منهما آلياً حتى يظل مستمراً بلا انقطاع.
+    const envToken = (process.env.FACEBOOK_ACCESS_TOKEN ?? "").trim();
+    const userToken = storedUserToken || envToken;
     if (!appId || !appSecret || !userToken) {
       return { ok: false, reason: "no-app-credentials", renewed: false };
     }
-    const expiresAt = config.facebookUserTokenExpiresAt ?? 0;
+    // توكن الصفحة (PAGE) دائم بطبعه — لا حاجة لتبديله.
+    if (!storedUserToken && config.facebookTokenType === "PAGE") {
+      return { ok: true, reason: "page-token-permanent", renewed: false };
+    }
+    const expiresAt =
+      (config.facebookUserTokenExpiresAt ?? 0) || (config.facebookTokenExpiresAt ?? 0);
     const soon = expiresAt > 0 && expiresAt - Date.now() < RENEW_WINDOW_DAYS * DAY;
-    if (!force && !soon) {
+    // 🔄 تجديد دوري: توكن بلا تاريخ انتهاء محفوظ يُجدَّد كل 30 يوماً من تاريخ
+    // آخر ربط ناجح — فيبقى التوكن متجدداً آلياً «دائم ومستمراً».
+    const connectedAt = config.facebookConnectedAt ?? 0;
+    const ageRenew =
+      expiresAt === 0 && connectedAt > 0 && Date.now() - connectedAt > RENEW_AGE_DAYS * DAY;
+    const lastAttempt = config.facebookRenewAttemptAt ?? 0;
+    const cooledDown = Date.now() - lastAttempt > 12 * HOUR;
+    if (!force && !soon && !(ageRenew && cooledDown)) {
       return { ok: true, reason: "not-needed", renewed: false, daysLeft: expiresAt ? Math.ceil((expiresAt - Date.now()) / DAY) : null };
+    }
+    // سجل المحاولة — يمنع تكرار الفشل كل دور فحص لو فشل التبديل مجدداً.
+    try {
+      await ctx.runMutation(internal.facebookStore.saveConfigInternal, {
+        values: { facebookRenewAttemptAt: Date.now() },
+      });
+    } catch {
+      /* السجل إضافة */
     }
 
     const long = await exchangeForLongLived(appId, appSecret, userToken);
@@ -894,6 +921,7 @@ export const refreshTokenInternal = internalAction({
       facebookUserToken: long.token,
       facebookUserTokenExpiresAt: long.expiresAt ?? 0,
       facebookConnectedAt: Date.now(),
+      facebookRenewAttemptAt: 0,
       facebookLastError: "",
     };
     if (chosen?.token) {

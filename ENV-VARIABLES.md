@@ -24,6 +24,17 @@
 - `WHATSAPP_ACCESS_TOKEN` — Cloud API access token
 - `WHATSAPP_PHONE_NUMBER_ID` — Business phone number ID
 - `WHATSAPP_BROADCAST_TO` — Recipient phone numbers, comma-separated
+- `WHATSAPP_GROUP_ID` — **(جديد)** معرّف المجتمع/المجموعة في واتساب الخاص بالمنصة
+  (أرقام فقط أو ينتهي بـ `@g.us`) — للنشر في جروب واتساب. النشر للمجموعات يتم عبر بوابة
+  OpenWA المجانية لأن WhatsApp Cloud API لا يدعم المجموعات. القناة متوقفة افتراضياً حتى
+  تُضبط ثم تُفعَّل من لوحة التحكم ← النشر اليدوي في القنوات.
+
+## YOUTUBE (Video Publishing — قناة يوتيوب للمنصة)
+- `YOUTUBE_CLIENT_ID` — OAuth Client ID من Google Cloud Console (Google.Apis.YouTube.v3)
+- `YOUTUBE_CLIENT_SECRET` — سرّ عميل OAuth
+- `YOUTUBE_REFRESH_TOKEN` — رمز التحديث الذي يُولَّد مرة واحدة عبر موافقة الحساب ويظل دائماً
+> الفيديو العمودي يُحوَّل آلياً إلى صيغة يوتيوب الأفقية 16:9 داخل المتصفح قبل الرفع
+> (لوحة التحكم ← النشر اليدوي في القنوات ← «نشر فيديو على قناة يوتيوب»).
 
 ## WHATSAPP — Free OpenWA Gateway (alternative to Cloud API)
 Saved in Convex `settings` table from Dashboard → Settings → WhatsApp card (no env needed):

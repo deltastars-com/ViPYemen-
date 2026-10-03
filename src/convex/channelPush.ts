@@ -17,7 +17,13 @@ import { api, internal } from "./_generated/api";
 import { DEFAULT_PAUSE_REASON, isPausedByDefault } from "./channelPolicy";
 
 /** كل قنوات المنصة الرسمية. */
-export const CHANNEL_NAMES = ["telegram", "whatsapp", "facebook_page", "facebook_group"] as const;
+export const CHANNEL_NAMES = [
+  "telegram",
+  "whatsapp",
+  "whatsapp_group",
+  "facebook_page",
+  "facebook_group",
+] as const;
 export type ChannelName = (typeof CHANNEL_NAMES)[number];
 
 const MAX_ATTEMPTS = 5;

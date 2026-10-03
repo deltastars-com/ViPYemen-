@@ -12,6 +12,9 @@ import {
   PackageCheck,
   RefreshCw,
   Eye,
+  EyeOff,
+  FileSignature,
+  Lock,
   Send,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
@@ -48,11 +51,20 @@ export function AdminSubmissions({
     type: typeFilter === "all" ? undefined : typeFilter,
     search: search.trim() || undefined,
   });
+  // 🔏 التوثيقات الموقّعة بالبصمة — تُربط بالطلب نفسه لعرض حالته في القائمة
+  const contracts = useQuery(api.contracts.list, { token });
+  const contractBySubmission = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const c of (contracts ?? []) as any[]) {
+      if (c.submissionId && !map[c.submissionId]) map[c.submissionId] = c;
+    }
+    return map;
+  }, [contracts]);
 
   const setStatusMut = useMutation(api.submissions.setStatus);
   const deleteMut = useMutation(api.submissions.deleteSubmission);
   const togglePhone = useMutation(api.submissions.togglePhoneVerified);
-  const updateMut = useMutation(api.submissions.updateSubmission);
+  const reviewMut = useMutation(api.submissions.reviewAndUpdate);
   const repushMut = useMutation(api.channelPush.repush);
 
   const catConfig = useMemo(
@@ -135,6 +147,7 @@ export function AdminSubmissions({
             const typeCfg = getType(cat, row.type);
             const TypeIcon = TYPE_ICONS[row.type] ?? cat.icon;
             const st = getStatusLabel(row.status, (k) => k);
+            const contract = contractBySubmission[row._id];
             return (
               <div key={row._id} className="card-surface overflow-hidden">
                 <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
@@ -150,6 +163,24 @@ export function AdminSubmissions({
                           <Badge className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
                             <BadgeCheck className="h-3 w-3" />
                             رقم موثق
+                          </Badge>
+                        )}
+                        {row.reviewedAt && (
+                          <Badge className="border-sky-500/40 bg-sky-500/10 text-sky-300">
+                            <Eye className="h-3 w-3" />
+                            مُراجَع {row.reviewCount > 1 ? `×${row.reviewCount}` : "✓"}
+                          </Badge>
+                        )}
+                        {contract && contract.status !== "void" && (
+                          <Badge
+                            className={
+                              contract.status === "paid"
+                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                                : "border-gold-500/40 bg-gold-500/10 text-gold-300"
+                            }
+                          >
+                            <FileSignature className="h-3 w-3" />
+                            {contract.status === "paid" ? "موثّق ومسدَّد" : "موقّع بالبصمة"}
                           </Badge>
                         )}
                       </div>
@@ -318,9 +349,10 @@ export function AdminSubmissions({
         <EditModal
           row={editing}
           token={token}
+          contract={contractBySubmission[editing._id] ?? null}
           onClose={() => setEditing(null)}
-          onSave={async (patch) => {
-            await updateMut({ token, id: editing._id, patch });
+          onSave={async (patch, publishMode, note) => {
+            await reviewMut({ token, id: editing._id, patch, publishMode, note });
             setEditing(null);
           }}
           onTogglePhone={async () => {
@@ -336,32 +368,111 @@ export function AdminSubmissions({
 function EditModal({
   row,
   token,
+  contract,
   onClose,
   onSave,
   onTogglePhone,
 }: {
   row: any;
   token: string;
+  contract: any | null;
   onClose: () => void;
-  onSave: (patch: any) => Promise<void>;
+  onSave: (patch: any, publishMode: "auto" | "manual", note?: string) => Promise<void>;
   onTogglePhone: () => Promise<void>;
 }) {
   const cat = getCategory(row.category);
   const typeCfg = getType(cat, row.type);
+  // 🔐 النسخة الأصلية السرّية كما أرسلها العميل — تظهر للإدارة بجانب المعدَّل
+  const originalData = useQuery(api.submissions.getOriginal, { token, id: row._id });
   const [title, setTitle] = useState(row.title);
   const [description, setDescription] = useState(row.description ?? "");
   const [fullName, setFullName] = useState(row.fullName);
   const [phone, setPhone] = useState(row.phone);
+  const [email, setEmail] = useState(row.email ?? "");
   const [address, setAddress] = useState(row.address ?? "");
   const [price, setPrice] = useState(row.price?.toString() ?? "");
   const [currency, setCurrency] = useState(row.currency ?? "yer");
   const [fields, setFields] = useState<Record<string, string>>(row.fields ?? {});
   const [adminNote, setAdminNote] = useState(row.adminNote ?? "");
+  const [reviewNote, setReviewNote] = useState("");
+  const [showOriginal, setShowOriginal] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  async function save(publishMode: "auto" | "manual") {
+    setSaving(true);
+    try {
+      await onSave(
+        {
+          title,
+          description,
+          fullName,
+          phone,
+          email: email.trim() || undefined,
+          address,
+          price: price ? Number(price) : undefined,
+          currency,
+          fields,
+          adminNote,
+        },
+        publishMode,
+        reviewNote.trim() || undefined
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Modal open onClose={onClose} title={`مراجعة وتعديل — ${row.title}`} wide>
       <div className="space-y-4">
+        {/* 🔐 النسخة الأصلية السرّية + ختم المراجعة */}
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/[0.06] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-[11px] font-black text-sky-200">
+              <Lock className="h-3.5 w-3.5" />
+              البيانات والوثائق الأصلية (سرّية — للإدارة فقط، لا تُنشر أبداً)
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowOriginal((v) => !v)}
+              className="inline-flex items-center gap-1 rounded-lg border border-sky-500/40 px-2.5 py-1 text-[10px] font-black text-sky-200 hover:bg-sky-500/15"
+            >
+              {showOriginal ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              {showOriginal ? "إخفاء الأصل" : "عرض الأصل"}
+            </button>
+          </div>
+          {originalData?.reviewedAt && (
+            <p className="mt-1.5 text-[10px] font-semibold text-sky-300/80">
+              آخر مراجعة: {formatDateTime(originalData.reviewedAt)} — {originalData.reviewedBy ?? "الإدارة"} ·
+              عدد المراجعات: {originalData.reviewCount}
+              {contract ? ` · التوثيق: ${contract.receiptNo ?? "موقّع"}` : ""}
+            </p>
+          )}
+          {showOriginal && (
+            <div className="mt-2 grid gap-1.5 rounded-lg border border-ink-700/60 bg-ink-950/60 p-3 text-[11px] sm:grid-cols-2">
+              {originalData?.original ? (
+                <>
+                  <p><span className="text-ink-400">العنوان:</span> <b className="text-cream">{originalData.original.title || "—"}</b></p>
+                  <p><span className="text-ink-400">الاسم:</span> <b className="text-cream">{originalData.original.fullName || "—"}</b></p>
+                  <p><span className="text-ink-400">الهاتف:</span> <b dir="ltr" className="text-cream">{originalData.original.phone || "—"}</b></p>
+                  <p><span className="text-ink-400">البريد:</span> <b dir="ltr" className="text-cream">{originalData.original.email || "—"}</b></p>
+                  <p><span className="text-ink-400">العنوان/المنطقة:</span> <b className="text-cream">{originalData.original.address || "—"}</b></p>
+                  <p><span className="text-ink-400">السعر:</span> <b className="text-cream">{originalData.original.price ?? "—"}</b></p>
+                  <p className="sm:col-span-2"><span className="text-ink-400">الوصف:</span> <b className="text-cream">{originalData.original.description || "—"}</b></p>
+                  <p className="sm:col-span-2 text-[10px] text-ink-500">
+                    حُفظت بتاريخ {originalData.original.savedAt ? formatDateTime(originalData.original.savedAt) : "—"} —
+                    تُنشر للجمهور النسخة المعدَّلة فقط.
+                  </p>
+                </>
+              ) : (
+                <p className="sm:col-span-2 font-bold text-ink-300">
+                  لا توجد نسخة أصلية محفوظة بعد — تُحفظ تلقائياً أول مرة تراجع فيها هذا الطلب.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label-app">{typeCfg.titleLabel}</label>
@@ -374,6 +485,10 @@ function EditModal({
           <div>
             <label className="label-app">رقم الهاتف</label>
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" className="text-left" />
+          </div>
+          <div>
+            <label className="label-app">البريد الإلكتروني</label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" dir="ltr" className="text-left" placeholder="name@example.com" />
           </div>
           <div>
             <label className="label-app">العنوان</label>
@@ -475,32 +590,33 @@ function EditModal({
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div>
+          <label className="label-app">خلاصة المراجعة والتدقيق</label>
+          <Textarea
+            value={reviewNote}
+            onChange={(e) => setReviewNote(e.target.value)}
+            placeholder="مثال: تحققنا من الهاتف والبريد والعنوان والوثائق PDF قبل إعادة النشر"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button loading={saving} onClick={() => save("auto")} title="حفظ التعديلات ونشر النسخة المعدَّلة فوراً على الواجهة وقنوات المنصة">
+            <Send className="h-4 w-4" /> حفظ ونشر تلقائي
+          </Button>
           <Button
+            variant="gold"
             loading={saving}
-            onClick={async () => {
-              setSaving(true);
-              try {
-                await onSave({
-                  title,
-                  description,
-                  fullName,
-                  phone,
-                  address,
-                  price: price ? Number(price) : undefined,
-                  currency,
-                  fields,
-                  adminNote,
-                });
-              } finally {
-                setSaving(false);
-              }
-            }}
+            onClick={() => save("manual")}
+            title="حفظ بعد المراجعة ثم نشرها لاحقاً يدوياً من قائمة الطلبات أو النشر اليدوي"
           >
-            حفظ التعديلات
+            <CheckCircle2 className="h-4 w-4" /> حفظ للمراجعة (نشر يدوي)
           </Button>
           <Button variant="ghost" onClick={onClose}>إلغاء</Button>
         </div>
+        <p className="text-[10px] leading-relaxed text-ink-400">
+          تُحفظ النسخة الأصلية كما أرسلها العميل سرّياً لدى الإدارة، ولا يُنشر للجمهور إلا النسخة
+          المعدَّلة بعد المراجعة والتدقيق — خاصة الوثائق وملفات PDF.
+        </p>
       </div>
     </Modal>
   );

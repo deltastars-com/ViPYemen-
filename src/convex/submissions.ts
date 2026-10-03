@@ -10,6 +10,32 @@ import {
 } from "./auth";
 import { api, internal } from "./_generated/api";
 import { findReturningClient, touchFollowup } from "./followups";
+import { makeReceiptNo } from "./contracts";
+
+/** التوثيق الإلكتروني والالتزام المالي الذي يكمله العميل مع تقديم الطلب/العرض. */
+type SubmissionCertification = {
+  amount: number;
+  commission: number;
+  currency?: string;
+  signature: string;
+  signatureType?: string;
+  fingerprint?: { mode: string; credentialId?: string; verified: boolean };
+  consent: boolean;
+};
+
+/** تحقّق صارم من التوثيق قبل إنشاء أي سجل — الفشل يُبطل العملية كاملة. */
+function assertValidCertification(c: SubmissionCertification | undefined): void {
+  if (!c) return;
+  if (!c.consent)
+    throw new ConvexError("يلزم قبول الالتزام المالي بعمولة المنصة المتفق عليها لإتمام التوثيق");
+  if (!(c.amount > 0)) throw new ConvexError("المبلغ المتفق عليه مطلوب في التوثيق الإلكتروني");
+  if (c.commission < 0 || c.commission > c.amount)
+    throw new ConvexError("عمولة المنصة يجب أن تكون بين صفر والمبلغ المتفق عليه");
+  if (!c.signature || c.signature.trim().length < 10)
+    throw new ConvexError("التوقيع الإلكتروني مطلوب — ارسم توقيعك في خانة التوقيع");
+  if (!c.fingerprint?.verified)
+    throw new ConvexError("تأكيد البصمة الإلكترونية مطلوب لإتمام التوثيق");
+}
 
 const CATEGORIES = ["jobs", "real_estate", "emarket", "software"];
 const TYPES = ["owner", "seeker", "buyer", "seller", "client", "employer"];
@@ -95,6 +121,7 @@ export const submit = mutation({
     description: v.optional(v.string()),
     fullName: v.string(),
     phone: v.string(),
+    email: v.optional(v.string()),
     address: v.optional(v.string()),
     price: v.optional(v.number()),
     currency: v.optional(v.string()),
@@ -109,9 +136,28 @@ export const submit = mutation({
       )
     ),
     otpCode: v.optional(v.string()),
+    /** 🔏 التوثيق الإلكتروني والالتزام المالي — يُستكمل مع تقديم الطلب/العرض */
+    certification: v.optional(
+      v.object({
+        amount: v.number(),
+        commission: v.number(),
+        currency: v.optional(v.string()),
+        signature: v.string(),
+        signatureType: v.optional(v.string()),
+        fingerprint: v.optional(
+          v.object({
+            mode: v.string(),
+            credentialId: v.optional(v.string()),
+            verified: v.boolean(),
+          })
+        ),
+        consent: v.boolean(),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     assertValid(args);
+    assertValidCertification(args.certification);
     const now = Date.now();
     let phoneVerified = false;
     if (args.otpCode) {
@@ -138,6 +184,7 @@ export const submit = mutation({
       description: args.description ? sanitize(args.description, MAX_DESC_LENGTH) : undefined,
       fullName: args.fullName.trim(),
       phone: normalizePhone(args.phone),
+      email: args.email?.trim() || undefined,
       address: args.address?.trim() || undefined,
       price: args.price,
       currency: args.currency,
@@ -147,6 +194,36 @@ export const submit = mutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    // 🔏 ترابط قسم تقديم الطلب مع التوثيق الإلكتروني: عقد موقّع بالبصمة
+    // يُنشأ فوراً ومرتبطاً بالطلب نفسه، فيظل الالتزام المالي موثّقاً لدى الإدارة.
+    let receiptNo: string | undefined;
+    const cert = args.certification;
+    if (cert) {
+      receiptNo = makeReceiptNo(now);
+      await ctx.db.insert("contracts", {
+        submissionId: id,
+        title: sanitize(args.title, MAX_TITLE_LENGTH),
+        beneficiaryName: args.fullName.trim(),
+        phone: normalizePhone(args.phone),
+        amount: cert.amount,
+        commission: cert.commission,
+        currency: cert.currency ?? "USD",
+        signature: cert.signature,
+        signatureType: cert.signatureType ?? "drawn",
+        fingerprint: cert.fingerprint,
+        receiptNo,
+        status: "signed",
+        signedAt: now,
+        createdAt: now,
+      });
+      await ctx.db.insert("notifications", {
+        title: "🔐 توثيق إلكتروني بالبصمة مع تقديم الطلب",
+        message: `${receiptNo} — ${args.fullName} يلتزم بعمولة ${cert.commission} ${cert.currency ?? "USD"} من مبلغ ${cert.amount} ${cert.currency ?? "USD"} — طلب: ${args.title}`,
+        category: "contracts",
+        createdAt: now,
+      });
+    }
     const client = await touchFollowup(ctx, {
       fullName: args.fullName.trim(),
       phone: normalizePhone(args.phone),
@@ -208,6 +285,7 @@ export const submit = mutation({
     }
     return {
       id,
+      receiptNo: receiptNo ?? null,
       returning: client.isReturning
         ? {
             previousCount: client.previousCount,
@@ -285,6 +363,45 @@ async function resolveAttachmentUrls<T extends { attachments?: { name: string; s
   return { ...row, attachments };
 }
 
+/**
+ * 🔒 العرض العام الآمن للطلب — لا يكشف أبداً ملاحظات الإدارة ولا سجل
+ * التعديلات ولا النسخة الأصلية السرية ولا هوية المراجع.
+ */
+const PUBLIC_FIELDS = [
+  "_id",
+  "_creationTime",
+  "category",
+  "type",
+  "status",
+  "title",
+  "description",
+  "fullName",
+  "phone",
+  "email",
+  "address",
+  "price",
+  "currency",
+  "fields",
+  "attachments",
+  "phoneVerified",
+  "soldAt",
+  "publishedAt",
+  "publishedTo",
+  "lastChannelPush",
+  "reactivatedAt",
+  "bestMatchScore",
+  "createdAt",
+  "updatedAt",
+] as const;
+
+function publicView(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of PUBLIC_FIELDS) {
+    if (row[key] !== undefined) out[key] = row[key];
+  }
+  return out;
+}
+
 export const listPublished = query({
   args: {
     category: v.optional(v.string()),
@@ -301,7 +418,7 @@ export const listPublished = query({
       .order("desc")
       .take(limit ?? 100);
     if (type) rows = rows.filter((r) => r.type === type);
-    return Promise.all(rows.map((r) => resolveAttachmentUrls(ctx, r)));
+    return Promise.all(rows.map(async (r) => publicView(await resolveAttachmentUrls(ctx, r))));
   },
 });
 
@@ -347,7 +464,32 @@ export const listAll = query({
           (r.description ?? "").toLowerCase().includes(s)
       );
     }
-    return Promise.all(rows.map((r) => resolveAttachmentUrls(ctx, r)));
+    // 🔐 النسخة الأصلية السرية لا تخرج في القائمة — تُقرأ عبر getOriginal وحدها.
+    const stripped = rows.map((r) => {
+      const copy: Record<string, unknown> = { ...r };
+      delete copy.original;
+      return copy;
+    });
+    return Promise.all(stripped.map((r) => resolveAttachmentUrls(ctx, r as any)));
+  },
+});
+
+/**
+ * 🔐 قراءة النسخة الأصلية السرية للطلب (كما أرسلها العميل قبل أي مراجعة)
+ * — للإدارة فقط، وتُستخدم داخل نافذة المراجعة بجانب البيانات المعدّلة.
+ */
+export const getOriginal = query({
+  args: { token: v.string(), id: v.id("submissions") },
+  handler: async (ctx, { token, id }) => {
+    await requireAdmin(ctx, token);
+    const row = await ctx.db.get(id);
+    if (!row) return null;
+    return {
+      original: row.original ?? null,
+      reviewedAt: row.reviewedAt ?? null,
+      reviewedBy: row.reviewedBy ?? null,
+      reviewCount: row.reviewCount ?? 0,
+    };
   },
 });
 
@@ -360,6 +502,7 @@ export const updateSubmission = mutation({
       description: v.optional(v.string()),
       fullName: v.optional(v.string()),
       phone: v.optional(v.string()),
+      email: v.optional(v.string()),
       address: v.optional(v.string()),
       price: v.optional(v.number()),
       currency: v.optional(v.string()),
@@ -384,6 +527,138 @@ export const updateSubmission = mutation({
       updatedAt: Date.now(),
     });
     return { ok: true };
+  },
+});
+
+/**
+ * 🔍 مراجعة إدارية كاملة قبل إعادة النشر — المسار الاحترافي:
+ *   1. تحفظ النسخة الأصلية كما أرسلها العميل (سرّية، للإدارة فقط) مرة واحدة.
+ *   2. تُطبَّق التعديلات (هاتف · بريد · عنوان · بيانات الطلب) مع التحقق.
+ *   3. تُختم المراجعة (متى ومن/عدد مرات) وتُسجل في سجل التعديلات.
+ *   4. ثم تُعاد المعاينة بأحد المسارين:
+ *        • auto   → نشر فوري على الواجهة + نشر تلقائي للقنوات + ترشيح المطابقات
+ *        • manual → حفظ كجاهز للنشر ثم ينشرها المشرف يدوياً من أي قناة
+ */
+export const reviewAndUpdate = mutation({
+  args: {
+    token: v.string(),
+    id: v.id("submissions"),
+    patch: v.object({
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      fullName: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      email: v.optional(v.string()),
+      address: v.optional(v.string()),
+      price: v.optional(v.number()),
+      currency: v.optional(v.string()),
+      fields: v.optional(v.any()),
+      adminNote: v.optional(v.string()),
+    }),
+    publishMode: v.string(), // auto | manual
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, { token, id, patch, publishMode, note }) => {
+    const admin = await requireAdmin(ctx, token);
+    if (!['auto', 'manual'].includes(publishMode))
+      throw new ConvexError("أسلوب النشر غير صالح — تلقائي أو يدوي");
+    const existing = await ctx.db.get(id);
+    if (!existing) throw new ConvexError("الطلب غير موجود");
+
+    // التحقق من المدخلات المعدَّلة قبل تغيير أي شيء
+    if (patch.phone && !isValidYemeniPhone(patch.phone))
+      throw new ConvexError("رقم الهاتف غير صحيح — أدخل رقم يمني صحيح (7xxxxxxxx)");
+    if (patch.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patch.email.trim()))
+      throw new ConvexError("البريد الإلكتروني غير صالح");
+    if (patch.title !== undefined && patch.title.trim().length < 3)
+      throw new ConvexError("العنوان مطلوب (3 أحرف على الأقل)");
+    if (patch.fullName !== undefined && patch.fullName.trim().length < 3)
+      throw new ConvexError("الاسم الكامل مطلوب");
+
+    const now = Date.now();
+    // 🔐 حفظ النسخة الأصلية السرّية مرة واحدة فقط — تبقى لدى الإدارة دائماً.
+    const original = existing.original ?? {
+      title: existing.title,
+      description: existing.description ?? "",
+      fullName: existing.fullName,
+      phone: existing.phone,
+      email: existing.email ?? "",
+      address: existing.address ?? "",
+      price: existing.price ?? null,
+      currency: existing.currency ?? "yer",
+      fields: existing.fields ?? {},
+      attachments: existing.attachments ?? [],
+      savedAt: now,
+      savedBy: admin.name,
+    };
+
+    const clean: Record<string, unknown> = { ...patch };
+    if (typeof clean.title === "string") clean.title = sanitize(clean.title, MAX_TITLE_LENGTH);
+    if (typeof clean.description === "string")
+      clean.description = sanitize(clean.description, MAX_DESC_LENGTH);
+    if (typeof clean.fullName === "string") clean.fullName = clean.fullName.trim();
+    if (typeof clean.phone === "string") clean.phone = normalizePhone(clean.phone);
+    if (typeof clean.email === "string") clean.email = clean.email.trim();
+    if (typeof clean.address === "string") clean.address = clean.address.trim();
+
+    const history = existing.history ?? [];
+    history.push({
+      by: admin.name,
+      at: now,
+      action: publishMode === "auto" ? "review+publish" : "review",
+      note: note || (patch.adminNote ?? "مراجعة وتعديل البيانات قبل إعادة النشر"),
+    });
+
+    const doc: Record<string, unknown> = {
+      ...clean,
+      original,
+      history,
+      updatedAt: now,
+      reviewedAt: now,
+      reviewedBy: admin.name,
+      reviewCount: (existing.reviewCount ?? 0) + 1,
+    };
+    const publish = publishMode === "auto";
+    if (publish) {
+      doc.status = "published";
+      doc.publishedAt = existing.publishedAt ?? now;
+    }
+    await ctx.db.patch(id, doc);
+
+    await ctx.db.insert("notifications", {
+      title: publish ? "✅ مُراجَع ومنشور بعد التدقيق" : "🔍 مراجعة مكتملة — جاهز للنشر اليدوي",
+      message: `${existing.title} — راجعها ${admin.name} (${(existing.reviewCount ?? 0) + 1}) وحُفظت النسخة الأصلية سرّياً${publish ? " ونُشرت النسخة المعدَّلة تلقائياً" : " بانتظار النشر اليدوي"}`,
+      category: existing.category,
+      createdAt: now,
+    });
+
+    if (publish) {
+      // النشر التلقائي: الواجهة + كل قنوات المنصة + ترشيح المطابقات
+      const sectionUrl =
+        existing.category === "jobs"
+          ? "/jobs"
+          : existing.category === "real_estate"
+            ? "/real-estate"
+            : existing.category === "emarket"
+              ? "/emarket"
+              : "/software";
+      await ctx.scheduler.runAfter(0, api.channels.publishToChannels, {
+        kind: "submission",
+        itemId: id,
+        title: (patch.title ?? existing.title).trim(),
+        message: patch.description ?? existing.description ?? (patch.title ?? existing.title),
+        url: sectionUrl,
+        price:
+          (patch.price ?? existing.price) !== undefined
+            ? `${(patch.price ?? existing.price)!.toLocaleString("en-US")} ${(patch.currency ?? existing.currency) === "usd" ? "$" : "ريال يمني"}`
+            : undefined,
+      });
+      await ctx.scheduler.runAfter(0, internal.matching.runAutoMatchInternal, {
+        category: existing.category,
+        limit: 25,
+      });
+    }
+    return { ok: true, published: publish, reviewedAt: now };
   },
 });
 

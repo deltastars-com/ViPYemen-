@@ -5,6 +5,8 @@ import { api } from "../convex/_generated/api";
 import { queueSubmission } from "@/lib/outbox";
 import {
   CheckCircle2,
+  FileSignature,
+  Fingerprint,
   History,
   MessageCircle,
   PhoneCall,
@@ -17,6 +19,13 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button, Input, Label, Select, Textarea } from "./ui";
+import { SignaturePad } from "./admin/ContractModal";
+import {
+  createFingerprint,
+  fallbackFingerprint,
+  FingerprintUnavailable,
+  type FingerprintResult,
+} from "@/lib/fingerprint";
 import { getType, type CategoryConfig } from "@/lib/categories";
 import { fileKindOf, whatsappLink, PLATFORM_WHATSAPP_DISPLAY } from "@/lib/utils";
 import { liveText } from "@/lib/liveLabels";
@@ -42,6 +51,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
   const [description, setDescription] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [price, setPrice] = useState("");
   const [currency, setCurrency] = useState("yer");
@@ -54,6 +64,15 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
   const [queuedOffline, setQueuedOffline] = useState(false);
+  // 🔏 التوثيق الإلكتروني والالتزام المالي — مرتبط بالطلب عند تقديمه
+  const [enableCert, setEnableCert] = useState(false);
+  const [certAmount, setCertAmount] = useState("");
+  const [certCommission, setCertCommission] = useState("");
+  const [certSignature, setCertSignature] = useState("");
+  const [certFingerprint, setCertFingerprint] = useState<FingerprintResult | null>(null);
+  const [certConsent, setCertConsent] = useState(false);
+  const [certError, setCertError] = useState("");
+  const [receiptNo, setReceiptNo] = useState<string | null>(null);
   // 🔁 العميل السابق: يُكشف عند التحقق من رقم الهاتف وعند الإرسال
   const [returning, setReturning] = useState<{
     count: number;
@@ -150,10 +169,66 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
     }
   }
 
+  async function handleCertFingerprint() {
+    setCertError("");
+    try {
+      setCertFingerprint(await createFingerprint());
+    } catch (err) {
+      if (err instanceof FingerprintUnavailable) {
+        setCertError("هذا الجهاز لا يدعم ماسح البصمة — استخدم «تأكيد بديل مسجّل».");
+      } else {
+        setCertError("لم يُؤكَّد البصمة — أعد المحاولة.");
+      }
+    }
+  }
+
+  function buildCertification(): {
+    error?: string;
+    cert?: {
+      amount: number;
+      commission: number;
+      currency: string;
+      signature: string;
+      signatureType: string;
+      fingerprint: FingerprintResult;
+      consent: boolean;
+    };
+  } {
+    if (!enableCert) return {};
+    const amount = Number(certAmount) || 0;
+    const commission = Number(certCommission) || 0;
+    if (!(amount > 0)) return { error: "أدخل المبلغ المتفق عليه مع الإدارة لإتمام التوثيق." };
+    if (commission < 0 || commission > amount)
+      return { error: "عمولة المنصة يجب أن تكون بين صفر والمبلغ المتفق عليه." };
+    if (certSignature.trim().length < 10)
+      return { error: "ارسم توقيعك الإلكتروني في خانة التوقيع." };
+    if (!certFingerprint?.verified)
+      return { error: "أكّد البصمة الإلكترونية لإتمام التوثيق." };
+    if (!certConsent)
+      return { error: "يجب الموافقة على الالتزام المالي بعمولة المنصة." };
+    return {
+      cert: {
+        amount,
+        commission,
+        currency: currency === "usd" ? "USD" : currency === "sar" ? "SAR" : "YER",
+        signature: certSignature,
+        signatureType: "drawn",
+        fingerprint: certFingerprint,
+        consent: true,
+      },
+    };
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setBusy(true);
+    const certResult = buildCertification();
+    if (certResult.error) {
+      setCertError(certResult.error);
+      setBusy(false);
+      return;
+    }
     const payload = {
       category: category.key,
       type: typeValue,
@@ -161,15 +236,18 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
       description,
       fullName,
       phone,
+      email: email.trim() || undefined,
       address,
       price: price ? Number(price) : undefined,
       currency,
       fields,
       attachments,
       otpCode: otpCode.trim() || undefined,
+      certification: certResult.cert,
     };
     try {
       const result: any = await submit(payload);
+      if (result?.receiptNo) setReceiptNo(result.receiptNo);
       if (result?.returning && !returning) {
         setReturning(
           result.returning.lastSubmissionId
@@ -228,6 +306,17 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
             ? "لا يوجد اتصال بالخادم الآن — لم يضيع طلبك. سيُرسَل تلقائياً فور عودة الشبكة دون أي إدخال إضافي منك."
             : t("submissionSuccessSub")}
         </p>
+        {receiptNo && (
+          <div className="w-full max-w-md rounded-2xl border border-gold-500/40 bg-gold-500/10 p-4 text-[12px] leading-relaxed text-ink-200">
+            <p className="font-black text-gold-200">
+              <FileSignature className="ml-1 inline h-4 w-4" />
+              توثيق إلكتروني مكتمل بالبصمة
+            </p>
+            <p className="mt-1">
+              رقم السند: <b dir="ltr" className="text-cream">{receiptNo}</b> — التزامك المالي موثّق ومرتبط بطلبك، وسيتواصل معك فريق الإدارة لتأكيد العمولة المتفق عليها.
+            </p>
+          </div>
+        )}
         {/* إشعار العميل السابق بعد الإرسال: تنشيط بدل إعادة كل شيء */}
         {returning && !reactivatedTitle && (
           <div className="w-full max-w-md rounded-2xl border border-gold-500/30 bg-gold-500/5 p-4 text-[12px] leading-relaxed text-ink-200">
@@ -252,7 +341,7 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
             {liveText("returningReactivated", lang)} — «{reactivatedTitle}»
           </p>
         )}
-        <Button type="button" onClick={() => { setDone(false); setQueuedOffline(false); setOtpState(null); setOtpCode(""); setAttachments([]); }}>
+        <Button type="button" onClick={() => { setDone(false); setQueuedOffline(false); setOtpState(null); setOtpCode(""); setAttachments([]); setReceiptNo(null); }}>
           {t("submitAnother")}
         </Button>
       </div>
@@ -359,6 +448,17 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
             dir="ltr"
             className="text-left"
             required
+          />
+        </div>
+        <div>
+          <Label>البريد الإلكتروني (اختياري)</Label>
+          <Input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            placeholder="name@example.com"
+            dir="ltr"
+            className="text-left"
           />
         </div>
         <div>
@@ -528,6 +628,119 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
       <div className="flex items-start gap-2 rounded-xl border border-gold-500/25 bg-gold-500/5 p-3 text-xs text-ink-300">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold-400" />
         <p>{t("dataReviewNotice")}</p>
+      </div>
+
+      {/* 🔏 التوثيق الإلكتروني والالتزام المالي — مرتبط بالطلب عند تقديمه */}
+      <div className="rounded-2xl border border-gold-500/30 bg-gold-500/[0.04] p-4">
+        <div className="flex items-start gap-3">
+          <FileSignature className="mt-0.5 h-5 w-5 shrink-0 text-gold-300" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-gold-200">التوثيق الإلكتروني والالتزام المالي</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-ink-300">
+              اكتب اسمك، والتزم بمبلغ العمولة المتفق عليه مع إدارة المنصة، ثم وقّع وابصم إلكترونياً —
+              يُرتبط التوثيق بطلبك مباشرة ويبقى موثقاً لدى المنصة ضمن قسم التعاقد الإلكتروني.
+            </p>
+          </div>
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-gold-500/40 bg-gold-500/10 px-3 py-1.5 text-[11px] font-black text-gold-200">
+            <input
+              type="checkbox"
+              checked={enableCert}
+              onChange={(e) => {
+                setEnableCert(e.target.checked);
+                setCertError("");
+              }}
+              className="accent-gold-500"
+            />
+            تفعيل التوثيق
+          </label>
+        </div>
+
+        {enableCert && (
+          <div className="mt-4 space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label>المبلغ المتفق عليه *</Label>
+                <Input
+                  value={certAmount}
+                  onChange={(e) => {
+                    setCertAmount(e.target.value);
+                    if (!certCommission && Number(e.target.value) > 0)
+                      setCertCommission(String(Math.round(Number(e.target.value) * 0.1)));
+                  }}
+                  type="number"
+                  min="0"
+                  dir="ltr"
+                  className="text-left"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>عمولة المنصة المتفق عليها *</Label>
+                <Input
+                  value={certCommission}
+                  onChange={(e) => setCertCommission(e.target.value)}
+                  type="number"
+                  min="0"
+                  dir="ltr"
+                  className="text-left"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <p className="rounded-xl border border-ink-700/60 bg-ink-950/50 p-2.5 text-[11px] leading-relaxed text-ink-300">
+              المستفيد: <b className="text-cream">{fullName || "—"}</b> · الهاتف:{" "}
+              <b dir="ltr" className="text-cream">{phone || "—"}</b> — أقرّ بالتزام مالي بعمولة المنصة
+              المتفق عليها مع الإدارة، وأوافق على توثيق ذلك إلكترونياً بتوقيع وبصمة.
+            </p>
+            <div>
+              <Label>التوقيع الإلكتروني ✍️ *</Label>
+              <SignaturePad onChange={setCertSignature} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant={certFingerprint ? "success" : "gold"}
+                onClick={handleCertFingerprint}
+                className="!py-2 text-xs"
+              >
+                <Fingerprint className="h-4 w-4" />
+                {certFingerprint ? "البصمة موثّقة ✓" : "تأكيد البصمة الإلكترونية"}
+              </Button>
+              {!certFingerprint && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="!py-2 text-xs"
+                  onClick={() => setCertFingerprint(fallbackFingerprint())}
+                >
+                  تأكيد بديل مسجّل
+                </Button>
+              )}
+              {certFingerprint && (
+                <span className="text-[11px] font-bold text-emerald-300">
+                  {certFingerprint.mode === "webauthn"
+                    ? "بصمة جهاز موثّقة (WebAuthn)"
+                    : "مسار بديل مسجَّل في الوثيقة"}
+                </span>
+              )}
+            </div>
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-gold-500/25 bg-gold-500/5 p-3 text-[12px] font-bold leading-relaxed text-ink-200">
+              <input
+                type="checkbox"
+                checked={certConsent}
+                onChange={(e) => setCertConsent(e.target.checked)}
+                className="mt-0.5 accent-gold-500"
+              />
+              أوافق على الالتزام المالي بعمولة المنصة المتفق عليها مع الإدارة، وأن هذا الطلب/العرض
+              موثّق إلكترونياً بتوقيعي وبصمتي.
+            </label>
+            {certError && (
+              <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs font-bold text-rose-300">
+                {certError}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {error && (

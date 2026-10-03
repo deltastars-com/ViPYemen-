@@ -19,6 +19,7 @@ import { printContractPdf, type PrintableContract } from "@/lib/contractPdf";
 export type ContractRecord = PrintableContract & {
   _id: string;
   matchId?: string;
+  submissionId?: string;
   signToken?: string;
 };
 
@@ -122,6 +123,7 @@ export function ContractModal({
   requestName,
   requestPhone,
   contract,
+  submissionId,
 }: {
   token: string;
   open: boolean;
@@ -130,6 +132,8 @@ export function ContractModal({
   requestName: string;
   requestPhone: string;
   contract: ContractRecord | null;
+  /** ربط التوثيق بطلب/عرض معيّن من قسم تقديم الطلب */
+  submissionId?: string;
 }) {
   const createContract = useMutation(api.contracts.createContract);
   const createDraft = useMutation(api.contracts.createDraft);
@@ -187,6 +191,7 @@ export function ContractModal({
       await createContract({
         token,
         matchId: contract?.matchId,
+        submissionId: submissionId ?? contract?.submissionId,
         title: matchTitle,
         beneficiaryName: name,
         phone,
@@ -211,6 +216,7 @@ export function ContractModal({
       const r = await createDraft({
         token,
         matchId: contract?.matchId,
+        submissionId: submissionId ?? contract?.submissionId,
         title: matchTitle,
         beneficiaryName: name,
         phone,

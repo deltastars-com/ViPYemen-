@@ -23,6 +23,11 @@ type ChannelTarget = { id: string; label: string; hint?: string };
 const CHANNELS: ChannelTarget[] = [
   { id: "telegram", label: "📢 تيليجرام" },
   { id: "whatsapp", label: "💬 واتساب (API/OpenWA)" },
+  {
+    id: "whatsapp_group",
+    label: "👥 مجتمع/جروب واتساب",
+    hint: "يتطلب WHATSAPP_GROUP_ID + بوابة OpenWA",
+  },
   { id: "facebook_page", label: "📘 صفحة فيسبوك" },
   { id: "facebook_group", label: "👥 مجموعة فيسبوك" },
   { id: "platform", label: "🏠 إشعار داخل المنصة", hint: "يظهر لكل مستخدمي التطبيق" },

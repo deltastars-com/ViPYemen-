@@ -18,6 +18,7 @@ import { requireAdmin } from "./auth";
 type ContractDoc = {
   _id: any;
   matchId?: string;
+  submissionId?: string;
   title: string;
   beneficiaryName: string;
   phone: string;
@@ -37,7 +38,7 @@ type ContractDoc = {
 };
 
 /** رقم سند تسلسلي غير قابل للتكرار عمليًا: VIP-السنة-خمس خانات. */
-function makeReceiptNo(now: number): string {
+export function makeReceiptNo(now: number): string {
   const year = new Date(now).getFullYear();
   const serial = Math.floor(10000 + Math.random() * 90000);
   return `VIP-${year}-${serial}`;
@@ -72,6 +73,7 @@ export const createContract = mutation({
   args: {
     token: v.string(),
     matchId: v.optional(v.string()),
+    submissionId: v.optional(v.string()),
     title: v.string(),
     beneficiaryName: v.string(),
     phone: v.string(),
@@ -101,6 +103,7 @@ export const createContract = mutation({
     const receiptNo = makeReceiptNo(now);
     const id = await ctx.db.insert("contracts", {
       matchId: args.matchId,
+      submissionId: args.submissionId,
       title: args.title.trim(),
       beneficiaryName: args.beneficiaryName.trim(),
       phone: args.phone.trim(),
@@ -131,6 +134,7 @@ export const createDraft = mutation({
   args: {
     token: v.string(),
     matchId: v.optional(v.string()),
+    submissionId: v.optional(v.string()),
     title: v.string(),
     beneficiaryName: v.optional(v.string()),
     phone: v.optional(v.string()),
@@ -144,6 +148,7 @@ export const createDraft = mutation({
     const signToken = randomToken();
     const id = await ctx.db.insert("contracts", {
       matchId: args.matchId,
+      submissionId: args.submissionId,
       title: args.title.trim(),
       beneficiaryName: (args.beneficiaryName ?? "").trim(),
       phone: (args.phone ?? "").trim(),
@@ -257,6 +262,25 @@ export const list = query({
     await requireAdmin(ctx, token);
     const rows = await ctx.db.query("contracts").withIndex("by_created").order("desc").take(200);
     return rows as ContractDoc[];
+  },
+});
+
+/**
+ * 🔗 التوثيق المرتبط بطلب/عرض معيّن — يُستخدم داخل قائمة مراجعة الطلبات
+ * ليعرض المشرف حالة الالتزام المالي والتوقيع والبصمة لهذا الطلب.
+ */
+export const getForSubmission = query({
+  args: { token: v.string(), submissionId: v.string() },
+  handler: async (ctx, { token, submissionId }): Promise<ContractDoc | null> => {
+    await requireAdmin(ctx, token);
+    const rows = await ctx.db
+      .query("contracts")
+      .withIndex("by_submission", (q) => q.eq("submissionId", submissionId))
+      .order("desc")
+      .take(5);
+    const active =
+      rows.find((r) => r.status === "paid" || r.status === "signed") ?? rows[0];
+    return (active as ContractDoc) ?? null;
   },
 });
 

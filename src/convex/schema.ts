@@ -65,6 +65,8 @@ export default defineSchema({
     description: v.optional(v.string()),
     fullName: v.string(),
     phone: v.string(),
+    /** بريد المستفيد — يُراجَع ويُحدَّث من لوحة التحكم قبل إعادة النشر */
+    email: v.optional(v.string()),
     address: v.optional(v.string()),
     price: v.optional(v.number()),
     currency: v.optional(v.string()),
@@ -80,6 +82,15 @@ export default defineSchema({
     ),
     adminNote: v.optional(v.string()),
     history: v.optional(v.array(v.any())),
+    /**
+     * 🔐 النسخة الأصلية كما أرسلها العميل — تُحفظ مرة واحدة عند أول مراجعة
+     * وتبقى سرية لدى الإدارة فقط (لا تظهر في أي استعلام عام ولا تُنشر).
+     */
+    original: v.optional(v.any()),
+    /** ختم المراجعة: متى راجعت الإدارة هذا الطلب ومن، وعدد مرات المراجعة */
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.string()),
+    reviewCount: v.optional(v.number()),
     phoneVerified: v.boolean(),
     soldAt: v.optional(v.number()),
     publishedAt: v.optional(v.number()),
@@ -455,6 +466,8 @@ export default defineSchema({
    */
   contracts: defineTable({
     matchId: v.optional(v.string()),
+    /** الطلب/العرض المرتبط بالتوثيق — ترابط قسم تقديم الطلب مع التوثيق الإلكتروني */
+    submissionId: v.optional(v.string()),
     title: v.string(),
     beneficiaryName: v.string(),
     phone: v.string(),
@@ -479,6 +492,7 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_match", ["matchId"])
+    .index("by_submission", ["submissionId"])
     .index("by_status", ["status"])
     .index("by_signToken", ["signToken"])
     .index("by_created", ["createdAt"]),

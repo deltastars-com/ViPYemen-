@@ -190,6 +190,36 @@ async function postViaOpenWA(
   return any;
 }
 
+// ── WhatsApp Group / Community ─────────────────────────────
+/**
+ * النشر في جروب/مجتمع واتساب الخاص بالمنصة.
+ * معرّف المجتمع/المجموعة يُضبط في WHATSAPP_GROUP_ID (يُضاف ‎@g.us تلقائياً)،
+ * والإرسال يتم عبر بوابة OpenWA المجانية — لأن WhatsApp Cloud API لا يدعم
+ * المجموعات والمجتمعات من الأساس.
+ */
+async function postToWhatsAppGroup(
+  text: string,
+  wa: WhatsAppRuntimeConfig
+): Promise<boolean> {
+  const raw = (process.env.WHATSAPP_GROUP_ID ?? "").trim();
+  if (!raw) {
+    console.log(
+      "[Channel:WhatsAppGroup] SKIP — أضف WHATSAPP_GROUP_ID (معرّف المجتمع/المجموعة) في متغيرات Convex"
+    );
+    return false;
+  }
+  const chatId = raw.includes("@")
+    ? raw
+    : `${raw.replace(/\D/g, "")}@g.us`;
+  if (!wa.openwa) {
+    console.log(
+      "[Channel:WhatsAppGroup] SKIP — المجموعات تتطلب بوابة OpenWA (لوحة التحكم ← الإعدادات ← بوابة OpenWA)"
+    );
+    return false;
+  }
+  return postViaOpenWA(text, [chatId], wa.openwa);
+}
+
 async function postToWhatsApp(text: string, wa: WhatsAppRuntimeConfig): Promise<boolean> {
   if ((!wa.token || !wa.phoneNumberId) && wa.openwa && wa.recipients.length > 0) {
     // مسار مجاني بالكامل: بوابة OpenWA بدل Cloud API.
@@ -524,14 +554,31 @@ async function resolveWhatsAppConfig(ctx: ActionCtx): Promise<WhatsAppRuntimeCon
   }
 }
 
-export type ChannelName = "telegram" | "whatsapp" | "facebook_page" | "facebook_group";
+export type ChannelName =
+  | "telegram"
+  | "whatsapp"
+  | "whatsapp_group"
+  | "facebook_page"
+  | "facebook_group";
 
 export const ALL_CHANNELS: ChannelName[] = [
   "telegram",
   "whatsapp",
+  "whatsapp_group",
   "facebook_page",
   "facebook_group",
 ];
+
+/** أسماء القنوات بالعربية للوحة التحكم ونتائج النشر. */
+export const CHANNEL_LABELS_AR: Record<string, string> = {
+  telegram: "تيليجرام",
+  whatsapp: "واتساب (الأرقام)",
+  whatsapp_group: "جروب/مجتمع واتساب",
+  facebook_page: "صفحة فيسبوك",
+  facebook_group: "جروب فيسبوك",
+  platform: "إشعار داخل المنصة",
+  youtube: "يوتيوب",
+};
 
 /** إرسال نص واحد إلى قناة واحدة — يُستخدم للإرسال المباشر وإعادة المحاولة. */
 async function sendToChannel(ctx: ActionCtx, channel: string, text: string): Promise<boolean> {
@@ -548,6 +595,8 @@ async function sendToChannel(ctx: ActionCtx, channel: string, text: string): Pro
       return postToTelegram(text);
     case "whatsapp":
       return postToWhatsApp(text, await resolveWhatsAppConfig(ctx));
+    case "whatsapp_group":
+      return postToWhatsAppGroup(text, await resolveWhatsAppConfig(ctx));
     case "facebook_page":
       return postToFacebookPage(text, undefined, await resolveFacebookConfig(ctx));
     case "facebook_group":
@@ -570,7 +619,7 @@ async function deliverEverywhere(
     kind?: string;
     category?: string;
     entityId?: string;
-    texts: Record<ChannelName, string>;
+    texts: Partial<Record<ChannelName, string>> & { telegram: string };
   }
 ): Promise<{ done: string[]; failed: string[]; paused: string[] }> {
   // 📴 القنوات المتوقفة لا تُجعل في الصندوق أصلاً — لا محاولة فاشلة ولا
@@ -703,6 +752,8 @@ async function explainChannelFailure(
   try {
     if (channel === "telegram") return (await checkTelegram()).detail;
     if (channel === "whatsapp") return (await checkWhatsApp(await resolveWhatsAppConfig(ctx))).detail;
+    if (channel === "whatsapp_group")
+      return (await checkWhatsAppGroup(await resolveWhatsAppConfig(ctx))).detail;
     const fb = await resolveFacebookConfig(ctx);
     if (channel === "facebook_page") {
       return (await checkFacebookTarget(channel, fb.pageId || FB_PAGE_ID_DEFAULT, fb)).detail;
@@ -946,6 +997,52 @@ async function checkWhatsApp(wa: WhatsAppRuntimeConfig): Promise<ChannelHealthRo
   };
 }
 
+async function checkWhatsAppGroup(wa: WhatsAppRuntimeConfig): Promise<ChannelHealthRow> {
+  const raw = (process.env.WHATSAPP_GROUP_ID ?? "").trim();
+  if (!raw) {
+    return {
+      channel: "whatsapp_group",
+      status: "down",
+      detail: "غير مهيأ — أضف WHATSAPP_GROUP_ID (معرّف المجتمع/المجموعة في واتساب) في متغيرات Convex ثم فعّل القناة من لوحة التحكم",
+    };
+  }
+  if (!wa.openwa) {
+    return {
+      channel: "whatsapp_group",
+      status: "degraded",
+      detail: "المعرّف مضبوط لكن الإرسال للمجموعات يتطلب بوابة OpenWA المجانية (WhatsApp Cloud API لا يدعم المجموعات)",
+    };
+  }
+  const base = wa.openwa.baseUrl.replace(/\/+$/, "");
+  const started = Date.now();
+  try {
+    const res = await fetch(`${base}/api/sessions/${wa.openwa.sessionId}`, {
+      headers: { "X-API-Key": wa.openwa.apiKey, Accept: "application/json" },
+      cache: "no-store" as RequestCache,
+    });
+    return res.ok
+      ? {
+          channel: "whatsapp_group",
+          status: "ok",
+          detail: `بوابة OpenWA نشطة — المجتمع/المجموعة: ${raw} · النشر الجماعي جاهز`,
+          latencyMs: Date.now() - started,
+        }
+      : {
+          channel: "whatsapp_group",
+          status: "down",
+          detail: `بوابة OpenWA لا تستجيب (${res.status}) — تأكد أن الخادم يعمل والجلسة مُصرَّحة`,
+          latencyMs: Date.now() - started,
+        };
+  } catch (err) {
+    return {
+      channel: "whatsapp_group",
+      status: "down",
+      detail: `تعذّر الوصول إلى بوابة OpenWA — ${err instanceof Error ? err.message : "خطأ شبكة"}`,
+      latencyMs: Date.now() - started,
+    };
+  }
+}
+
 async function checkFacebookTarget(
   channel: "facebook_page" | "facebook_group",
   id: string,
@@ -1014,6 +1111,7 @@ export const checkChannels = internalAction({
     const rows: ChannelHealthRow[] = [
       await checkTelegram(),
       await checkWhatsApp(wa),
+      await checkWhatsAppGroup(wa),
       await checkFacebookTarget("facebook_page", fb.pageId || FB_PAGE_ID_DEFAULT, fb),
       await checkFacebookTarget("facebook_group", fb.groupId || FB_GROUP_ID_DEFAULT, fb),
     ];

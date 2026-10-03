@@ -33,6 +33,7 @@ export const KEYS = [
   "facebookPostingDetail",
   "facebookTokenType",
   "facebookLastProbeAt",
+  "facebookRenewAttemptAt",
   "facebookTokenAppId",
   "facebookTokenAppName",
 ] as const;
@@ -58,6 +59,8 @@ export interface FacebookConfig {
   facebookTokenType?: string;
   /** وقت آخر اختبار نشر فعلي (منشور مخفي يُحذف فوراً) — ms. */
   facebookLastProbeAt?: number;
+  /** وقت آخر محاولة تجديد التوكن — لمنع تكرار المحاولة الفاشلة. */
+  facebookRenewAttemptAt?: number;
   /** معرّف التطبيق المالك للتوكن — يُستخرج آلياً من debug_token. */
   facebookTokenAppId?: string;
   /** اسم التطبيق المالك للتوكن — للعرض فقط. */

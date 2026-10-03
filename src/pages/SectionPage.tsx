@@ -9,10 +9,17 @@ import { LiveNotices } from "@/components/LiveNotices";
 import { EmptyState, Spinner } from "@/components/ui";
 import type { CategoryConfig } from "@/lib/categories";
 import { useLang } from "@/lib/i18n";
+import { useSeo } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
 export function SectionPage({ category }: { category: CategoryConfig }) {
   const { t, tCat, tField } = useLang();
+  // 🔎 عنوان ووصف فريد لكل قسم — يجعل محرّكات البحث تفهرس كل صفحة على حدة
+  const sectionLabel = category.label;
+  useSeo({
+    title: `${sectionLabel} — توظيف وعقارات وتسويق وبرمجيات في اليمن | ViP Yemen`,
+    description: `أحدث ${sectionLabel} موثّقة في اليمن على منصة ViP Yemen — كل طلب يُراجَع ويُدقَّق قبل النشر، مع توثيق إلكتروني بالتوقيع والبصمة وتواصل مباشر عبر واتساب 00967711780999.`,
+  });
   const published = useSnapshotQuery("subm.all." + category.key, api.submissions.listPublished, {
     category: category.key,
   });

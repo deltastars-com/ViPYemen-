@@ -1,10 +1,13 @@
 import type { LucideIcon } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
  * Professional section heading: icon chip + title with gold highlight +
  * gradient underline + optional subtitle. Used across the platform's main
  * sections for a consistent, polished header language.
+ * Entrance is animated once per view (subtle rise + fade) for a premium feel
+ * without hurting performance (single transform/opacity animation).
  */
 export function SectionHeading({
   icon: Icon,
@@ -22,7 +25,13 @@ export function SectionHeading({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-10", center && "text-center", className)}>
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.5 }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
+      className={cn("mb-10", center && "text-center", className)}
+    >
       <div
         className={cn(
           "relative inline-flex flex-wrap items-center gap-3 rounded-2xl border border-gold-500/20 bg-ink-950/40 px-5 py-3 backdrop-blur-md",
@@ -36,7 +45,7 @@ export function SectionHeading({
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gold-500/40 bg-gradient-to-b from-gold-500/15 to-gold-500/5 text-gold-300 shadow-[0_0_28px_-8px_rgba(212,175,55,0.55)]">
           <Icon className="h-5 w-5" />
         </span>
-        <h2 className="section-title text-cream">
+        <h2 className="section-title text-cream drop-shadow-[0_2px_18px_rgba(212,175,55,0.12)]">
           {title}
           {highlight ? (
             <>
@@ -52,6 +61,6 @@ export function SectionHeading({
           {subtitle}
         </p>
       ) : null}
-    </div>
+    </motion.div>
   );
 }

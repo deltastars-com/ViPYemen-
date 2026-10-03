@@ -157,7 +157,7 @@ jobs:
           cp -r dist release/web-pwa
           zip -r release/vip-yemen-web-pwa-${{ github.ref_name }}.zip release/web-pwa
           zip -r release/vip-yemen-source-${{ github.ref_name }}.zip src index.html package.json bun.lock bun.lockb vite.config.ts capacitor.config.ts convex.json public scripts android ios .github "store-graphics" || true
-          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md IOS-APPSTORE-GUIDE.md FREE-SERVERS.md PLATFORM-GUIDE.md ENV-VARIABLES.md SECRETS-SETUP.md META-DATA-ACCESS-RENEWAL.md ViP-Yemen-Complete-Documentation.md README.md CHANGELOG.md store-listing.json release/ || true
+          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md IOS-APPSTORE-GUIDE.md FREE-SERVERS.md PLATFORM-GUIDE.md ENV-VARIABLES.md SECRETS-SETUP.md META-DATA-ACCESS-RENEWAL.md CLOUD-STORAGE.md ViP-Yemen-Complete-Documentation.md README.md CHANGELOG.md store-listing.json release/ || true
           cp store-graphics/*.png release/ || true
 
       # Assets go straight from this job onto the GitHub Release (no CI
@@ -417,6 +417,7 @@ jobs:
             echo '- **التوقيع والملكية**: بصمة SHA-256/SHA-1 وسجل الملكية في SIGNING-AND-OWNERSHIP.md'
             echo '- **الوثائق**: سياسة الخصوصية (المنصة والتطبيقات)، أدلة النشر والإدارة والتشغيل'
             echo '- **السيرفرات المجانية**: مرايا استضافة متعددة + نبضات إبقاء التشغيل + فحص آلي لقنوات المنصة (انظر FREE-SERVERS.md)'
+            echo '- **التخزين السحابي متعدد الأهداف**: كل ملف يُنسخ آلياً إلى تيليجرام + جروب فيسبوك + مجتمع واتساب + مجلد WebDAV سحابي (انظر CLOUD-STORAGE.md)'
             echo '- **الدليل الشامل**: شرح تفصيلي للمنصة والتطبيق والتقنيات والأنظمة والمميزات والخدمات والمهام وآلية التشغيل (انظر PLATFORM-GUIDE.md)'
             echo '- **قنوات التواصل**: تلجرام · واتساب (WhatsApp Cloud API) · صفحة فيسبوك · مجموعة فيسبوك — تُدار كلها من لوحة التحكم بلا متغيرات بيئة'
           } > /tmp/release-notes.md

@@ -29,6 +29,14 @@
   OpenWA المجانية لأن WhatsApp Cloud API لا يدعم المجموعات. القناة متوقفة افتراضياً حتى
   تُضبط ثم تُفعَّل من لوحة التحكم ← النشر اليدوي في القنوات.
 
+## MULTI-CLOUD FILE ARCHIVE (الأرشفة السحابية متعدّدة الأهداف)
+- `STORAGE_WEBDAV_URL` — رابط مجلد WebDAV (Nextcloud / Strato / Box / IceWarp / rclone serve webdav)
+- `STORAGE_WEBDAV_USER` — اسم المستخدم (يُترك فارغاً إن لم تطلب المصادقة)
+- `STORAGE_WEBDAV_PASS` — كلمة المرور / رمز التطبيق
+> كل ملف يُرفع يُنسخ آلياً إلى: تيليجرام (النسخة الدائمة) + جروب فيسبوك + مجتمع واتساب
+> (وصف + رابط) + هذا المجلد السحابي — بمحاورات متوازية ودون إسقاط بعضها.
+> انظر `CLOUD-STORAGE.md` لقائمة المزوّدين المجانيين وبيانات كل منهم.
+
 ## YOUTUBE (Video Publishing — قناة يوتيوب للمنصة)
 - `YOUTUBE_CLIENT_ID` — OAuth Client ID من Google Cloud Console (Google.Apis.YouTube.v3)
 - `YOUTUBE_CLIENT_SECRET` — سرّ عميل OAuth

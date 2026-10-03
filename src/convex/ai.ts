@@ -38,6 +38,31 @@ function readKey(): string {
   return (process.env.GEMINI_KEY ?? process.env.VITE_GEMINI_KEY ?? "").trim();
 }
 
+// ⚡ ذاكرة مؤقتة للإجابات: نفس السؤال يتلقى نفس الجواب فوراً بدل إعادة
+// استدعاء Gemini — تُقلّل زمن الاستجابة إلى أجزاء من الثانية وتوفر حصة API.
+// (متغيّرة داخل النسخة الواحدة للـ action — تُستبعد تلقائياً عند انتهاء العمر.)
+const ANSWER_CACHE = new Map<string, { text: string; model: string; at: number }>();
+const CACHE_TTL_MS = 10 * 60_000;
+const CACHE_MAX = 200;
+
+function cacheGet(key: string): { text: string; model: string } | null {
+  const hit = ANSWER_CACHE.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > CACHE_TTL_MS) {
+    ANSWER_CACHE.delete(key);
+    return null;
+  }
+  return { text: hit.text, model: hit.model };
+}
+
+function cacheSet(key: string, text: string, model: string): void {
+  if (ANSWER_CACHE.size >= CACHE_MAX) {
+    const oldest = ANSWER_CACHE.keys().next().value;
+    if (oldest !== undefined) ANSWER_CACHE.delete(oldest);
+  }
+  ANSWER_CACHE.set(key, { text, model, at: Date.now() });
+}
+
 function isKeyRevokedError(status: number, body: string): boolean {
   const b = (body || "").toLowerCase();
   return (
@@ -57,6 +82,11 @@ export const answer = action({
       return { ok: false as const, reason: "EMPTY" as const };
     }
 
+    const cacheKey = `${lang ?? "ar"}::${question.trim().toLowerCase()}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      return { ok: true as const, text: cached.text, model: cached.model, cached: true as const };
+    }
     const langHint = lang === "en" ? "Answer in English" : "أجب بالعربية";
     const prompt =
       `أنت مساعد ذكي لمنصة ViP Yemen الشاملة (التوظيف، التسويق العقاري، التسويق الإلكتروني، البرمجيات، العروض، الإعلانات). ${langHint}، موجز ودقيق:\n\n${question}`;
@@ -137,6 +167,7 @@ export const answer = action({
           lastError = "empty response";
           continue;
         }
+        cacheSet(cacheKey, text, modelName);
         return { ok: true as const, text, model: modelName };
       } catch {
         lastError = "network timeout";

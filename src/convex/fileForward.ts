@@ -271,15 +271,26 @@ export const processFileQueue = action({
     const buffer = await res.arrayBuffer();
     const caption = categoryLabel(args.entityType, args.entityTitle);
     const fbToken = await resolveFacebookToken(ctx);
+    // رابط بديل للمشاركة — يُرسل مع الوصف إلى مجتمع واتساب (ينتهي تلقائياً).
+    const shareUrl = (await ctx.storage.getUrl(args.storageId)) ?? url;
 
-    // Forward to Telegram + Facebook in parallel
-    const [tgResult, fbResult] = await Promise.all([
+    // Forward to Telegram + Facebook + WhatsApp group + cloud (WebDAV) in parallel
+    const [tgResult, fbResult, waResult, davResult] = await Promise.all([
       sendFileToTelegram(buffer, args.fileName, args.mimeType, caption).catch((e) => ({
         ok: false as const,
         error: e.message,
       })),
       sendFileToFacebook(buffer, args.fileName, args.mimeType, caption, fbToken).catch((e) => ({
         ok: false as const,
+        error: e.message,
+      })),
+      sendLinkToWhatsAppGroup(
+        ctx,
+        `${caption}\n📎 ${args.fileName}\n🔗 ${shareUrl}`
+      ).catch((e) => ({ ok: false as const, skipped: false, error: e.message })),
+      archiveToWebdav(buffer, args.fileName, args.mimeType).catch((e) => ({
+        ok: false as const,
+        skipped: false,
         error: e.message,
       })),
     ]);
@@ -306,6 +317,26 @@ export const processFileQueue = action({
       console.error(`[FileForward] ❌ Facebook: ${args.fileName} — ${fbResult.error}`);
     }
 
+    // 👥 مجتمع واتساب — هدف «متخطٍّ» لو لم يُضبط (لا يُحتسب فشلاً)
+    if (waResult.ok) {
+      forwardedTo.push("whatsapp_group");
+      remoteUrls.whatsapp_group = shareUrl;
+      console.log(`[FileForward] ✅ WhatsApp group: ${args.fileName}`);
+    } else if (!waResult.skipped) {
+      errors.push(`WhatsApp: ${waResult.error}`);
+      console.error(`[FileForward] ❌ WhatsApp: ${args.fileName} — ${waResult.error}`);
+    }
+
+    // ☁️ الأرشفة السحابية (WebDAV) — متخطّاة إن لم تُضبط المتغيرات
+    if (davResult.ok) {
+      forwardedTo.push("webdav");
+      if (davResult.url) remoteUrls.webdav = davResult.url;
+      console.log(`[FileForward] ✅ WebDAV: ${args.fileName}`);
+    } else if (!davResult.skipped) {
+      errors.push(`WebDAV: ${davResult.error}`);
+      console.error(`[FileForward] ❌ WebDAV: ${args.fileName} — ${davResult.error}`);
+    }
+
     // Update queue record
     if (forwardedTo.length > 0) {
       await ctx.runMutation(api.fileQueueMutations.markForwarded, {
@@ -326,6 +357,8 @@ export const processFileQueue = action({
       ok: forwardedTo.length > 0,
       telegram: tgResult.ok,
       facebook: fbResult.ok,
+      whatsappGroup: waResult.ok === true,
+      webdav: davResult.ok === true,
       remoteUrls,
     };
   },
@@ -333,3 +366,83 @@ export const processFileQueue = action({
 
 // Batch processing moved to fileQueueInternal.ts (called by cron)
 // Avoids circular reference in generated API types
+
+/* ─────────────── ☁️ أرشفة سحابية متعددة الأهداف (WebDAV) ─────────────── */
+/**
+ * يرفع نسخة من الملف إلى تخزين سحابي مجاني عبر بروتوكول WebDAV — يعمل مع
+ * أي مزوّد يدعمه (Nextcloud · Strato HI3 · Box · IceWarp · خوادمك الخاصة)،
+ * وبذلك تصبح المنصة متعددة المصادر: تيليجرام + فيسبوك + واتساب + سحابة WebDAV.
+ * لا يحدث شيء إن لم تُضبط المتغيرات — الهدف «متخطّي» لا «فاشل».
+ */
+async function archiveToWebdav(
+  buffer: ArrayBuffer,
+  fileName: string,
+  mimeType: string
+): Promise<{ ok: boolean; skipped?: boolean; url?: string; error?: string }> {
+  const base = (process.env.STORAGE_WEBDAV_URL ?? "").trim();
+  const user = (process.env.STORAGE_WEBDAV_USER ?? "").trim();
+  const pass = (process.env.STORAGE_WEBDAV_PASS ?? "").trim();
+  if (!base) return { ok: false, skipped: true };
+  const stamp = new Date().toISOString().slice(0, 10);
+  const safe = fileName.replace(/[^\w.\-]/g, "_");
+  const target = `${base.replace(/\/+$/, "")}/${stamp}-${Date.now()}-${encodeURIComponent(safe)}`;
+  try {
+    const res = await fetch(target, {
+      method: "PUT",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}`,
+        "Content-Type": mimeType || "application/octet-stream",
+      },
+      body: buffer,
+    });
+    if (!res.ok) return { ok: false, error: `WebDAV ${res.status}` };
+    return { ok: true, url: target };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? "WebDAV unreachable" };
+  }
+}
+
+/* ─────────── 👥 نسخة إلى مجتمع/جروب واتساب (نص + رابط موقّع) ─────────── */
+/**
+ * يرسل وصف الملف ورابطه الموقّع (3 أيام) إلى مجتمع/جروب واتساب الخاص بالمنصة
+ * عبر بوابة OpenWA (نفس مسار send-text المستخدم للنشر) — فالوصول إلى الملف
+ * يبقى من أي جهاز، بينما النسخة الكاملة تُحفظ دائماً في تيليجرام والسحابة.
+ */
+async function sendLinkToWhatsAppGroup(
+  ctx: ActionCtx,
+  text: string
+): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  const rawGroupId = (process.env.WHATSAPP_GROUP_ID ?? "").trim();
+  if (!rawGroupId) return { ok: false, skipped: true };
+  try {
+    const cfg = (await ctx.runQuery(internal.openwa.getConfigInternal, {})) as {
+      baseUrl: string;
+      apiKey: string;
+      sessionId: string;
+    };
+    if (!cfg?.baseUrl || !cfg?.apiKey || !cfg?.sessionId) {
+      return { ok: false, skipped: true };
+    }
+    const chatId = rawGroupId.includes("@")
+      ? rawGroupId
+      : `${rawGroupId.replace(/\D/g, "")}@g.us`;
+    const res = await fetch(
+      `${cfg.baseUrl.replace(/\/+$/, "")}/api/sessions/${cfg.sessionId}/messages/send-text`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": cfg.apiKey,
+        },
+        body: JSON.stringify({ chatId, text }),
+      }
+    );
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `OpenWA ${res.status} ${body.slice(0, 120)}` };
+    }
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? "OpenWA unreachable" };
+  }
+}

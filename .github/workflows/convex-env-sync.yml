@@ -1,0 +1,92 @@
+# 🔄 مزامنة متغيرات البيئة من أسرار المستودع إلى البيئة الحقيقية للناشر (Convex)
+#
+# المشكلة التي تحلها: قنوات النشر تُنفَّذ من أكشنات Convex، وهي تقرأ **حصراً**
+# متغيرات بيئة اتصال النشر في Convex Dashboard — أما أسرار GitHub / Vercel /
+# Render / Supabase فلا تصل إليها إطلاقاً. لذلك كان التوكن «الجاهز» في أسرار
+# المستودع لا يراه النظام، فيظل يعلن انتهاء الصلاحية.
+#
+# هذا السير عمل يدفع القيم (بدون طباعتها أبداً) إلى متغيرات Convex عند كل دفع
+# إلى main أو يدوياً من Actions → Sync Convex environment → Run workflow.
+# القيم تُمرَّر كمتغيرات بيئة للخطوة فقط ولا تُسجَّل في السجلات.
+
+name: Sync Convex environment (repo secrets → backend)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: convex-env-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Sync secrets into Convex env
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install Convex CLI (project dependency)
+        run: npm install --no-save --ignore-scripts convex@1.24.0
+
+      - name: Push secret values into the Convex deployment
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          # فيسبوك (التوكن طويل الأجل + سرّ التطبيق للتجديد الذاتي)
+          FACEBOOK_ACCESS_TOKEN: ${{ secrets.FACEBOOK_ACCESS_TOKEN }}
+          FACEBOOK_PAGE_ACCESS_TOKEN: ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
+          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+          FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FACEBOOK_GROUP_ID: ${{ secrets.FACEBOOK_GROUP_ID }}
+          # تيليجرام · واتساب (المجتمع/المجموعة) · يوتيوب
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WHATSAPP_GROUP_ID: ${{ secrets.WHATSAPP_GROUP_ID }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CONVEX_DEPLOY_KEY:-}" ]]; then
+            echo "::notice::CONVEX_DEPLOY_KEY غير مضبوط في أسرار المستودع — تُتخطّى مزامنة متغيرات Convex."
+            exit 0
+          fi
+          KEYS=(
+            FACEBOOK_ACCESS_TOKEN
+            FACEBOOK_PAGE_ACCESS_TOKEN
+            FACEBOOK_APP_ID
+            FACEBOOK_APP_SECRET
+            FACEBOOK_PAGE_ID
+            FACEBOOK_GROUP_ID
+            TELEGRAM_BOT_TOKEN
+            TELEGRAM_CHAT_ID
+            WHATSAPP_GROUP_ID
+            YOUTUBE_CLIENT_ID
+            YOUTUBE_CLIENT_SECRET
+            YOUTUBE_REFRESH_TOKEN
+          )
+          synced=0
+          skipped=0
+          for key in "${KEYS[@]}"; do
+            value="${!key:-}"
+            if [[ -z "$value" ]]; then
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if ./node_modules/.bin/convex env set "$key" "$value" >/dev/null 2>&1; then
+              echo "✅ $key synced to Convex (القيمة لا تُطبع أبداً)"
+              synced=$((synced + 1))
+            else
+              echo "::warning::تعذّرت مزامنة $key إلى بيئة Convex — تحقّق من CONVEX_DEPLOY_KEY"
+            fi
+          done
+          echo "synced=$synced skipped_unset=$skipped"

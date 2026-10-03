@@ -345,10 +345,24 @@ export const getRenewalStatePublic = internalQuery({
       (process.env.FACEBOOK_APP_ID ?? "").trim().length > 0 &&
       (process.env.FACEBOOK_APP_SECRET ?? "").trim().length > 0;
     const pageTokenInEnv = (process.env.FACEBOOK_PAGE_ACCESS_TOKEN ?? "").trim().length > 0;
+    const accessTokenInEnv = (process.env.FACEBOOK_ACCESS_TOKEN ?? "").trim().length > 0;
+    const expired = tokenExpiresAt > 0 && tokenExpiresAt < now;
+    // 🧭 الإرشاد المباشر بالعربية: ماذا يفعل المشرف الآن إن كانت الحالة سيّئة؟
+    const hasCreds = appId.length > 0 && appSecret.length > 0;
+    const nextStep = !hasCreds
+      ? "أضف FACEBOOK_APP_SECRET في متغيرات Convex (أو في أسرار المستودع — يُزامَن آلياً) لتفعيل التبديل والتجديد الذاتي للتوكن."
+      : expired
+        ? "التوكن الحالي منتهٍ — حدّث FACEBOOK_ACCESS_TOKEN في أسرار المستودع (تُزامَن آلياً إلى Convex) أو الصقه في بطاقة «ربط فيسبوك» باللوحة، ويرفع النظام الإيقاف تلقائياً خلال 5 دقائق."
+        : config.facebookCanPost === false
+          ? "أعد توليد التوكن مع صلاحيتي pages_manage_posts و pages_read_engagement ثم حدّثه — الإيقاف يرتفع تلقائياً بعد اختبار النشر الفعلي."
+          : "كل شيء جاهز — التجديد الذاتي يعمل وحده عند اقتراب انتهاء التوكن.";
     return {
       hasAppCredentials: appId.length > 0 && appSecret.length > 0,
       appCredentialsInEnv: appCredsInEnv,
+      accessTokenInEnv,
       pageTokenInEnv,
+      expired,
+      nextStep,
       tokenType: (config.facebookTokenType as string | undefined) ?? "",
       hasUserToken: userToken.length > 0,
       hasToken: token.length > 0,

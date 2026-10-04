@@ -314,7 +314,9 @@ export const getBotProfile = action({
  *    `setMyName` / `setMyDescription` / `setMyShortDescription` تغيّر نصّ العرض
  *    فقط، ولا علاقة لها بالتوكن ولا بصلاحيات البوت في القناة.
  *
- * الحقل الفارغ = لا تغيّر ذلك الحقل.
+ * **الحقل الفارغ أو الغائب = لا نغيّره إطلاقاً** (عكس الإرسال الفارغ الذي
+ *  كان سيمسح النصّ من تيليجرام). زر «قراءة الهوية الحالية» يملأ الحقول،
+ *  فمن أراد التعديل يكتب فوق ما يريد فقط ويترك الباقي.
  */
 export const setBotProfile = action({
   args: {
@@ -330,39 +332,42 @@ export const setBotProfile = action({
       return { ok: false as const, detail: "لا يوجد توكن بوت — أضفه أولاً" };
     }
 
-    const checks: [string, string | undefined, number][] = [
-      ["الاسم", name, BOT_PROFILE_LIMITS.name],
-      ["الوصف", description, BOT_PROFILE_LIMITS.description],
-      ["الوصف القصير", shortDescription, BOT_PROFILE_LIMITS.shortDescription],
+    // نتجاهل الفارغ مسبقاً حتى لا يُرسَل نصٌّ فارغ يمسح ما هو موجود.
+    const wanted: [string, string | undefined, number][] = [
+      ["الاسم", name?.trim() || undefined, BOT_PROFILE_LIMITS.name],
+      ["الوصف", description?.trim() || undefined, BOT_PROFILE_LIMITS.description],
+      ["الوصف القصير", shortDescription?.trim() || undefined, BOT_PROFILE_LIMITS.shortDescription],
     ];
-    for (const [label, value, max] of checks) {
-      if (value !== undefined && value.trim().length > max) {
+    for (const [label, value, max] of wanted) {
+      if (value !== undefined && value.length > max) {
         return {
           ok: false as const,
-          detail: `${label} يتجاوز الحد (${value.trim().length}/${max} حرف) — اختصره ثم أعد المحاولة`,
+          detail: `${label} يتجاوز الحد (${value.length}/${max} حرف) — اختصره ثم أعد المحاولة`,
         };
       }
     }
 
     const results: { field: string; ok: boolean; detail: string }[] = [];
-    if (name !== undefined) {
-      const r = await callBotApi(tg.token, "setMyName", { name: name.trim() });
+    const [nameV, descV, shortV] = wanted.map((w) => w[1]);
+    if (nameV !== undefined) {
+      const r = await callBotApi(tg.token, "setMyName", { name: nameV });
       results.push({ field: "الاسم", ...r });
     }
-    if (description !== undefined) {
-      const r = await callBotApi(tg.token, "setMyDescription", {
-        description: description.trim(),
-      });
+    if (descV !== undefined) {
+      const r = await callBotApi(tg.token, "setMyDescription", { description: descV });
       results.push({ field: "الوصف", ...r });
     }
-    if (shortDescription !== undefined) {
+    if (shortV !== undefined) {
       const r = await callBotApi(tg.token, "setMyShortDescription", {
-        short_description: shortDescription.trim(),
+        short_description: shortV,
       });
       results.push({ field: "الوصف القصير", ...r });
     }
     if (results.length === 0) {
-      return { ok: false as const, detail: "لم تُدخل أي حقل للتغيير" };
+      return {
+        ok: false as const,
+        detail: "كل الحقول فارغة — اضغط «قراءة الهوية الحالية» أولاً ثم عدّل ما تريد فقط.",
+      };
     }
     return { ok: results.every((r) => r.ok), results };
   },

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { LogoMark } from "@/components/Logo";
+import { UpdateBadge } from "./UpdateNotice";
 import {
   Facebook,
   Instagram,
@@ -42,31 +43,35 @@ function StoreBadges() {
   const badge =
     "flex items-center gap-2 rounded-xl border border-gold-500/40 bg-gold-500/10 px-3.5 py-2 text-xs font-bold text-gold-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/70 hover:bg-gold-500/15 disabled:cursor-not-allowed disabled:opacity-40";
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-2.5">
-      {/* Real buttons (not anchors): the store badges act on click only and
-          the iOS one is genuinely disabled until a URL is saved, so keyboard
-          users get the same behaviour as pointer users. */}
-      <button
-        type="button"
-        onClick={() => openExternal(androidUrl)}
-        aria-label={t("footerDownloadAndroid")}
-        title={t("footerDownloadAndroid")}
-        className={badge}
-      >
-        <Smartphone className="h-4 w-4" />
-        <span>{lang === "ar" ? "أندرويد — APK" : "Android — APK"}</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => iosUrl && openExternal(iosUrl)}
-        disabled={!iosUrl}
-        aria-label={iosUrl ? t("footerDownloadIos") : t("footerIosSoon")}
-        title={iosUrl ? t("footerDownloadIos") : t("footerIosSoon")}
-        className={badge}
-      >
-        <Apple className="h-4 w-4" />
-        <span>{lang === "ar" ? "آيفون — App Store" : "iOS — App Store"}</span>
-      </button>
+    <div className="mt-4">
+      {/* تذكير بسيط بوجود تحديث يظهر فوق أيقونة تحميل التطبيق — بدون أي رابط */}
+      <UpdateBadge />
+      <div className="flex flex-wrap items-center gap-2.5">
+        {/* Real buttons (not anchors): the store badges act on click only and
+            the iOS one is genuinely disabled until a URL is saved, so keyboard
+            users get the same behaviour as pointer users. */}
+        <button
+          type="button"
+          onClick={() => openExternal(androidUrl)}
+          aria-label={t("footerDownloadAndroid")}
+          title={t("footerDownloadAndroid")}
+          className={badge}
+        >
+          <Smartphone className="h-4 w-4" />
+          <span>{lang === "ar" ? "أندرويد — APK" : "Android — APK"}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => iosUrl && openExternal(iosUrl)}
+          disabled={!iosUrl}
+          aria-label={iosUrl ? t("footerDownloadIos") : t("footerIosSoon")}
+          title={iosUrl ? t("footerDownloadIos") : t("footerIosSoon")}
+          className={badge}
+        >
+          <Apple className="h-4 w-4" />
+          <span>{lang === "ar" ? "آيفون — App Store" : "iOS — App Store"}</span>
+        </button>
+      </div>
     </div>
   );
 }

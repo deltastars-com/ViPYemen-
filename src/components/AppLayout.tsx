@@ -4,7 +4,6 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { OfflineBanner } from "./OfflineBanner";
 import { MirrorFailover } from "./MirrorFailover";
-import { UpdateNotice } from "./UpdateNotice";
 import { WhatsAppButton, AssistantEntry } from "./FloatingButtons";
 
 export function AppLayout() {
@@ -12,7 +11,6 @@ export function AppLayout() {
     <div className="flex min-h-screen flex-col">
       <TickerBar />
       <OfflineBanner />
-      <UpdateNotice />
       <Navbar />
       <main className="flex-1">
         <Outlet />

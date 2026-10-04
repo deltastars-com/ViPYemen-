@@ -5,9 +5,10 @@
 // لا يحتاج أي توكن ولا Cloud API — يعمل في الويب والتطبيق الأصلي دائماً،
 // وهو المسار الاحتياطي الدائم لنشر العروض والإعلانات على القناة.
 import { openExternal } from "@/lib/utils";
+import { WHATSAPP_COMMUNITY_URL } from "@/lib/socialLinks";
 
-/** الرابط الرسمي الحقيقي لقناة واتساب في هذا المشروع (Footer · /channels · صفحة القنوات). */
-export const DEFAULT_WHATSAPP_CHANNEL_LINK = "https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb";
+/** الرابط الرسمي لمجتمع واتساب (من المصدر الواحد — Footer · /channels · صفحة القنوات). */
+export const DEFAULT_WHATSAPP_CHANNEL_LINK = WHATSAPP_COMMUNITY_URL;
 
 /** نموذج المعاينة — يُتجاهل إن حُفظ ليحل محل الرابط الرسمي. */
 const SAMPLE_CHANNEL_LINK = "https://whatsapp.com/channel/0029VaYourChannelID";

@@ -8,6 +8,16 @@
 - `VITE_CONVEX_URL` — Backend URL (e.g., `https://xxx.convex.cloud`)
 - `CONVEX_DEPLOY_KEY` — Deploy key for CI/CD (server-side only)
 
+> ⚠️ **مهم:** بدون `CONVEX_DEPLOY_KEY` لا ينفّذ سير `release.yml` أمر
+> `convex deploy` على الإنتاج، فتصل تغييرات الواجهة فقط ويبقى الباك اند
+> على نسخته القديمة (نقاط `/health` و`/channels` ترجع 404). أضف السر إلى
+> GitHub Secrets لتصل كل التحسينات إلى الإنتاج تلقائياً مع كل دفعة.
+
+> ℹ️ **مفاتيح تيليجرام ويوتيوب** يمكن إضافتها أيضاً من لوحة التحكم:
+> تبويب «النشر اليدوي في القنوات» ← بطاقة «مفاتيح تيليجرام ويوتيوب».
+> الأولوية دائماً لمتغير البيئة هنا؛ وما تُحفظ في اللوحة احتياط سريع
+> يعمل فوراً. الأبعد: أضف نفس القيمة في GitHub Secrets وSupabase.
+
 ## SUPABASE (Secondary Backend — Storage, Search, Analytics)
 - `VITE_SUPABASE_URL` — Project URL (e.g., `https://xxx.supabase.co`)
 - `VITE_SUPABASE_ANON_KEY` — Public anon key (safe for client)

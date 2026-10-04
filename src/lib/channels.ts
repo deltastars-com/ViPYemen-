@@ -1,3 +1,14 @@
+import {
+  FACEBOOK_GROUP_URL,
+  FACEBOOK_PAGE_URL,
+  INSTAGRAM_URL,
+  TELEGRAM_BOT_URL,
+  TELEGRAM_CHANNEL_URL,
+  TIKTOK_URL,
+  WHATSAPP_COMMUNITY_URL,
+  YOUTUBE_URL,
+} from "./socialLinks";
+
 export interface Channel {
   id: string;
   name: string;
@@ -20,7 +31,7 @@ export const CHANNELS: Channel[] = [
     name: "قناة تيليجرام",
     description:
       "أخبار المنصة والعروض الحصرية وكل ما يخص التوظيف والعقارات والتسويق الإلكتروني أولاً بأول.",
-    href: "https://t.me/vipyemen77",
+    href: TELEGRAM_CHANNEL_URL,
     color: "text-sky-300",
     bg: "bg-[#229ed9]/15",
     hover: "hover:border-[#229ed9]/50",
@@ -28,23 +39,35 @@ export const CHANNELS: Channel[] = [
     cta: "انضم للقناة",
   },
   {
-    id: "whatsapp",
-    name: "قناة واتساب",
+    id: "telegram_bot",
+    name: "بوت تيليجرام",
     description:
-      "كل جديد المنصة — إعلانات، عروض، ومنشورات معتمدة تُنشر لحظياً عبر قناة الواتساب الرسمية.",
-    href: "https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb",
+      "المساعد الذكي للمنصة على تيليجرام — يرد على استفساراتك ويوصلك أحدث العروض لحظة نشرها.",
+    href: TELEGRAM_BOT_URL,
+    color: "text-sky-300",
+    bg: "bg-[#229ed9]/15",
+    hover: "hover:border-[#229ed9]/50",
+    badge: "border-[#229ed9]/40 bg-[#229ed9]/10 text-sky-300",
+    cta: "افتح البوت",
+  },
+  {
+    id: "whatsapp",
+    name: "مجتمع واتساب",
+    description:
+      "كل جديد المنصة — إعلانات، عروض، ومنشورات معتمدة تُنشر لحظياً عبر مجتمع الواتساب الرسمي.",
+    href: WHATSAPP_COMMUNITY_URL,
     color: "text-[#4ade80]",
     bg: "bg-[#25d366]/15",
     hover: "hover:border-[#25d366]/50",
     badge: "border-[#25d366]/40 bg-[#25d366]/10 text-[#4ade80]",
-    cta: "انضم للقناة",
+    cta: "انضم للمجتمع",
   },
   {
     id: "facebook",
     name: "صفحة فيسبوك",
     description:
       "الصفحة الرسمية للمنصة — كل منشور معتمد يُنشر عليها تلقائياً مع رابط المنصة وبيانات التواصل.",
-    href: "https://www.facebook.com/profile.php?id=102672588647591",
+    href: FACEBOOK_PAGE_URL,
     color: "text-[#4da3ff]",
     bg: "bg-[#1877f2]/15",
     hover: "hover:border-[#1877f2]/50",
@@ -56,7 +79,7 @@ export const CHANNELS: Channel[] = [
     name: "مجموعة فيسبوك",
     description:
       "مجموعة المنصة للنقاش والعروض — تنشر فيها الطلبات المعلنة تلقائياً ليصل الجمهور كاملاً.",
-    href: "https://www.facebook.com/groups/346010664332427",
+    href: FACEBOOK_GROUP_URL,
     color: "text-[#4da3ff]",
     bg: "bg-[#1877f2]/15",
     hover: "hover:border-[#1877f2]/50",
@@ -68,11 +91,47 @@ export const CHANNELS: Channel[] = [
     name: "قناة يوتيوب",
     description:
       "فيديوهات تعريفيّة بالمنصة، شروحات الخدمات، والمنشورات المصوّرة بجودة عالية واحترافية.",
-    href: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw",
+    href: YOUTUBE_URL,
     color: "text-red-300",
     bg: "bg-[#ff0000]/15",
     hover: "hover:border-[#ff0000]/50",
     badge: "border-[#ff0000]/40 bg-[#ff0000]/10 text-red-300",
     cta: "اشترك بالقناة",
   },
+  {
+    id: "tiktok",
+    name: "حساب تيك توك",
+    description:
+      "مقاطع مصوّرة قصيرة عن المنصة وأحدث العروض والخدمات — محتوى عملي يصل الجمهور بسرعة.",
+    href: TIKTOK_URL,
+    color: "text-cyan-200",
+    bg: "bg-cyan-400/15",
+    hover: "hover:border-cyan-400/50",
+    badge: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
+    cta: "تابع الحساب",
+  },
+  {
+    id: "instagram",
+    name: "حساب انستغرام",
+    description:
+      "صور ومحتوى مرئي للمنصة — واجهات المنصة، شهادات العملاء، وخلاصة العروض المنشورة.",
+    href: INSTAGRAM_URL,
+    color: "text-pink-300",
+    bg: "bg-[#e1306c]/15",
+    hover: "hover:border-[#e1306c]/50",
+    badge: "border-[#e1306c]/40 bg-[#e1306c]/10 text-pink-300",
+    cta: "تابع الحساب",
+  },
 ];
+
+/** لون العلامة التجارية لكل قناة — يُستخدم لتلوين الأيقونات في كل الواجهات. */
+export const CHANNEL_BRAND_COLOR: Record<string, string> = {
+  telegram: "#229ED9",
+  telegram_bot: "#229ED9",
+  whatsapp: "#25D366",
+  facebook: "#1877F2",
+  facebook_group: "#1877F2",
+  youtube: "#FF0000",
+  tiktok: "#25F4EE",
+  instagram: "#E1306C",
+};

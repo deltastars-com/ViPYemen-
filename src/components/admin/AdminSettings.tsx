@@ -28,6 +28,7 @@ import {
   publishToWhatsAppChannel,
   setWhatsAppChannelLink,
 } from "@/lib/whatsappChannel";
+import { ChannelKeysCard } from "./ChannelKeysCard";
 import { api } from "../../convex/_generated/api";
 import { Button, Card, Input, Label, Spinner, Textarea } from "@/components/ui";
 import { ChannelPublishCard } from "@/components/admin/ChannelPublishCard";
@@ -243,6 +244,7 @@ export function AdminSettings({ token }: { token: string }) {
       </div>
 
       <ChannelSetupCard />
+      <ChannelKeysCard token={token} />
 
       <WhatsAppConnectCard token={token} />
 

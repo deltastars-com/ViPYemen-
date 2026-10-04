@@ -11,6 +11,7 @@ import {
 import { api, internal } from "./_generated/api";
 import { findReturningClient, touchFollowup } from "./followups";
 import { makeReceiptNo } from "./contracts";
+import { computeExpiry, isExpired } from "./platformExpiry";
 
 /** التوثيق الإلكتروني والالتزام المالي الذي يكمله العميل مع تقديم الطلب/العرض. */
 type SubmissionCertification = {
@@ -414,10 +415,15 @@ export const listPublished = query({
       .withIndex("by_category_status", (q) =>
         q.eq("category", category ?? "jobs")
       )
-      .filter((q) => q.or(q.eq(q.field("status"), "published"), q.eq(q.field("status"), "sold")))
+      .filter(
+        (q) =>
+          q.or(q.eq(q.field("status"), "published"), q.eq(q.field("status"), "sold"))
+      )
       .order("desc")
       .take(limit ?? 100);
     if (type) rows = rows.filter((r) => r.type === type);
+    // ⏳ انتهاء المدة يظهر فوراً على الواجهة (لا ننتظر دورة الأرشفة).
+    rows = rows.filter((r) => !isExpired(r.platformExpiresAt));
     return Promise.all(rows.map(async (r) => publicView(await resolveAttachmentUrls(ctx, r))));
   },
 });
@@ -431,7 +437,10 @@ export const getPublicStats = query({
         .query("submissions")
         .withIndex("by_category_status", (q) => q.eq("category", category))
         .collect();
-      counts[category] = rows.filter((r) => r.status === "published" || r.status === "sold").length;
+      counts[category] = rows.filter(
+        (r) =>
+          (r.status === "published" || r.status === "sold") && !isExpired(r.platformExpiresAt)
+      ).length;
     }
     const offers = await ctx.db.query("offers").withIndex("by_status", (q) => q.eq("status", "published")).collect();
     return { counts, offers: offers.length };
@@ -557,8 +566,14 @@ export const reviewAndUpdate = mutation({
     }),
     publishMode: v.string(), // auto | manual
     note: v.optional(v.string()),
+    /**
+     * ⏳ مدة ظهور المنشور على واجهات المنصة فقط (بالأيام).
+     * الإدارة تختارها أثناء المراجعة قبل إعادة النشر: 0 أو غائبة = دائم.
+     * نسخة المنشور في القنوات والجروبات والصفحات تبقى دائماً.
+     */
+    platformVisibleDays: v.optional(v.number()),
   },
-  handler: async (ctx, { token, id, patch, publishMode, note }) => {
+  handler: async (ctx, { token, id, patch, publishMode, note, platformVisibleDays }) => {
     const admin = await requireAdmin(ctx, token);
     if (!['auto', 'manual'].includes(publishMode))
       throw new ConvexError("أسلوب النشر غير صالح — تلقائي أو يدوي");
@@ -619,6 +634,13 @@ export const reviewAndUpdate = mutation({
       reviewCount: (existing.reviewCount ?? 0) + 1,
     };
     const publish = publishMode === "auto";
+    if (platformVisibleDays !== undefined) {
+      if (!Number.isFinite(platformVisibleDays) || platformVisibleDays < 0 || platformVisibleDays > 365) {
+        throw new ConvexError("مدة الظهور يجب أن تكون بين 0 (دائم) و 365 يوماً");
+      }
+      doc.platformVisibleDays = platformVisibleDays;
+      doc.platformExpiresAt = computeExpiry(platformVisibleDays, now);
+    }
     if (publish) {
       doc.status = "published";
       doc.publishedAt = existing.publishedAt ?? now;

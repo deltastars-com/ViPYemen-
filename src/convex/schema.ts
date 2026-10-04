@@ -101,6 +101,14 @@ export default defineSchema({
     indexedAt: v.optional(v.number()),
     /** وقت الأرشفة التلقائية/اليدوية */
     archivedAt: v.optional(v.number()),
+    /**
+     * ⏳ مدة ظهور المنشور على واجهات المنصة فقط (بالأيام كما حددتها الإدارة).
+     * صفر/غائبة = دائم بلا حذف. عند انتهاء المدة تُحذف واجهة المنصة آلياً
+     * (via platforms) وتبقى النسخ المنشورة في القنوات والجروبات والصفحات.
+     */
+    platformVisibleDays: v.optional(v.number()),
+    /** الوقت الذي ينتهي عنده الظهور على واجهات المنصة (يُحسب عند المراجعة) */
+    platformExpiresAt: v.optional(v.number()),
     /** آخر تنشيط من العميل (عميل سابق أعاد تنشيط طلبه) */
     reactivatedAt: v.optional(v.number()),
     /** أفضل نتيجة مطابقة محسوبة من محرك التوافق (0..100) */
@@ -120,6 +128,10 @@ export default defineSchema({
     link: v.optional(v.string()),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
+    /** ⏳ مدة ظهور الإعلان على واجهة المنصة فقط (أيام) — 0 = دائم */
+    platformVisibleDays: v.optional(v.number()),
+    /** وقت انتهاء الظهور على واجهة المنصة (يُحذف آلياً بعده) */
+    platformExpiresAt: v.optional(v.number()),
     publishedTo: v.optional(v.array(v.string())),
     lastChannelPush: v.optional(v.number()),
     createdAt: v.number(),
@@ -135,6 +147,10 @@ export default defineSchema({
     discountPercent: v.optional(v.number()),
     isFeatured: v.boolean(),
     status: v.string(),
+    /** ⏳ مدة ظهور العرض على واجهة المنصة فقط (أيام) — 0 = دائم */
+    platformVisibleDays: v.optional(v.number()),
+    /** وقت انتهاء الظهور على واجهة المنصة (يُحذف آلياً بعده) */
+    platformExpiresAt: v.optional(v.number()),
     publishedTo: v.optional(v.array(v.string())),
     lastChannelPush: v.optional(v.number()),
     createdAt: v.number(),

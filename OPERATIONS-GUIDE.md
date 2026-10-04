@@ -108,9 +108,14 @@ bun run icons            # توليد الأيقونات الرسمية لكل �
 | واتساب الأعمال | +967 711 780 999 |
 | اتصال مباشر | +967 773 597 404 |
 | البريد | vipservicesyemen@gmail.com |
-| قناة واتساب | chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb |
-| قناة تيليجرام | t.me/VIPservices2 |
-| يوتيوب | youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw |
+| مجتمع واتساب | chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb |
+| قناة تيليجرام | t.me/vipyemen77 |
+| بوت تيليجرام | t.me/vipyemen_bot |
+| صفحة فيسبوك | facebook.com/vipyemen1 |
+| مجموعة فيسبوك | facebook.com/groups/346010664332427 |
+| يوتيوب | youtube.com/@vipyemen1 |
+| تيك توك | tiktok.com/@vip_yemen7 |
+| انستغرام | instagram.com/vipyemen1 |
 | سياسة الخصوصية | /privacy-policy |
 
 **© 2026 ViP Yemen — المهندس علي درهم الدحان**

@@ -44,6 +44,7 @@ import { AdminClients } from "@/components/admin/AdminClients";
 import { AdminDeveloper } from "@/components/admin/AdminDeveloper";
 import { AdminContracts } from "@/components/admin/AdminContracts";
 import { ChannelPublishCard } from "@/components/admin/ChannelPublishCard";
+import { ChannelKeysCard } from "@/components/admin/ChannelKeysCard";
 import { VideoPublishCard } from "@/components/admin/VideoPublishCard";
 import { EmailCampaigns } from "@/components/admin/EmailCampaigns";
 
@@ -356,6 +357,7 @@ export function AdminPage() {
             {tab === "contracts" && <AdminContracts token={token} />}
             {tab === "channel_publish" && (
               <div className="mx-auto max-w-3xl space-y-4">
+                <ChannelKeysCard token={token} />
                 <VideoPublishCard token={token} />
                 <ChannelPublishCard token={token} />
               </div>

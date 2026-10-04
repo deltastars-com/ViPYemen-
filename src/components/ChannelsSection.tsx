@@ -1,16 +1,26 @@
 import { ArrowLeft, ExternalLink, Radio } from "lucide-react";
-import { CHANNELS } from "@/lib/channels";
+import { CHANNELS, CHANNEL_BRAND_COLOR } from "@/lib/channels";
 import { cn } from "@/lib/utils";
-import { FacebookIcon, TelegramIcon, WhatsAppIcon, YouTubeIcon } from "./ChannelIcons";
+import {
+  FacebookIcon,
+  InstagramIcon,
+  TelegramIcon,
+  TikTokIcon,
+  WhatsAppIcon,
+  YouTubeIcon,
+} from "./ChannelIcons";
 import type { ComponentType, SVGProps } from "react";
 import { useLang } from "@/lib/i18n";
 
 const CHANNEL_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
   whatsapp: WhatsAppIcon,
   telegram: TelegramIcon,
+  telegram_bot: TelegramIcon,
   facebook: FacebookIcon,
   facebook_group: FacebookIcon,
   youtube: YouTubeIcon,
+  tiktok: TikTokIcon,
+  instagram: InstagramIcon,
 };
 
 export function ChannelsSection({ className }: { className?: string }) {
@@ -38,14 +48,19 @@ export function ChannelsSection({ className }: { className?: string }) {
               )}
             />
             <div className="relative flex items-center justify-between">
+              {/* الحاوية بلون العلامة نفسه مع تدرّج خفيف، والأيقونة شفافة فوقه
+                  لتبقى مقروءة على الداكن وتبدو كشارة رسمية متسقة. */}
               <div
                 className={cn(
-                  "flex h-14 w-14 items-center justify-center rounded-2xl border transition-transform duration-300 group-hover:scale-110",
+                  "flex h-14 w-14 items-center justify-center rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-transform duration-300 group-hover:scale-110",
                   c.badge,
                   c.bg
                 )}
               >
-                <Icon className="h-7 w-7" />
+                <Icon
+                  className="h-7 w-7 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+                  style={{ color: CHANNEL_BRAND_COLOR[c.id] ?? "currentColor" }}
+                />
               </div>
               <span className="flex items-center gap-1.5 rounded-full border border-ink-600/60 bg-ink-900/70 px-2.5 py-1 text-[10px] font-black text-ink-300">
                 <Radio className="h-3 w-3 animate-pulse text-gold-400" />
@@ -71,5 +86,7 @@ export function ChannelsSection({ className }: { className?: string }) {
 
 export function ChannelIcon({ id, className }: { id: string; className?: string }) {
   const Icon = CHANNEL_ICONS[id] ?? ExternalLink;
-  return <Icon className={className} />;
+  return (
+    <Icon className={className} style={{ color: CHANNEL_BRAND_COLOR[id] ?? undefined }} />
+  );
 }

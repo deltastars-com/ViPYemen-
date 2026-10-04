@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { Badge, Button, Card, EmptyState, Input, Label, Modal, Select, Spinner, Textarea } from "@/components/ui";
 import { formatDateTime, cn } from "@/lib/utils";
 import { publishToWhatsAppChannel, buildWhatsAppChannelMessage } from "@/lib/whatsappChannel";
+import { PlatformDurationSelect } from "./PlatformDurationSelect";
 
 export function AdminOffers({ token }: { token: string }) {
   const offers = useQuery(api.offers.listAll, { token });
@@ -266,6 +267,10 @@ function OfferFields({ initial, onSave }: { initial: any; onSave: (patch: any) =
   const [offerPrice, setOfferPrice] = useState(initial.offerPrice?.toString() ?? "");
   const [discountPercent, setDiscountPercent] = useState(initial.discountPercent?.toString() ?? "");
   const [isFeatured, setIsFeatured] = useState(initial.isFeatured);
+  // ⏳ مدة ظهور العرض في واجهة المنصة (نسخته في القنوات تبقى دائماً)
+  const [platformVisibleDays, setPlatformVisibleDays] = useState<number>(
+    typeof initial.platformVisibleDays === "number" ? initial.platformVisibleDays : 30
+  );
   const [saving, setSaving] = useState(false);
 
   return (
@@ -307,6 +312,7 @@ function OfferFields({ initial, onSave }: { initial: any; onSave: (patch: any) =
         <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="h-4 w-4 accent-[#d4af37]" />
         عرض مميز
       </label>
+      <PlatformDurationSelect value={platformVisibleDays} onChange={setPlatformVisibleDays} compact />
       <Button
         loading={saving}
         onClick={async () => {
@@ -321,6 +327,7 @@ function OfferFields({ initial, onSave }: { initial: any; onSave: (patch: any) =
               offerPrice: offerPrice ? Number(offerPrice) : undefined,
               discountPercent: discountPercent ? Number(discountPercent) : undefined,
               isFeatured,
+              platformVisibleDays,
             });
           } finally {
             setSaving(false);

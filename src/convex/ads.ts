@@ -3,6 +3,15 @@ import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { requireAdmin } from "./auth";
 import { api } from "./_generated/api";
+import { computeExpiry, isExpired } from "./platformExpiry";
+
+/** ⏳ المدة المسموحة: 0 (دائم) … 365 يوماً. */
+function assertDuration(days: number | undefined): void {
+  if (days === undefined) return;
+  if (!Number.isFinite(days) || days < 0 || days > 365) {
+    throw new ConvexError("مدة الظهور يجب أن تكون بين 0 (دائم) و 365 يوماً");
+  }
+}
 
 export const listActive = query({
   args: {},
@@ -15,6 +24,8 @@ export const listActive = query({
         if (a.status === "active") {
           if (a.endsAt && a.endsAt < now) return false;
           if (a.startsAt && a.startsAt > now) return false;
+          // ⏳ انتهت مدة الظهور التي حددتها الإدارة ⟵ يختفي من الواجهة فوراً
+          if (isExpired(a.platformExpiresAt, now)) return false;
           return true;
         }
         if (a.status === "scheduled") {
@@ -44,11 +55,14 @@ export const createAd = mutation({
     link: v.optional(v.string()),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
+    /** ⏳ مدة ظهور الإعلان على واجهة المنصة فقط (أيام) — 0 = دائم */
+    platformVisibleDays: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.token);
     if (!args.title.trim() || !args.message.trim())
       throw new ConvexError("العنوان والرسالة مطلوبان");
+    assertDuration(args.platformVisibleDays);
     const id = await ctx.db.insert("ads", {
       title: args.title.trim(),
       message: args.message.trim(),
@@ -57,6 +71,8 @@ export const createAd = mutation({
       link: args.link || undefined,
       startsAt: args.startsAt,
       endsAt: args.endsAt,
+      platformVisibleDays: args.platformVisibleDays,
+      platformExpiresAt: computeExpiry(args.platformVisibleDays),
       createdAt: Date.now(),
     });
     // Auto-publish active ads to the platform channels
@@ -85,6 +101,7 @@ export const updateAd = mutation({
       link: v.optional(v.string()),
       startsAt: v.optional(v.number()),
       endsAt: v.optional(v.number()),
+      platformVisibleDays: v.optional(v.number()),
     }),
   },
   handler: async (ctx, { token, id, patch }) => {
@@ -92,7 +109,16 @@ export const updateAd = mutation({
     const existing = await ctx.db.get(id);
     if (!existing) throw new ConvexError("الإعلان غير موجود");
     const nextStatus = patch.status ?? existing.status;
-    await ctx.db.patch(id, patch);
+    await ctx.db.patch(id, {
+      ...patch,
+      // ⏳ تغيير المدة يعيد حساب وقت الانتهاء من الآن
+      ...(patch.platformVisibleDays !== undefined
+        ? {
+            platformVisibleDays: patch.platformVisibleDays,
+            platformExpiresAt: computeExpiry(patch.platformVisibleDays),
+          }
+        : {}),
+    });
     // Auto-publish whenever the ad becomes active
     if (nextStatus === "active" && existing.status !== "active") {
       await ctx.scheduler.runAfter(0, api.channels.publishToChannels, {

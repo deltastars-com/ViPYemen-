@@ -194,7 +194,12 @@ npm run icons           # توليد أيقونات كل المنصات
 
 [![WhatsApp](https://img.shields.io/badge/WhatsApp-00967711780999-25D366?style=for-the-badge&logo=whatsapp&logoColor=white)](https://wa.me/967711780999)
 [![Telegram](https://img.shields.io/badge/Telegram-@vipyemen77-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/vipyemen77)
-[![Facebook](https://img.shields.io/badge/Facebook-ViPservicesYemen-0866FF?style=for-the-badge&logo=facebook&logoColor=white)](https://www.facebook.com/ViPservicesYemen/)
+[![Telegram Bot](https://img.shields.io/badge/Telegram_Bot-@vipyemen_bot-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/vipyemen_bot)
+[![Facebook](https://img.shields.io/badge/Facebook-vipyemen1-0866FF?style=for-the-badge&logo=facebook&logoColor=white)](https://www.facebook.com/vipyemen1)
+[![Facebook Group](https://img.shields.io/badge/Facebook_Group-346010664332427-0866FF?style=for-the-badge&logo=facebook&logoColor=white)](https://www.facebook.com/groups/346010664332427)
+[![YouTube](https://img.shields.io/badge/YouTube-@vipyemen1-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@vipyemen1)
+[![TikTok](https://img.shields.io/badge/TikTok-@vip_yemen7-25F4EE?style=for-the-badge&logo=tiktok&logoColor=white)](https://www.tiktok.com/@vip_yemen7)
+[![Instagram](https://img.shields.io/badge/Instagram-@vipyemen1-E1306C?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/vipyemen1)
 [![Email](https://img.shields.io/badge/Email-vipservicesyemen@gmail.com-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:vipservicesyemen@gmail.com)
 
 اليمن · صنعاء · حي شميلة

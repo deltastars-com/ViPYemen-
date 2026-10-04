@@ -13,6 +13,16 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { CHANNEL_NAMES } from "./channelPush";
+import {
+  FACEBOOK_GROUP_URL,
+  FACEBOOK_PAGE_URL,
+  INSTAGRAM_URL,
+  TELEGRAM_BOT_URL,
+  TELEGRAM_CHANNEL_URL,
+  TIKTOK_URL,
+  WHATSAPP_COMMUNITY_URL,
+  YOUTUBE_URL,
+} from "../lib/socialLinks";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -30,17 +40,21 @@ const MIRRORS: { label: string; url: string; role: string }[] = [
   { label: "Cloudflare Pages", url: "https://vipyemen.pages.dev", role: "mirror" },
 ];
 
+/** روابط القنوات الرسمية — من نفس المصدر الذي تستخدمه الواجهة (مصدر واحد). */
 const CHANNELS: { id: string; label: string; url: string }[] = [
-  { id: "telegram", label: "قناة تيليجرام", url: "https://t.me/vipyemen77" },
-  { id: "whatsapp", label: "قناة واتساب", url: "https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb" },
+  { id: "telegram", label: "قناة تيليجرام", url: TELEGRAM_CHANNEL_URL },
+  { id: "telegram_bot", label: "بوت تيليجرام", url: TELEGRAM_BOT_URL },
+  { id: "whatsapp", label: "مجتمع واتساب", url: WHATSAPP_COMMUNITY_URL },
   {
     id: "whatsapp_group",
     label: "مجتمع/جروب واتساب",
-    url: "https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb",
+    url: WHATSAPP_COMMUNITY_URL,
   },
-  { id: "facebook_page", label: "صفحة فيسبوك", url: "https://www.facebook.com/profile.php?id=102672588647591" },
-  { id: "facebook_group", label: "مجموعة فيسبوك", url: "https://www.facebook.com/groups/346010664332427" },
-  { id: "youtube", label: "قناة يوتيوب", url: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw" },
+  { id: "facebook_page", label: "صفحة فيسبوك", url: FACEBOOK_PAGE_URL },
+  { id: "facebook_group", label: "مجموعة فيسبوك", url: FACEBOOK_GROUP_URL },
+  { id: "youtube", label: "قناة يوتيوب", url: YOUTUBE_URL },
+  { id: "tiktok", label: "حساب تيك توك", url: TIKTOK_URL },
+  { id: "instagram", label: "حساب انستغرام", url: INSTAGRAM_URL },
 ];
 
 function json(body: unknown, status = 200): Response {

@@ -21,6 +21,7 @@ import { api } from "../../convex/_generated/api";
 import { Badge, Button, EmptyState, Input, Modal, Select, Spinner, Textarea } from "@/components/ui";
 import { getCategory, getType, getStatusLabel, TYPE_ICONS } from "@/lib/categories";
 import { formatDateTime, whatsappLink, cn } from "@/lib/utils";
+import { PlatformDurationSelect } from "./PlatformDurationSelect";
 
 const STATUS_FILTERS = [
   { value: "all", label: "الكل" },
@@ -351,8 +352,15 @@ export function AdminSubmissions({
           token={token}
           contract={contractBySubmission[editing._id] ?? null}
           onClose={() => setEditing(null)}
-          onSave={async (patch, publishMode, note) => {
-            await reviewMut({ token, id: editing._id, patch, publishMode, note });
+          onSave={async (patch, publishMode, note, platformVisibleDays) => {
+            await reviewMut({
+              token,
+              id: editing._id,
+              patch,
+              publishMode,
+              note,
+              platformVisibleDays,
+            });
             setEditing(null);
           }}
           onTogglePhone={async () => {
@@ -377,7 +385,12 @@ function EditModal({
   token: string;
   contract: any | null;
   onClose: () => void;
-  onSave: (patch: any, publishMode: "auto" | "manual", note?: string) => Promise<void>;
+  onSave: (
+    patch: any,
+    publishMode: "auto" | "manual",
+    note?: string,
+    platformVisibleDays?: number
+  ) => Promise<void>;
   onTogglePhone: () => Promise<void>;
 }) {
   const cat = getCategory(row.category);
@@ -395,6 +408,11 @@ function EditModal({
   const [fields, setFields] = useState<Record<string, string>>(row.fields ?? {});
   const [adminNote, setAdminNote] = useState(row.adminNote ?? "");
   const [reviewNote, setReviewNote] = useState("");
+  // ⏳ المدة الافتراضية عند أول مراجعة: شهر على واجهات المنصة، والنسخة
+  // المنشورة في القنوات والجروبات والصفحات تبقى دائمة.
+  const [platformVisibleDays, setPlatformVisibleDays] = useState<number>(
+    typeof row.platformVisibleDays === "number" ? row.platformVisibleDays : 30
+  );
   const [showOriginal, setShowOriginal] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -415,7 +433,8 @@ function EditModal({
           adminNote,
         },
         publishMode,
-        reviewNote.trim() || undefined
+        reviewNote.trim() || undefined,
+        platformVisibleDays
       );
     } finally {
       setSaving(false);
@@ -598,6 +617,8 @@ function EditModal({
             placeholder="مثال: تحققنا من الهاتف والبريد والعنوان والوثائق PDF قبل إعادة النشر"
           />
         </div>
+
+        <PlatformDurationSelect value={platformVisibleDays} onChange={setPlatformVisibleDays} />
 
         <div className="flex flex-wrap items-center gap-2">
           <Button loading={saving} onClick={() => save("auto")} title="حفظ التعديلات ونشر النسخة المعدَّلة فوراً على الواجهة وقنوات المنصة">

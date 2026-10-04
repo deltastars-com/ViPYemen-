@@ -3,6 +3,15 @@ import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { requireAdmin } from "./auth";
 import { api } from "./_generated/api";
+import { computeExpiry, isExpired } from "./platformExpiry";
+
+/** ⏳ المدة المسموحة: 0 (دائم) … 365 يوماً. */
+function assertDuration(days: number | undefined): void {
+  if (days === undefined) return;
+  if (!Number.isFinite(days) || days < 0 || days > 365) {
+    throw new ConvexError("مدة الظهور يجب أن تكون بين 0 (دائم) و 365 يوماً");
+  }
+}
 
 export const listPublished = query({
   args: {},
@@ -12,7 +21,10 @@ export const listPublished = query({
       .withIndex("by_status", (q) => q.eq("status", "published"))
       .order("desc")
       .collect();
-    return rows.sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
+    // ⏳ ما انتهت مدته يختفي فوراً من واجهة المنصة (نسخته في القنوات تبقى)
+    return rows
+      .filter((r) => !isExpired(r.platformExpiresAt))
+      .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
   },
 });
 
@@ -36,10 +48,13 @@ export const createOffer = mutation({
     discountPercent: v.optional(v.number()),
     isFeatured: v.boolean(),
     status: v.string(),
+    /** ⏳ مدة ظهور العرض على واجهة المنصة فقط (أيام) — 0 = دائم */
+    platformVisibleDays: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.token);
     if (!args.title.trim()) throw new ConvexError("عنوان العرض مطلوب");
+    assertDuration(args.platformVisibleDays);
     const id = await ctx.db.insert("offers", {
       title: args.title.trim(),
       description: args.description.trim(),
@@ -50,6 +65,8 @@ export const createOffer = mutation({
       discountPercent: args.discountPercent,
       isFeatured: args.isFeatured,
       status: args.status,
+      platformVisibleDays: args.platformVisibleDays,
+      platformExpiresAt: computeExpiry(args.platformVisibleDays),
       createdAt: Date.now(),
     });
     // Auto-publish published offers to the platform channels
@@ -91,14 +108,25 @@ export const updateOffer = mutation({
       discountPercent: v.optional(v.number()),
       isFeatured: v.optional(v.boolean()),
       status: v.optional(v.string()),
+      platformVisibleDays: v.optional(v.number()),
     }),
   },
   handler: async (ctx, { token, id, patch }) => {
     await requireAdmin(ctx, token);
     const existing = await ctx.db.get(id);
     if (!existing) throw new ConvexError("العرض غير موجود");
+    assertDuration(patch.platformVisibleDays);
     const nextStatus = patch.status ?? existing.status;
-    await ctx.db.patch(id, patch);
+    await ctx.db.patch(id, {
+      ...patch,
+      // ⏳ تغيير المدة يعيد حساب وقت الانتهاء من الآن
+      ...(patch.platformVisibleDays !== undefined
+        ? {
+            platformVisibleDays: patch.platformVisibleDays,
+            platformExpiresAt: computeExpiry(patch.platformVisibleDays),
+          }
+        : {}),
+    });
     // Auto-publish whenever the offer becomes published
     if (nextStatus === "published" && existing.status !== "published") {
       // Internal notification — instantly visible in the dashboard

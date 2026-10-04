@@ -1,6 +1,13 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./auth";
+import {
+  FACEBOOK_PAGE_URL,
+  INSTAGRAM_URL,
+  TELEGRAM_CHANNEL_URL,
+  TIKTOK_URL,
+  YOUTUBE_URL,
+} from "../lib/socialLinks";
 
 export const PUBLIC_KEYS = [
   "brandName",
@@ -73,13 +80,13 @@ export const ensureDefaults = mutation({
       phone: "773597404",
       email: "vipservicesyemen@gmail.com",
       address: "اليمن · صنعاء · حي شميلة",
-      facebook: "https://www.facebook.com/ViPservicesYemen/",
-      tiktok: "https://www.tiktok.com/@vipservicesyemen1",
-      instagram: "https://www.instagram.com/vipservicesyemen",
+      facebook: FACEBOOK_PAGE_URL,
+      tiktok: TIKTOK_URL,
+      instagram: INSTAGRAM_URL,
       twitter: "https://twitter.com/ViPservicesYeme",
       linkedin: "https://www.linkedin.com/in/ali-aldahan-57b5a2231",
-      youtube: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw",
-      telegram: "https://t.me/vipyemen77",
+      youtube: YOUTUBE_URL,
+      telegram: TELEGRAM_CHANNEL_URL,
       beacons: "https://beacons.ai/vipservicesyemen",
       linkfly: "https://linkfly.to/vipservicesyemen",
       taplink: "https://taplink.cc/vipservicesyemen",

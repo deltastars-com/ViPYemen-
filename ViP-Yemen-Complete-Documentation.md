@@ -447,7 +447,7 @@ startAutomation();
 | جروب فيسبوك | Graph API (`publish_to_groups`) | يتوقف آلياً بانتظار الصلاحية (بلا إنذارات كاذبة) |
 | واتساب — Cloud API | Meta Graph بقالب معتمد | عند توفر توكن Meta |
 | واتساب — **OpenWA المجانية** | بوابة مفتوحة المصدر `rmyndharis/OpenWA` | بديل مجاني 100% — تُهيَّأ من بطاقة واتساب وتُختبر بزر واحد |
-| واتساب — القناة | فتح الرابط الرسمي `chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb` + نسخ النص | زر في كل عرض/إعلان |
+| واتساب — المجتمع | فتح رابط المجتمع الرسمي `chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb` + نسخ النص | زر في كل عرض/إعلان |
 | البريد | حملات مجدولة بدفعات + Resend | مشتركين + إلغاء اشتراك + سجل إرسال |
 
 كل قناة لها **مفتاح تشغيل/إيقاف** مع سجل، وصندوق إرسال موثوق يعيد المحاولة تلقائياً.
@@ -546,13 +546,22 @@ setLanguage(language === "ar" ? "en" : "ar");
 
 | المنصة | الرابط |
 |--------|--------|
-| **فيسبوك** | https://www.facebook.com/ViPservicesYemen/ |
+| **صفحة فيسبوك** | https://www.facebook.com/vipyemen1 |
+| **مجموعة فيسبوك** | https://www.facebook.com/groups/346010664332427 |
+| **تيليجرام — قناة** | https://t.me/vipyemen77 |
+| **تيليجرام — بوت** | https://t.me/vipyemen_bot |
+| **مجتمع واتساب** | https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb |
+| **إنستغرام** | https://www.instagram.com/vipyemen1 |
+| **تيك توك** | https://www.tiktok.com/@vip_yemen7 |
+| **يوتيوب** | https://www.youtube.com/@vipyemen1 |
 | **تويتر** | https://twitter.com/ViPservicesYeme |
-| **إنستغرام** | https://www.instagram.com/vipservicesyemen |
 | **لينكدإن** | https://www.linkedin.com/in/ali-aldahan-57b5a2231 |
-| **يوتيوب** | https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw |
-| **واتساب** | https://wa.me/967711780999 |
+| **واتساب (تواصل مباشر)** | https://wa.me/967711780999 |
 | **Linktree** | https://linktr.ee/vipservicesyemen |
+
+> كل روابط القنوات الرسمية معرَّفة في ملف واحد: `src/lib/socialLinks.ts`، وتستهلكها
+> الواجهة (الفوتر + صفحة القنوات) والباك اند (نقطة `/channels` + الإعدادات الافتراضية)،
+> فلا تتكرر الروابط ولا تختلف بين السطوح.
 
 ---
 

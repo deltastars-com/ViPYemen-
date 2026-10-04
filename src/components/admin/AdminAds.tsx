@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { Badge, Button, Card, EmptyState, Input, Label, Modal, Select, Spinner, Textarea } from "@/components/ui";
 import { formatDateTime, cn } from "@/lib/utils";
 import { publishToWhatsAppChannel, buildWhatsAppChannelMessage } from "@/lib/whatsappChannel";
+import { PlatformDurationSelect } from "./PlatformDurationSelect";
 
 const AD_STATUS: Record<string, { label: string; className: string }> = {
   draft: { label: "مسودة", className: "border-ink-500/40 bg-ink-500/10 text-ink-300" },
@@ -246,6 +247,10 @@ function AdForm({ initial, onSave }: { initial: any; onSave: (patch: any) => Pro
   const [status, setStatus] = useState(initial.status);
   const [priority, setPriority] = useState(initial.priority);
   const [link, setLink] = useState(initial.link ?? "");
+  // ⏳ مدة ظهور الإعلان في واجهة المنصة (نشره في القنوات يبقى دائماً)
+  const [platformVisibleDays, setPlatformVisibleDays] = useState<number>(
+    typeof initial.platformVisibleDays === "number" ? initial.platformVisibleDays : 30
+  );
   const [saving, setSaving] = useState(false);
   return (
     <div className="space-y-3">
@@ -276,12 +281,20 @@ function AdForm({ initial, onSave }: { initial: any; onSave: (patch: any) => Pro
         <Label>الرابط</Label>
         <Input value={link} onChange={(e) => setLink(e.target.value)} dir="ltr" className="text-left" />
       </div>
+      <PlatformDurationSelect value={platformVisibleDays} onChange={setPlatformVisibleDays} compact />
       <Button
         loading={saving}
         onClick={async () => {
           setSaving(true);
           try {
-            await onSave({ title, message, status, priority, link: link || undefined });
+            await onSave({
+              title,
+              message,
+              status,
+              priority,
+              link: link || undefined,
+              platformVisibleDays,
+            });
           } finally {
             setSaving(false);
           }

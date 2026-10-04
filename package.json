@@ -1,7 +1,7 @@
 {
   "name": "vip-yemen-platform",
   "private": true,
-  "version": "6.7.57",
+  "version": "6.7.58",
   "type": "module",
   "description": "ViP Yemen — منصة التوظيف والتسويق العقاري والإلكتروني والخدمات البرمجية",
   "scripts": {
@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "convex:dev": "convex dev --once",
+    "loadtest": "node scripts/loadtest.mjs",
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {

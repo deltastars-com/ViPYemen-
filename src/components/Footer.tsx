@@ -5,10 +5,6 @@ import { LogoMark } from "@/components/Logo";
 import { UpdateBadge } from "./UpdateNotice";
 import {
   Facebook,
-  Instagram,
-  Twitter,
-  Youtube,
-  Linkedin,
   Mail,
   Phone,
   MapPin,
@@ -23,7 +19,26 @@ import { ExitButton } from "./ExitButton";
 import { useLang } from "@/lib/i18n";
 import { PLATFORM_WHATSAPP_LINK, openExternal } from "@/lib/utils";
 import { isNativeApp } from "@/lib/native";
-import { TelegramIcon, WhatsAppIcon } from "./ChannelIcons";
+import {
+  TelegramIcon,
+  WhatsAppIcon,
+  TikTokIcon,
+  XIcon,
+  LinkedInIcon,
+  InstagramIcon,
+  YouTubeIcon,
+} from "./ChannelIcons";
+import {
+  FACEBOOK_GROUP_URL,
+  FACEBOOK_PAGE_URL,
+  INSTAGRAM_URL,
+  LINKEDIN_URL,
+  TELEGRAM_BOT_URL,
+  TELEGRAM_CHANNEL_URL,
+  TIKTOK_URL,
+  WHATSAPP_COMMUNITY_URL,
+  YOUTUBE_URL,
+} from "@/lib/socialLinks";
 
 const APKPURE_URL = "https://apkpure.com/vipyemen/com.vip.yemen/download";
 
@@ -76,15 +91,22 @@ function StoreBadges() {
   );
 }
 
+/**
+ * أيقونات التواصل في الفوتر — كلها شعارات رسمية ممتلئة بلون علامتها، وكل
+ * الروابط تأتي من src/lib/socialLinks.ts (مصدر واحد) فلا تتكرر ولا تختلف
+ * عن صفحة القنوات ولا عن نقطة /channels في الباك اند.
+ */
 const SOCIALS = [
-  { icon: WhatsAppIcon, href: "https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb", labelAr: "قناة واتساب", labelEn: "WhatsApp Channel" },
-  { icon: TelegramIcon, href: "https://t.me/vipyemen77", labelAr: "قناة تيليجرام", labelEn: "Telegram Channel" },
-  { icon: Facebook, href: "https://www.facebook.com/ViPservicesYemen/", labelAr: "صفحة فيسبوك", labelEn: "Facebook Page" },
-  { icon: Facebook, href: "https://www.facebook.com/groups/346010664332427", labelAr: "مجموعة فيسبوك", labelEn: "Facebook Group" },
-  { icon: Instagram, href: "https://www.instagram.com/vipservicesyemen", labelAr: "إنستغرام", labelEn: "Instagram" },
-  { icon: Twitter, href: "https://twitter.com/ViPservicesYeme", labelAr: "تويتر / X", labelEn: "Twitter / X" },
-  { icon: Youtube, href: "https://youtube.com/channel/UCJGfi4S63-Nm2rSXpBqzHtw", labelAr: "يوتيوب", labelEn: "YouTube" },
-  { icon: Linkedin, href: "https://www.linkedin.com/in/ali-aldahan-57b5a2231", labelAr: "لينكدإن", labelEn: "LinkedIn" },
+  { icon: WhatsAppIcon, href: WHATSAPP_COMMUNITY_URL, brand: "#25D366", labelAr: "مجتمع واتساب", labelEn: "WhatsApp Community" },
+  { icon: TelegramIcon, href: TELEGRAM_CHANNEL_URL, brand: "#229ED9", labelAr: "قناة تيليجرام", labelEn: "Telegram Channel" },
+  { icon: TelegramIcon, href: TELEGRAM_BOT_URL, brand: "#229ED9", labelAr: "بوت تيليجرام", labelEn: "Telegram Bot" },
+  { icon: Facebook, href: FACEBOOK_PAGE_URL, brand: "#1877F2", labelAr: "صفحة فيسبوك", labelEn: "Facebook Page" },
+  { icon: Facebook, href: FACEBOOK_GROUP_URL, brand: "#1877F2", labelAr: "مجموعة فيسبوك", labelEn: "Facebook Group" },
+  { icon: InstagramIcon, href: INSTAGRAM_URL, brand: "#E1306C", labelAr: "إنستغرام", labelEn: "Instagram" },
+  { icon: TikTokIcon, href: TIKTOK_URL, brand: "#25F4EE", labelAr: "تيك توك", labelEn: "TikTok" },
+  { icon: XIcon, href: "https://twitter.com/ViPservicesYeme", brand: "#FFFFFF", labelAr: "تويتر / X", labelEn: "Twitter / X" },
+  { icon: YouTubeIcon, href: YOUTUBE_URL, brand: "#FF0000", labelAr: "يوتيوب", labelEn: "YouTube" },
+  { icon: LinkedInIcon, href: LINKEDIN_URL, brand: "#0A66C2", labelAr: "لينكدإن", labelEn: "LinkedIn" },
 ];
 
 const LINKTREES = [
@@ -93,8 +115,6 @@ const LINKTREES = [
   { label: "Taplink", href: "https://taplink.cc/vipservicesyemen" },
   { label: "AllMyLinks", href: "https://allmylinks.com/vipservicesyemen" },
 ];
-
-const TIKTOK_URL = "https://www.tiktok.com/@vipservicesyemen1";
 
 const SECTION_LINKS = [
   { to: "/jobs", ar: "قسم التوظيف", en: "Jobs Section" },
@@ -125,23 +145,14 @@ export function Footer() {
                 rel="noopener noreferrer"
                 aria-label={lang === "ar" ? s.labelAr : s.labelEn}
                 title={lang === "ar" ? s.labelAr : s.labelEn}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
+                className="group flex h-10 w-10 items-center justify-center rounded-xl border border-ink-600/60 bg-ink-900/60 text-ink-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:bg-ink-800 hover:text-gold-300"
               >
-                <s.icon className="h-4 w-4" />
+                <s.icon
+                  className="h-[18px] w-[18px] transition-transform duration-200 group-hover:scale-110"
+                  style={{ color: s.brand }}
+                />
               </a>
             ))}
-            <a
-              href={TIKTOK_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="TikTok"
-              title="TikTok"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink-600/60 text-ink-300 transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:text-gold-300"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
-                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-              </svg>
-            </a>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {LINKTREES.map((l) => (

@@ -43,6 +43,11 @@ export const tick = internalMutation({
     // \ معاملة مستقلة حتى لا يثقل حجمها دورة الأتمتة الأساسية.
     await ctx.scheduler.runAfter(0, internal.controlPanel.archiveInternal, {});
 
+    // ── 2c. ⏳ انتهاء مدة الظهور على واجهات المنصة ──────────────────
+    // ما حددته الإدارة أثناء المراجعة (٧/١٥/٣٠/٦٠/٩٠ يوماً أو دائم) يُطبَّق
+    // هنا: المنشور يختفي من المنصة وحدها وتبقى نسخته في القنوات كما هي.
+    await ctx.scheduler.runAfter(0, internal.platformExpiry.sweepExpired, { limit: 200 });
+
     // ── 3b. محرك التوافق + تقييم مقدمي التوظيف ──────────────────────
     // تُشغَّل كل واحدة في معاملة مستقلة (تحافظ على خفة دورة الأتمتة)
     await ctx.scheduler.runAfter(0, internal.matching.runAutoMatchInternal, { limit: 30 });

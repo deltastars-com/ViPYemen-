@@ -26,6 +26,7 @@ import type { FacebookConfig } from "./facebookStore";
 import type { WhatsAppConfig } from "./whatsapp";
 import { buildMessageBody, normalizeRecipients } from "./whatsappBody";
 import { pauseReasonFor } from "./channelPolicy";
+import { telegramConfigForAction, type TelegramRuntimeConfig } from "./channelKeys";
 
 export type ChannelKind = "submission" | "ad" | "offer";
 
@@ -101,24 +102,21 @@ function buildFacebookMessage(args: {
  * (`.github/workflows/secret-scan.yml`) بأن هذا التوكن معروف ومنتظر إزالته، وأن
  * أي توكن آخر يُكتشف هو تسريب جديد يجب إيقاف البناء عنده.
  */
-function telegramTokenUsesLegacy(): boolean {
-  const env = process.env.TELEGRAM_BOT_TOKEN?.trim();
-  if (env) return false;
+/**
+ * هل ما نعتمد عليه توكن قديم مسرّب داخل الكود؟
+ * (يُبقى كاحتياط فقط حتى تُدخل مفتاحاً حقيقياً من اللوحة أو من متغيرات Convex،
+ *  ووجود `legacy-leaked-secret-allowlisted` يُعلم حاجز الأسرار الآلي أن هذا
+ *  التوكن معروف ومنتظر إزالته.)
+ */
+function telegramTokenUsesLegacy(cfg: TelegramRuntimeConfig): boolean {
+  if (cfg.tokenSource !== "default") return false;
   return !!TELEGRAM_BOT_TOKEN_LEGACY;
 }
 
-/** توكن البوت الفعلي: متغير البيئة أولاً، ثم القديم (مع تنبيه صريح في اللوحة). */
-function telegramToken(): string {
-  return process.env.TELEGRAM_BOT_TOKEN?.trim() || TELEGRAM_BOT_TOKEN_LEGACY;
-}
-
 // ── Telegram ──────────────────────────────────────────────────────────
-async function postToTelegram(text: string): Promise<boolean> {
-  const token = telegramToken();
-  const envChats = (process.env.TELEGRAM_CHAT_ID ?? "").trim();
-  const chats = envChats
-    ? envChats.split(",").map((c) => c.trim()).filter(Boolean)
-    : [TELEGRAM_CHAT_ID_DEFAULT];
+async function postToTelegram(cfg: TelegramRuntimeConfig, text: string): Promise<boolean> {
+  const token = cfg.token || TELEGRAM_BOT_TOKEN_LEGACY;
+  const chats = cfg.chatIds.length > 0 ? cfg.chatIds : [TELEGRAM_CHAT_ID_DEFAULT];
   if (!token || chats.length === 0) {
     console.log("[Channel:Telegram] SKIP — no token or chat ID");
     return false;
@@ -387,11 +385,11 @@ export const getChannelSetup = action({
   handler: async (ctx) => {
     const fb = await resolveFacebookConfig(ctx);
     const wa = await resolveWhatsAppConfig(ctx);
-    // نفس منطق الإرسال الفعلي: توكن البوت من البيئة أو الافتراضي، والقناة من
-    // البيئة أو الافتراضية — فلا تناقض بين بطاقة الإعداد وفحص الصحة.
-    const telegram =
-      !!telegramToken() &&
-      !!(process.env.TELEGRAM_CHAT_ID?.trim() || TELEGRAM_CHAT_ID_DEFAULT);
+    // نفس منطق الإرسال الفعلي: توكن البوت والقناة من متغير البيئة أو من
+    // القيم المحفوظة في اللوحة أو من الافتراضي — فلا تناقض بين بطاقة
+    // الإعداد وفحص الصحة، وكلاهما يعرض الحالة نفسها تماماً.
+    const tg = await telegramConfigForAction(ctx);
+    const telegram = !!tg.token && tg.chatIds.length > 0;
     const whatsapp = !!wa.token && !!wa.phoneNumberId;
     const facebook = !!fb.token;
     const facebookGroup = !!fb.token;
@@ -592,7 +590,7 @@ async function sendToChannel(ctx: ActionCtx, channel: string, text: string): Pro
   }
   switch (channel) {
     case "telegram":
-      return postToTelegram(text);
+      return postToTelegram(await telegramConfigForAction(ctx), text);
     case "whatsapp":
       return postToWhatsApp(text, await resolveWhatsAppConfig(ctx));
     case "whatsapp_group":
@@ -750,7 +748,8 @@ async function explainChannelFailure(
   channel: string
 ): Promise<string> {
   try {
-    if (channel === "telegram") return (await checkTelegram()).detail;
+    if (channel === "telegram")
+      return (await checkTelegram(await telegramConfigForAction(ctx))).detail;
     if (channel === "whatsapp") return (await checkWhatsApp(await resolveWhatsAppConfig(ctx))).detail;
     if (channel === "whatsapp_group")
       return (await checkWhatsAppGroup(await resolveWhatsAppConfig(ctx))).detail;
@@ -895,10 +894,9 @@ async function timedJson(
   }
 }
 
-async function checkTelegram(): Promise<ChannelHealthRow> {
-  const token = telegramToken();
-  const envChats = (process.env.TELEGRAM_CHAT_ID ?? "").trim();
-  const chatId = envChats ? envChats.split(",")[0].trim() : TELEGRAM_CHAT_ID_DEFAULT;
+async function checkTelegram(cfg: TelegramRuntimeConfig): Promise<ChannelHealthRow> {
+  const token = cfg.token || TELEGRAM_BOT_TOKEN_LEGACY;
+  const chatId = cfg.chatIds[0] ?? TELEGRAM_CHAT_ID_DEFAULT;
   if (!token) {
     return { channel: "telegram", status: "down", detail: "لا يوجد توكن بوت (TELEGRAM_BOT_TOKEN)" };
   }
@@ -918,7 +916,7 @@ async function checkTelegram(): Promise<ChannelHealthRow> {
     return {
       channel: "telegram",
       status: "ok",
-      detail: telegramTokenUsesLegacy()
+      detail: telegramTokenUsesLegacy(cfg)
         ? `البوت @${me.data.result.username} — القناة: ${chat.data.result.title ?? chatId} · ⚠️ يعمل بتوكن قديم مسرّب: بدّله من @BotFather وأضف TELEGRAM_BOT_TOKEN في متغيرات Convex الآن`
         : `البوت @${me.data.result.username} — القناة: ${chat.data.result.title ?? chatId}`,
 
@@ -1108,8 +1106,9 @@ export const checkChannels = internalAction({
     const checkedAt = Date.now();
     const fb = await resolveFacebookConfig(ctx);
     const wa = await resolveWhatsAppConfig(ctx);
+    const tg = await telegramConfigForAction(ctx);
     const rows: ChannelHealthRow[] = [
-      await checkTelegram(),
+      await checkTelegram(tg),
       await checkWhatsApp(wa),
       await checkWhatsAppGroup(wa),
       await checkFacebookTarget("facebook_page", fb.pageId || FB_PAGE_ID_DEFAULT, fb),

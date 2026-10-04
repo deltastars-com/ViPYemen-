@@ -238,6 +238,136 @@ async function upsert(ctx: DbCtx, key: string, value: string): Promise<void> {
   else await ctx.db.insert("settings", { key, value });
 }
 
+// ── هوية البوت عبر Bot API (بدون BotFather) ──────────────────────────
+
+/**
+ * حدود Bot API الرسمية لهوية البوت — نتحقق منها قبل الإرسال حتى لا يرفض
+ * تيليجرام الطلب، ونعرض السبب بالعربية بدل رقم خطأ غامض.
+ */
+export const BOT_PROFILE_LIMITS = {
+  name: 64, // setMyName
+  description: 512, // setMyDescription
+  shortDescription: 120, // setMyShortDescription
+} as const;
+
+/** استدعاء آمن لطريقة من طرق Bot API مع رسالة خطأ عربية. */
+async function callBotApi(
+  token: string,
+  method: string,
+  payload: Record<string, unknown>
+): Promise<{ ok: boolean; detail: string }> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = (await res.json().catch(() => ({}))) as any;
+    if (data?.ok) return { ok: true, detail: "تم ✅" };
+    return { ok: false, detail: `تعذّر التطبيق: ${data?.description ?? `HTTP ${res.status}`}` };
+  } catch (err: any) {
+    return { ok: false, detail: `تعذّر الاتصال بواجهة تلجرام: ${err?.message ?? String(err)}` };
+  }
+}
+
+/**
+ * 📄 قراءة هوية البوت الحالية من تيليجرام (الاسم + الوصفان) — بلا أي
+ * تغيير، فيتبين للإدارة ما هو مضبوط فعلاً قبل التعديل.
+ */
+export const getBotProfile = action({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    await ctx.runQuery(api.settings.getAll, { token });
+    const tg = await telegramConfigForAction(ctx);
+    if (!tg.token) {
+      return { ok: false as const, detail: "لا يوجد توكن بوت — أضفه أولاً" };
+    }
+    try {
+      const get = async (method: string) => {
+        const res = await fetch(`https://api.telegram.org/bot${tg.token}/${method}`);
+        const data = (await res.json().catch(() => ({}))) as any;
+        return data?.ok ? data.result : null;
+      };
+      const [me, desc, shortDesc] = await Promise.all([
+        get("getMe"),
+        get("getMyDescription"),
+        get("getMyShortDescription"),
+      ]);
+      return {
+        ok: true as const,
+        username: me?.username ?? "",
+        name: me?.first_name ?? "",
+        description: desc?.description ?? "",
+        shortDescription: shortDesc?.short_description ?? "",
+      };
+    } catch (err: any) {
+      return { ok: false as const, detail: `تعذّر الاتصال: ${err?.message ?? String(err)}` };
+    }
+  },
+});
+
+/**
+ * ✏️ تطبيق هوية البوت عبر Bot API مباشرةً — بلا المرور على BotFather إطلاقاً.
+ *
+ * ✅ **لا يلمس التوكن إطلاقاً**: توثيق تيليجرام الرسمي ينصّ على أن التوكن
+ *    لا يُبطَل إلا بأمر `revokeWebhookToken` (أو `/revoke` في BotFather).
+ *    `setMyName` / `setMyDescription` / `setMyShortDescription` تغيّر نصّ العرض
+ *    فقط، ولا علاقة لها بالتوكن ولا بصلاحيات البوت في القناة.
+ *
+ * الحقل الفارغ = لا تغيّر ذلك الحقل.
+ */
+export const setBotProfile = action({
+  args: {
+    token: v.string(),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    shortDescription: v.optional(v.string()),
+  },
+  handler: async (ctx, { token, name, description, shortDescription }) => {
+    await ctx.runQuery(api.settings.getAll, { token });
+    const tg = await telegramConfigForAction(ctx);
+    if (!tg.token) {
+      return { ok: false as const, detail: "لا يوجد توكن بوت — أضفه أولاً" };
+    }
+
+    const checks: [string, string | undefined, number][] = [
+      ["الاسم", name, BOT_PROFILE_LIMITS.name],
+      ["الوصف", description, BOT_PROFILE_LIMITS.description],
+      ["الوصف القصير", shortDescription, BOT_PROFILE_LIMITS.shortDescription],
+    ];
+    for (const [label, value, max] of checks) {
+      if (value !== undefined && value.trim().length > max) {
+        return {
+          ok: false as const,
+          detail: `${label} يتجاوز الحد (${value.trim().length}/${max} حرف) — اختصره ثم أعد المحاولة`,
+        };
+      }
+    }
+
+    const results: { field: string; ok: boolean; detail: string }[] = [];
+    if (name !== undefined) {
+      const r = await callBotApi(tg.token, "setMyName", { name: name.trim() });
+      results.push({ field: "الاسم", ...r });
+    }
+    if (description !== undefined) {
+      const r = await callBotApi(tg.token, "setMyDescription", {
+        description: description.trim(),
+      });
+      results.push({ field: "الوصف", ...r });
+    }
+    if (shortDescription !== undefined) {
+      const r = await callBotApi(tg.token, "setMyShortDescription", {
+        short_description: shortDescription.trim(),
+      });
+      results.push({ field: "الوصف القصير", ...r });
+    }
+    if (results.length === 0) {
+      return { ok: false as const, detail: "لم تُدخل أي حقل للتغيير" };
+    }
+    return { ok: results.every((r) => r.ok), results };
+  },
+});
+
 /**
  * 🩪 اختبار حي للمفاتيح بعد حفظها — يتحقق فعلاً من إمكانية النشر:
  *  • تيليجرام: getMe للبوت + getChat للقناة (وهل البوت مشرف فيها؟)

@@ -16,7 +16,7 @@ import { useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { KeyRound, Save, ShieldCheck, Stethoscope, Youtube, Send } from "lucide-react";
 import { api } from "../../convex/_generated/api";
-import { Button, Card, Input, Label } from "@/components/ui";
+import { Button, Card, Input, Label, Textarea } from "@/components/ui";
 
 type TestResult = {
   ok: boolean;
@@ -52,15 +52,72 @@ export function ChannelKeysCard({ token }: { token: string }) {
   const saveTelegram = useMutation(api.channelKeys.saveTelegram);
   const saveYouTube = useMutation(api.channelKeys.saveYouTube);
   const test = useAction(api.channelKeys.test);
+  const loadProfile = useAction(api.channelKeys.getBotProfile);
+  const setProfile = useAction(api.channelKeys.setBotProfile);
 
   const [tgToken, setTgToken] = useState("");
   const [tgChats, setTgChats] = useState("");
   const [ytId, setYtId] = useState("");
   const [ytSecret, setYtSecret] = useState("");
   const [ytRefresh, setYtRefresh] = useState("");
-  const [busy, setBusy] = useState<"" | "tg" | "yt" | "test">("");
+  const [busy, setBusy] = useState<"" | "tg" | "yt" | "test" | "profileLoad" | "profileSave">("");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<TestResult>(null);
+  const [botName, setBotName] = useState("");
+  const [botDesc, setBotDesc] = useState("");
+  const [botShort, setBotShort] = useState("");
+  const [profileMsg, setProfileMsg] = useState("");
+
+  async function readProfile() {
+    setBusy("profileLoad");
+    setProfileMsg("");
+    try {
+      const r = await loadProfile({ token });
+      if (!r.ok) {
+        setProfileMsg(`⛔ ${r.detail}`);
+        return;
+      }
+      setBotName(r.name ?? "");
+      setBotDesc(r.description ?? "");
+      setBotShort(r.shortDescription ?? "");
+      setProfileMsg(
+        r.username
+          ? `✅ هُبطت هوية البوت @${r.username} الحالية — عدّل ما تريد ثم اضغط «تطبيق».`
+          : "✅ هُبطت الهوية الحالية."
+      );
+    } catch (err: any) {
+      setProfileMsg(`⛔ ${err?.message ?? "تعذر الاتصال"}`);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function applyProfile() {
+    setBusy("profileSave");
+    setProfileMsg("");
+    try {
+      const r = await setProfile({
+        token,
+        name: botName,
+        description: botDesc,
+        shortDescription: botShort,
+      });
+      if (!("results" in r) || !r.results) {
+        setProfileMsg(`⛔ ${r.detail}`);
+        return;
+      }
+      const failed = r.results.filter((x) => !x.ok);
+      setProfileMsg(
+        failed.length === 0
+          ? "✅ حُدِّثت هوية البوت بنجاح — ولم يُمَسّ التوكن ولا صلاحيات النشر."
+          : r.results.map((x) => `${x.ok ? "✅" : "⛔"} ${x.field}: ${x.detail}`).join(" — ")
+      );
+    } catch (err: any) {
+      setProfileMsg(`⛔ ${err?.message ?? "تعذر التطبيق"}`);
+    } finally {
+      setBusy("");
+    }
+  }
 
   async function saveTelegramKeys() {
     setBusy("tg");
@@ -235,6 +292,59 @@ export function ChannelKeysCard({ token }: { token: string }) {
         <p className="mt-2 text-[10px] leading-relaxed text-ink-400">
           تحتاج المفاتيح الثلاثة معاً. الفراغ في أي حقل يعني «اترك القيمة المحفوظة كما هي».
         </p>
+      </div>
+
+      {/* ── هوية البوت عبر Bot API (بلا BotFather) ──────────── */}
+      <div className="mb-4 rounded-xl border border-ink-700/60 bg-ink-900/40 p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-black text-cream">هوية البوت (اسمه ووصفه)</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="ghost"
+              loading={busy === "profileLoad"}
+              onClick={readProfile}
+              className="!py-1.5 text-[11px]"
+            >
+              قراءة الهوية الحالية
+            </Button>
+            <Button loading={busy === "profileSave"} onClick={applyProfile} className="!py-1.5 text-[11px]">
+              <Save className="h-3.5 w-3.5" /> تطبيق
+            </Button>
+          </div>
+        </div>
+        <div className="grid gap-3">
+          <div>
+            <Label>اسم البوت (حد ٦٤ حرفاً)</Label>
+            <Input value={botName} onChange={(e) => setBotName(e.target.value)} />
+          </div>
+          <div>
+            <Label>الوصف في ملف البوت (حد ٥١٢ حرفاً)</Label>
+            <Textarea
+              value={botDesc}
+              onChange={(e) => setBotDesc(e.target.value)}
+              rows={6}
+              placeholder="نبذة عن المنصة وأقسامها وطريقة عمل البوت…"
+            />
+            <p className="mt-1 text-[10px] text-ink-400">{botDesc.trim().length} / 512 حرفاً</p>
+          </div>
+          <div>
+            <Label>الوصف القصير (حد ١٢٠ حرفاً)</Label>
+            <Input value={botShort} onChange={(e) => setBotShort(e.target.value)} />
+            <p className="mt-1 text-[10px] text-ink-400">{botShort.trim().length} / 120 حرفاً</p>
+          </div>
+        </div>
+        <p className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-2.5 text-[10px] leading-relaxed text-emerald-200/90">
+          ✅ هذه الطريقة تتصل بتيليجرام مباشرةً عبر Bot API بلا المرور على @BotFather.
+          <b className="text-cream"> التوكن لا يُبطَل ولا يتغير</b> — توثيق تيليجرام ينصّ أن إبطال
+          التوكن لا يحدث إلا بالأمر <b className="text-cream" dir="ltr">revokeWebhookToken</b>
+          (أو <b className="text-cream" dir="ltr">/revoke</b>)، وهذه الدالة ليست منه، فلا تتأثر
+          صلاحية النشر في القناة ولا تتوقف الرسائل.
+        </p>
+        {profileMsg && (
+          <p className="mt-2 rounded-lg border border-gold-500/30 bg-gold-500/10 p-2.5 text-[11px] font-bold text-gold-200">
+            {profileMsg}
+          </p>
+        )}
       </div>
 
       {/* ── الاختبار الحي ────────────────────────────────────── */}

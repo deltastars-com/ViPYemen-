@@ -69,7 +69,25 @@ jobs:
             [[ -n "$TG_TOKEN_SECRET" ]] && ./node_modules/.bin/convex env set TELEGRAM_BOT_TOKEN "$TG_TOKEN_SECRET" --prod >/dev/null 2>&1 || true
             [[ -n "$TG_CHAT_SECRET" ]] && ./node_modules/.bin/convex env set TELEGRAM_CHAT_ID "$TG_CHAT_SECRET" --prod >/dev/null 2>&1 || true
           fi
+          # 🛡️ العنوان المُعدّ هو المرجع دائماً (قواعد البيانات منفصلة لكل نشر)،
+          # ومفتاح النشر يُستخدم لنشر الشيفرة فقط مع تحقّق أنه يستهدف نفس النشر.
           if [[ -n "$VITE_CONVEX_URL_VAR" && "$VITE_CONVEX_URL_VAR" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
+            if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
+              DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
+                echo "$DEPLOY_OUT"
+                echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
+                exit 1
+              }
+              echo "$DEPLOY_OUT"
+              DEPLOYED=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
+              CONFIGURED_HOST=$(printf '%s' "$VITE_CONVEX_URL_VAR" | sed -E 's#^https://([^/]+).*#\1#')
+              DEPLOYED_HOST=$(printf '%s' "$DEPLOYED" | sed -E 's#^https://([^/]+).*#\1#')
+              if [[ -n "$DEPLOYED_HOST" && "$DEPLOYED_HOST" != "$CONFIGURED_HOST" ]]; then
+                echo "::error::CONVEX_DEPLOY_KEY ينشر إلى ($DEPLOYED_HOST) بينما عنوان الإنتاج المُعدّ ($CONFIGURED_HOST) — سنوقف البناء بدل نشر موقع يشير إلى قاعدة بيانات فارغة."
+                echo "::error::الحل: أنشئ مفتاح نشر للنشر $CONFIGURED_HOST، أو انقل البيانات إلى $DEPLOYED_HOST واجعل العنوان يشير إليه."
+                exit 1
+              fi
+            fi
             echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
             echo "using repo variable VITE_CONVEX_URL"
           elif [[ -n "$VITE_CONVEX_URL_VAR" ]]; then

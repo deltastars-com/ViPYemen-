@@ -40,6 +40,19 @@ type BotMode = {
   commands: { command: string; description: string }[];
 };
 
+/**
+ * رسالة واضحة إذا كانت دوال البوت غير منشورة على هذا النشر بعد.
+ * يحدث ذلك حين يُنشر الباك اند على نشر آخر (أو لم يُنشر إطلاقاً)، وكانت
+ * اللوحة تُظهر خطأ Convex خاماً غامضاً بدل إخبار الإدارة بالحقيقة.
+ */
+function botErr(err: unknown): string {
+  const raw = (err as { message?: string })?.message ?? String(err);
+  if (/Could not find (public )?function|not found|Server Error/i.test(raw)) {
+    return "⏳ ميزة ردّ البوت تحتاج نشر الباك اند على هذا النشر (convex deploy) — تأكد أن مفتاح النشر يشير إلى نشر الإنتاج الصحيح ثم أعد النشر.";
+  }
+  return `⛔ ${raw}`;
+}
+
 const SOURCE_LABEL: Record<string, string> = {
   env: "متغير بيئة Convex",
   settings: "محفوظة في اللوحة",
@@ -115,7 +128,7 @@ export function ChannelKeysCard({ token }: { token: string }) {
         commands: r.commands,
       });
     } catch (err: any) {
-      setBotMsg(`⛔ ${err?.message ?? "تعذّر قراءة الحالة"}`);
+      setBotMsg(botErr(err));
     } finally {
       setBusy("");
     }
@@ -132,7 +145,7 @@ export function ChannelKeysCard({ token }: { token: string }) {
       const r = await fn();
       setBotMsg(r.ok ? r.detail ?? "✅ تم" : `⛔ ${r.detail ?? "فشل"}`);
     } catch (err: any) {
-      setBotMsg(`⛔ ${err?.message ?? "تعذّر التنفيذ"}`);
+      setBotMsg(botErr(err));
     } finally {
       setBusy("");
     }
@@ -171,7 +184,7 @@ export function ChannelKeysCard({ token }: { token: string }) {
           : "🔇 أُوقف الاستعلام الدوري."
       );
     } catch (err: any) {
-      setBotMsg(`⛔ ${err?.message ?? "تعذّر التغيير"}`);
+      setBotMsg(botErr(err));
     } finally {
       setBusy("");
     }

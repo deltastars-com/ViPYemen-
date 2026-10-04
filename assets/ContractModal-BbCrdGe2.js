@@ -1,0 +1,88 @@
+import{c as k,r as o,j as e,a as C,b as S}from"./index-BREdLu1g.js";import{M as te,c as K,B as g,L as v,I as $}from"./ui-CObmUAbp.js";import{C as se}from"./circle-check-DDw4Yq7r.js";import{C as ie}from"./circle-x-CrFMgxzT.js";import{C as ne}from"./copy-BZYhkU9M.js";const ae=[["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}],["path",{d:"M4.929 4.929 19.07 19.071",key:"196cmz"}]],re=k("ban",ae);const de=[["path",{d:"M14.364 13.634a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506l4.013-4.009a1 1 0 0 0-3.004-3.004z",key:"ukzhwg"}],["path",{d:"M14.487 7.858A1 1 0 0 1 14 7V2",key:"1klhew"}],["path",{d:"M20 19.645V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l2.516 2.516",key:"rxaxab"}],["path",{d:"M8 18h1",key:"13wk12"}]],oe=k("file-pen-line",de);const le=[["path",{d:"M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4",key:"1nerag"}],["path",{d:"M14 13.12c0 2.38 0 6.38-1 8.88",key:"o46ks0"}],["path",{d:"M17.29 21.02c.12-.6.43-2.3.5-3.02",key:"ptglia"}],["path",{d:"M2 12a10 10 0 0 1 18-6",key:"ydlgp0"}],["path",{d:"M2 16h.01",key:"1gqxmh"}],["path",{d:"M21.8 16c.2-2 .131-5.354 0-6",key:"drycrb"}],["path",{d:"M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2",key:"1tidbn"}],["path",{d:"M8.65 22c.21-.66.45-1.32.57-2",key:"13wd9y"}],["path",{d:"M9 6.8a6 6 0 0 1 9 5.2v2",key:"1fr1j5"}]],pe=k("fingerprint-pattern",le);const ce=[["path",{d:"M9 17H7A5 5 0 0 1 7 7h2",key:"8i5ue5"}],["path",{d:"M15 7h2a5 5 0 1 1 0 10h-2",key:"1b9ql8"}],["line",{x1:"8",x2:"16",y1:"12",y2:"12",key:"1jonct"}]],xe=k("link-2",ce);const ue=[["path",{d:"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2",key:"143wyd"}],["path",{d:"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6",key:"1itne7"}],["rect",{x:"6",y:"14",width:"12",height:"8",rx:"1",key:"1ue0tg"}]],he=k("printer",ue);function me(){var s,a;return typeof window<"u"&&typeof window.PublicKeyCredential=="function"&&!!((a=(s=window.navigator)==null?void 0:s.credentials)!=null&&a.create)}function ge(s){const a=new Uint8Array(s);let d="";for(const c of a)d+=String.fromCharCode(c);return btoa(d).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}function T(){return{mode:"fallback",verified:!0}}async function fe(){if(!me())return T();try{const s=await window.navigator.credentials.create({publicKey:{rp:{name:"ViP Yemen"},user:{id:crypto.getRandomValues(new Uint8Array(32)),name:`vip-${Date.now()}`,displayName:"مستفيد ViP Yemen"},challenge:crypto.getRandomValues(new Uint8Array(32)),pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"preferred"},timeout:6e4,attestation:"none"}});return s?{mode:"webauthn",credentialId:ge(s.rawId),verified:!0}:T()}catch{throw new q}}class q extends Error{constructor(){super("تعذّر استخدام ماسح البصمة على هذا الجهاز")}}const be={draft:"مسودة — بانتظار التوقيع",signed:"موقّعة إلكترونياً بالبصمة",paid:"مسدَّدة — سند دفع نهائي",void:"ملغاة"},ye={USD:"دولار أميركي",YER:"ريال يمني",SAR:"ريال سعودي",EUR:"يورو"};function _(s){if(!s)return"—";try{return new Date(s).toLocaleString("ar-YE",{dateStyle:"full",timeStyle:"short"})}catch{return new Date(s).toISOString()}}function W(s,a){return`${a==="USD"?"$":""}${s.toLocaleString("en-US")} ${ye[a]??a}`}function y(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function we(s){var f,t;const a=window.open("","_blank","width=820,height=980");if(!a){alert("تعذّر فتح نافذة الطباعة — اسمح بالنوافذ المنبثقة ثم أعد المحاولة.");return}const d=s.status==="paid",c=((f=s.fingerprint)==null?void 0:f.mode)==="webauthn"?"بصمة إلكترونية موثّقة (WebAuthn)":s.fingerprint?"تأكيد إلكتروني مسجَّل (مسار بديل)":"—",b=`<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>سند دفع ${y(s.receiptNo??"")} — ViP Yemen</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: #101528; margin: 0; background: #fff; }
+  .sheet { max-width: 760px; margin: 0 auto; padding: 28px; border: 2px solid #c9a227; border-radius: 14px; }
+  header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0b1b33; padding-bottom: 14px; }
+  .brand { font-size: 22px; font-weight: 900; color: #0b1b33; }
+  .brand span { color: #b98a12; }
+  .no { text-align: left; font-size: 13px; color: #444; }
+  .no b { display: block; font-size: 17px; color: #0b1b33; letter-spacing: 1px; }
+  h1 { text-align: center; font-size: 20px; margin: 18px 0 4px; color: #0b1b33; }
+  .sub { text-align: center; font-size: 12px; color: #6b7280; margin-bottom: 16px; }
+  .pill { display: inline-block; padding: 4px 14px; border-radius: 999px; font-size: 12px; font-weight: 800;
+          background: ${d?"#065f46":"#713f12"}; color: #fff; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+  th, td { border: 1px solid #d7dce5; padding: 9px 12px; text-align: right; }
+  th { background: #f4f6fb; color: #0b1b33; width: 34%; font-weight: 800; }
+  .clause { margin-top: 16px; font-size: 13px; line-height: 1.9; background: #fbf8ef; border: 1px dashed #c9a227;
+            border-radius: 10px; padding: 12px 14px; }
+  .sign { display: flex; gap: 18px; margin-top: 20px; align-items: flex-start; }
+  .box { flex: 1; border: 1px solid #d7dce5; border-radius: 10px; padding: 10px; min-height: 110px; }
+  .box h4 { margin: 0 0 6px; font-size: 12px; color: #6b7280; }
+  .box img { max-width: 100%; max-height: 90px; }
+  .stamp { text-align: center; border: 2px solid #059669; color: #059669; border-radius: 10px; padding: 10px;
+           font-weight: 900; font-size: 13px; width: 210px; }
+  footer { margin-top: 18px; border-top: 1px solid #d7dce5; padding-top: 10px; font-size: 11px; color: #6b7280;
+           display: flex; justify-content: space-between; }
+  @media print { .noprint { display: none !important; } .sheet { border: none; padding: 0; } }
+  .noprint { text-align: center; margin: 16px 0; }
+  .noprint button { background: #0b1b33; color: #fff; border: 0; border-radius: 10px; padding: 12px 28px;
+                    font-size: 15px; font-weight: 800; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <div class="brand">ViP <span>Yemen</span> — منصة التوظيف والتسويق والعقار والبرمجيات</div>
+    <div class="no">رقم السند<br><b>${y(s.receiptNo??"—")}</b></div>
+  </header>
+  <h1>${d?"سند دفع":"وثيقة توثيق إلكتروني"} ببصمة إلكترونية</h1>
+  <div class="sub"><span class="pill">${be[s.status]??s.status}</span></div>
+
+  <table>
+    <tr><th>المستفيد الكامل</th><td>${y(s.beneficiaryName)}</td></tr>
+    <tr><th>رقم الهاتف</th><td dir="ltr">${y(s.phone)}</td></tr>
+    <tr><th>موضوع الاتفاق</th><td>${y(s.title)}</td></tr>
+    <tr><th>المبلغ المتفق عليه</th><td><b>${W(s.amount,s.currency)}</b></td></tr>
+    <tr><th>عمولة المنصة</th><td><b>${W(s.commission,s.currency)}</b></td></tr>
+    <tr><th>تاريخ التوقيع</th><td>${_(s.signedAt)}</td></tr>
+    <tr><th>${d?"تاريخ التسديد":"حالة السند"}</th><td>${d?_(s.paidAt):"بانتظار التسديد"}</td></tr>
+  </table>
+
+  <div class="clause">
+    يُقرّ ويتعهّد المستفيد أعلاه إقراراً نهائياً موثّقاً بالبصمة الإلكترونية والتوقيع الإلكتروني
+    بالتزامه بتسديد المبلغ المتفق عليه أعلاه كعمولة للمنصة، ويُعدّ هذا السند وثيقة إثبات حق
+    في مواجهة الطرفين والمنصة، موقّعة إلكترونياً عبر أنظمة المنصة الموثّقة.
+  </div>
+
+  <div class="sign">
+    <div class="box">
+      <h4>التوقيع الإلكتروني</h4>
+      ${s.signature?`<img src="${s.signature}" alt="توقيع" />`:"—"}
+      <div style="font-size:11px;color:#6b7280;margin-top:6px">
+        ${s.signatureType==="drawn"?"مُرسَم على اللوحة":"مكتوب إلكترونياً"}
+      </div>
+    </div>
+    <div class="box" style="display:flex;flex-direction:column;justify-content:space-between">
+      <h4>البصمة الإلكترونية</h4>
+      <div style="font-size:13px;font-weight:800">${c}</div>
+      ${(t=s.fingerprint)!=null&&t.credentialId?`<div dir="ltr" style="font-size:10px;color:#6b7280;word-break:break-all">${y(s.fingerprint.credentialId.slice(0,48))}…</div>`:""}
+      <div class="stamp">✔ موثّق بواسطة<br />منصة ViP Yemen</div>
+    </div>
+  </div>
+
+  <footer>
+    <span>vi-p-yemen.vercel.app · وثيقة مُولّدة آلياً من نظام التوثيق الإلكتروني</span>
+    <span>أُنشئ: ${_(Date.now())}</span>
+  </footer>
+</div>
+<div class="noprint"><button onclick="window.print()">🖨️ حفظ / طباعة سند الدفع (PDF)</button></div>
+<script>window.onload = function () { setTimeout(function () { window.focus(); }, 300); };<\/script>
+</body>
+</html>`;a.document.open(),a.document.write(b),a.document.close()}function ve({onChange:s}){const a=o.useRef(null),d=o.useRef(!1),c=o.useRef(!1),[b,f]=o.useState(!1);o.useEffect(()=>{const n=a.current;if(!n)return;const r=n.getContext("2d");if(!r)return;const l=window.devicePixelRatio||1,p=n.getBoundingClientRect();n.width=Math.max(1,Math.round(p.width*l)),n.height=Math.max(1,Math.round(p.height*l)),r.scale(l,l),r.lineWidth=2.2,r.lineCap="round",r.lineJoin="round",r.strokeStyle="#e7c66a",f(!0)},[]);function t(n){const l=a.current.getBoundingClientRect();return{x:n.clientX-l.left,y:n.clientY-l.top}}function j(n){var u;const r=(u=a.current)==null?void 0:u.getContext("2d");if(!r)return;d.current=!0,n.currentTarget.setPointerCapture(n.pointerId);const{x:l,y:p}=t(n);r.beginPath(),r.moveTo(l,p),r.lineTo(l+.01,p),r.stroke()}function M(n){var u;if(!d.current)return;const r=(u=a.current)==null?void 0:u.getContext("2d");if(!r)return;const{x:l,y:p}=t(n);r.lineTo(l,p),r.stroke()}function N(){var n;d.current&&(d.current=!1,c.current=!0,s(((n=a.current)==null?void 0:n.toDataURL("image/png"))??""))}function P(){const n=a.current,r=n==null?void 0:n.getContext("2d");!n||!r||(r.clearRect(0,0,n.width,n.height),c.current=!1,s(""))}return e.jsxs("div",{children:[e.jsx("div",{className:"rounded-xl border border-dashed border-gold-500/50 bg-ink-950/60 p-1",children:e.jsx("canvas",{ref:a,onPointerDown:j,onPointerMove:M,onPointerUp:N,onPointerLeave:N,className:"h-32 w-full touch-none rounded-lg"})}),e.jsxs("div",{className:"mt-1.5 flex items-center justify-between",children:[e.jsx("span",{className:"text-[11px] text-ink-400",children:b?"✍️ ارسم توقيعك داخل الإطار":"…"}),e.jsx("button",{type:"button",onClick:P,className:"text-[11px] font-bold text-rose-300 hover:text-rose-200",children:"مسح التوقيع"})]})]})}function $e({token:s,open:a,onClose:d,matchTitle:c,requestName:b,requestPhone:f,contract:t,submissionId:j}){const M=C(S.contracts.createContract),N=C(S.contracts.createDraft),P=C(S.contracts.markPaid),n=C(S.contracts.voidContract),[r,l]=o.useState(""),[p,u]=o.useState(""),[D,E]=o.useState(""),[z,R]=o.useState(""),[J,F]=o.useState(""),[h,A]=o.useState(null),[U,V]=o.useState(null),[B,x]=o.useState(""),[I,m]=o.useState(!1),[X,L]=o.useState(!1);o.useEffect(()=>{a&&(x(""),F(""),A(null),V(null),L(!1),l((t==null?void 0:t.beneficiaryName)||b||""),u((t==null?void 0:t.phone)||f||""),E(t?String(t.amount):""),R(t?String(t.commission):""))},[a,t==null?void 0:t._id,c,b,f]);const Y=Number(D)||0,H=Number(z)||0,w=U?`${window.location.origin}${"/ViPYemen-/".replace(/\/$/,"")}/contract?t=${U}`:null;async function O(){x("");try{A(await fe())}catch(i){i instanceof q?x("هذا الجهاز لا يدعم ماسح البصمة — استخدم «تأكيد بديل مسجّل»."):x("لم يُؤكَّد البصمة — أعد المحاولة.")}}async function G(){m(!0),x("");try{await M({token:s,matchId:t==null?void 0:t.matchId,submissionId:j??(t==null?void 0:t.submissionId),title:c,beneficiaryName:r,phone:p,amount:Y,commission:H,signature:J,signatureType:"drawn",fingerprint:h??void 0}),d()}catch(i){x(i instanceof Error?i.message:String((i==null?void 0:i.data)??i))}finally{m(!1)}}async function Q(){m(!0),x("");try{const i=await N({token:s,matchId:t==null?void 0:t.matchId,submissionId:j??(t==null?void 0:t.submissionId),title:c,beneficiaryName:r,phone:p,amount:Y,commission:H});V(i.signToken)}catch(i){x(i instanceof Error?i.message:String((i==null?void 0:i.data)??i))}finally{m(!1)}}async function Z(){if(w)try{await navigator.clipboard.writeText(w),L(!0),setTimeout(()=>L(!1),2e3)}catch{x("انسخ الرابط يدوياً: "+w)}}const ee=(t==null?void 0:t.status)==="paid"?"border-emerald-500/40 bg-emerald-500/10 text-emerald-300":(t==null?void 0:t.status)==="signed"?"border-gold-500/40 bg-gold-500/10 text-gold-300":(t==null?void 0:t.status)==="void"?"border-rose-500/40 bg-rose-500/10 text-rose-300":"border-amber-500/40 bg-amber-500/10 text-amber-300";return e.jsx(te,{open:a,onClose:d,title:"📜 التوثيق الإلكتروني بالبصمة",wide:!0,children:e.jsxs("div",{className:"space-y-4",children:[e.jsxs("p",{className:"rounded-xl border border-ink-700/60 bg-ink-900/50 p-3 text-[12px] leading-relaxed text-ink-300",children:["يُستكمل هذا التوثيق داخل قائمة ",e.jsx("b",{className:"text-gold-300",children:"إتمام التوافق"})," قبل إتمام المطابقة وتسليم المستفيد — الاسم الكامل + الهاتف + التوقيع الإلكتروني + تأكيد البصمة + المبلغ المتفق عليه (يلتزم بتسديده عمولة للمنصة)، ويُصدر منه ",e.jsx("b",{className:"text-gold-300",children:"سند الدفع PDF"}),"."]}),t&&t.status!=="draft"?e.jsxs(e.Fragment,{children:[e.jsxs("div",{className:"flex flex-wrap items-center gap-2",children:[e.jsx(K,{className:ee,children:t.receiptNo??"بلا رقم"}),e.jsx(K,{className:"border-ink-600/60 bg-ink-800/60 text-ink-200",children:t.status==="paid"?"مسدَّد":t.status==="signed"?"موقّع بالبصمة":t.status==="void"?"ملغى":"مسودة"})]}),e.jsxs("div",{className:"grid gap-2 rounded-xl border border-ink-700/60 p-3 text-[12px] sm:grid-cols-2",children:[e.jsxs("p",{children:[e.jsx("span",{className:"text-ink-400",children:"المستفيد:"})," ",e.jsx("b",{className:"text-cream",children:t.beneficiaryName||"—"})]}),e.jsxs("p",{children:[e.jsx("span",{className:"text-ink-400",children:"الهاتف:"})," ",e.jsx("b",{dir:"ltr",className:"text-cream",children:t.phone||"—"})]}),e.jsxs("p",{children:[e.jsx("span",{className:"text-ink-400",children:"المبلغ المتفق:"})," ",e.jsxs("b",{className:"text-gold-300",children:[t.amount," ",t.currency]})]}),e.jsxs("p",{children:[e.jsx("span",{className:"text-ink-400",children:"عمولة المنصة:"})," ",e.jsxs("b",{className:"text-gold-300",children:[t.commission," ",t.currency]})]})]}),t.signature&&e.jsxs("div",{className:"rounded-xl border border-ink-700/60 p-3",children:[e.jsx("p",{className:"mb-1 text-[11px] text-ink-400",children:"التوقيع الإلكتروني:"}),e.jsx("img",{src:t.signature,alt:"توقيع",className:"max-h-24"})]}),e.jsxs("div",{className:"flex flex-wrap gap-2",children:[e.jsxs(g,{variant:"gold",onClick:()=>we(t),children:[e.jsx(he,{className:"h-4 w-4"})," استخراج سند الدفع PDF"]}),t.status==="signed"&&e.jsxs(g,{variant:"success",loading:I,onClick:async()=>{m(!0);try{await P({token:s,id:t._id}),d()}finally{m(!1)}},children:[e.jsx(se,{className:"h-4 w-4"})," تسجيل كمُسدَّد"]}),t.status!=="void"&&e.jsxs(g,{variant:"danger",onClick:async()=>{if(confirm("إلغاء هذه الوثيقة نهائياً؟")){m(!0);try{await n({token:s,id:t._id}),d()}finally{m(!1)}}},children:[e.jsx(re,{className:"h-4 w-4"})," إلغاء الوثيقة"]})]})]}):e.jsxs(e.Fragment,{children:[e.jsxs("div",{className:"grid gap-3 sm:grid-cols-2",children:[e.jsxs("div",{children:[e.jsx(v,{children:"الاسم الكامل للمستفيد"}),e.jsx($,{value:r,onChange:i=>l(i.target.value),placeholder:"الاسم الثلاثي"})]}),e.jsxs("div",{children:[e.jsx(v,{children:"رقم الهاتف"}),e.jsx($,{value:p,onChange:i=>u(i.target.value),dir:"ltr",placeholder:"7XXXXXXXX"})]}),e.jsxs("div",{children:[e.jsx(v,{children:"المبلغ المتفق عليه"}),e.jsx($,{value:D,onChange:i=>{E(i.target.value),!z&&Number(i.target.value)>0&&R(String(Math.round(Number(i.target.value)*.1)))},type:"number",min:"0",dir:"ltr",placeholder:"0"})]}),e.jsxs("div",{children:[e.jsx(v,{children:"عمولة المنصة"}),e.jsx($,{value:z,onChange:i=>R(i.target.value),type:"number",min:"0",dir:"ltr",placeholder:"0"})]})]}),e.jsxs("div",{children:[e.jsx(v,{children:"التوقيع الإلكتروني ✍️"}),e.jsx(ve,{onChange:F})]}),e.jsxs("div",{className:"flex flex-wrap items-center gap-2",children:[e.jsxs(g,{variant:h?"success":"gold",onClick:O,type:"button",children:[e.jsx(pe,{className:"h-4 w-4"}),(h==null?void 0:h.mode)==="webauthn"?"البصمة موثّقة ✓":"تأكيد البصمة الإلكترونية"]}),!h&&e.jsx(g,{variant:"ghost",onClick:()=>A(T()),type:"button",children:"تأكيد بديل مسجّل"}),h&&e.jsx("span",{className:"text-[11px] text-emerald-300",children:h.mode==="webauthn"?"بصمة جهاز موثّقة (WebAuthn)":"مسار بديل مسجَّل في الوثيقة"})]}),B&&e.jsxs("p",{className:"flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-[12px] font-bold text-rose-300",children:[e.jsx(ie,{className:"h-4 w-4 shrink-0"})," ",B]}),e.jsxs("div",{className:"flex flex-wrap gap-2",children:[e.jsxs(g,{variant:"gold",loading:I,onClick:G,children:[e.jsx(oe,{className:"h-4 w-4"})," توقيع وتوثيق الآن"]}),e.jsxs(g,{variant:"ghost",loading:I,onClick:Q,children:[e.jsx(xe,{className:"h-4 w-4"})," رابط توقيع للمستفيد من جهازه"]})]}),w&&e.jsxs("div",{className:"rounded-xl border border-sky-500/30 bg-sky-500/10 p-3",children:[e.jsx("p",{className:"mb-2 text-[12px] text-sky-200",children:"أرسل هذا الرابط للمستفيد ليُكمل الاسم والتوقيع والبصمة من هاتفه، ثم تظهر الوثيقة هنا جاهزة لاستخراج سند الدفع:"}),e.jsxs("div",{className:"flex flex-wrap items-center gap-2",children:[e.jsx("code",{dir:"ltr",className:"min-w-0 flex-1 break-all rounded-lg bg-ink-950/70 p-2 text-[11px] text-sky-200",children:w}),e.jsxs(g,{variant:X?"success":"ghost",onClick:Z,children:[e.jsx(ne,{className:"h-4 w-4"})," ",X?"تم النسخ":"نسخ"]})]})]})]})]})})}export{re as B,$e as C,oe as F,xe as L,he as P,ve as S,pe as a,q as b,fe as c,T as f,we as p};

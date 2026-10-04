@@ -156,6 +156,24 @@ jobs:
             echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
           fi
 
+          # 🛡️ حارس العنوان: العنوان المُعدّ (متغير المستودع، وإلا الافتراضي الحيّ
+          # الحامل لبيانات المستخدمين) هو ما يتّصل به التطبيق — دائماً.
+          # إن نشر `convex deploy` إلى نشر آخر، فقواعد البيانات منفصلة: التطبيق
+          # سيُبنى على منصة فارغة (0 طلب · 0 إعلان). لذلك نصحّح العنوان هنا
+          # ونُطلق تحذيراً صاخباً بدل شحن تطبيق ميت.
+          CONFIGURED_URL="$VITE_CONVEX_URL_VAR"
+          if ! [[ "$CONFIGURED_URL" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
+            CONFIGURED_URL="https://notable-shepherd-367.convex.cloud"
+          fi
+          RESOLVED_URL=$(grep -E '^url=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2- || true)
+          if [[ -n "$RESOLVED_URL" && "$RESOLVED_URL" != "$CONFIGURED_URL" ]]; then
+            echo "::error::نشر مفتاح النشر إلى ($RESOLVED_URL) بينما العنوان المُعدّ ($CONFIGURED_URL). قواعد البيانات منفصلة، فالتطبيق على الأول سيظهر فارغاً."
+            echo "::warning::تم تثبيت عنوان التطبيق على $CONFIGURED_URL. الشيفرة نُشرت إلى $RESOLVED_URL."
+            grep -v '^url=' "$GITHUB_OUTPUT" > "$GITHUB_OUTPUT.tmp" || true
+            mv "$GITHUB_OUTPUT.tmp" "$GITHUB_OUTPUT"
+            echo "url=$CONFIGURED_URL" >> "$GITHUB_OUTPUT"
+          fi
+
       # 🛡️ بوّابة السلامة: لا نبني حزمة تشير إلى نشر لا يخدم المنصة فعلاً.
       # `convex deploy` يطبع رابط النشر الذي وُصل به؛ فإن كان نشراً جديداً فارغاً
       # (بلا داتا ولا HTTP Actions) ل يحوّل التطبيق كله إلى منصة ميتة بصمت.
@@ -333,6 +351,19 @@ jobs:
           else
             echo "::warning::No valid VITE_CONVEX_URL and no CONVEX_DEPLOY_KEY secret. Using the built-in live production URL (https://notable-shepherd-367.convex.cloud). Add CONVEX_DEPLOY_KEY as a repo SECRET to auto-deploy backend changes."
             echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
+          fi
+
+          # 🛡️ حارس العنوان (أندرويد): نفس القاعدة — العنوان المُعدّ هو المرجع.
+          CONFIGURED_URL="$VITE_CONVEX_URL_VAR"
+          if ! [[ "$CONFIGURED_URL" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
+            CONFIGURED_URL="https://notable-shepherd-367.convex.cloud"
+          fi
+          RESOLVED_URL=$(grep -E '^url=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2- || true)
+          if [[ -n "$RESOLVED_URL" && "$RESOLVED_URL" != "$CONFIGURED_URL" ]]; then
+            echo "::error::نشر مفتاح النشر إلى ($RESOLVED_URL) بينما العنوان المُعدّ ($CONFIGURED_URL) — سنمنع بناء حزمة تشير إلى قاعدة بيانات فارغة."
+            grep -v '^url=' "$GITHUB_OUTPUT" > "$GITHUB_OUTPUT.tmp" || true
+            mv "$GITHUB_OUTPUT.tmp" "$GITHUB_OUTPUT"
+            echo "url=$CONFIGURED_URL" >> "$GITHUB_OUTPUT"
           fi
 
       # 🛡️ بوّابة السلامة (أندرويد) — نفس الفحص قبل بناء الحزمة.

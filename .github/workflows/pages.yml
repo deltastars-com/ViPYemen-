@@ -71,6 +71,7 @@ jobs:
           fi
           # 🛡️ العنوان المُعدّ هو المرجع دائماً (قواعد البيانات منفصلة لكل نشر)،
           # ومفتاح النشر يُستخدم لنشر الشيفرة فقط مع تحقّق أنه يستهدف نفس النشر.
+          # [حراسة لاحقة أسفل هذا السطر تُصحّح أي عنوان يختلف عن المُعدّ]
           if [[ -n "$VITE_CONVEX_URL_VAR" && "$VITE_CONVEX_URL_VAR" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
             if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
               DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
@@ -133,6 +134,25 @@ jobs:
             # failing the whole build.
             echo "::warning::No valid VITE_CONVEX_URL and no CONVEX_DEPLOY_KEY secret. Using the built-in live production URL (https://notable-shepherd-367.convex.cloud). Add CONVEX_DEPLOY_KEY as a repo SECRET to auto-deploy backend changes."
             echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
+          fi
+
+          # 🛡️ حارس العنوان: العنوان المُعدّ (متغير المستودع، وإلا الافتراضي الحيّ
+          # الذي يحوي بيانات المستخدمين) هو ما يتّصل به التطبيق — دائماً.
+          # إن نشر `convex deploy` إلى نشر آخر، فقواعد البيانات منفصلة: التطبيق
+          # سيُبنى على منصة فارغة (0 طلب · 0 إعلان). لذلك نصحّح العنوان هنا
+          # ونُطلق تحذيراً صاخباً بدل شحن تطبيق ميت.
+          CONFIGURED_URL="$VITE_CONVEX_URL_VAR"
+          if ! [[ "$CONFIGURED_URL" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
+            CONFIGURED_URL="https://notable-shepherd-367.convex.cloud"
+          fi
+          RESOLVED_URL=$(grep -E '^url=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2- || true)
+          if [[ -n "$RESOLVED_URL" && "$RESOLVED_URL" != "$CONFIGURED_URL" ]]; then
+            echo "::error::نشر CONVEX_DEPLOY_KEY إلى ($RESOLVED_URL) بينما العنوان المُعدّ ($CONFIGURED_URL). قواعد البيانات منفصلة، فالتطبيق على الأول سيظهر فارغاً."
+            echo "::warning::تم تثبيت عنوان التطبيق على $CONFIGURED_URL (النشر الحيّ الحامل للبيانات). الشيفرة نُشرت إلى $RESOLVED_URL."
+            echo "::error::الحل: أنشئ مفتاح نشر للنشر $CONFIGURED_URL من لوحته في Convex، أو انقل البيانات إلى النشر المنشور ثم اجعل متغير المستودع VITE_CONVEX_URL يشير إليه."
+            grep -v '^url=' "$GITHUB_OUTPUT" > "$GITHUB_OUTPUT.tmp" || true
+            mv "$GITHUB_OUTPUT.tmp" "$GITHUB_OUTPUT"
+            echo "url=$CONFIGURED_URL" >> "$GITHUB_OUTPUT"
           fi
 
       # GitHub Pages serves this repo under /ViPYemen-/, so the Pages build

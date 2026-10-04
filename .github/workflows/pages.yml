@@ -124,6 +124,24 @@ jobs:
       # Bake the app version into the bundle from package.json so the in-app
       # update notifier can compare the running build against the latest
       # published release on every platform (including this Pages mirror).
+      # 🛡️ بوّابة السلامة: لا ننشر PWA يشير إلى نشر لا يخدم المنصة فعلاً
+      # (نشر جديد بلا داتا ولا HTTP Actions) — كان الموقع سيُبنى ميتاً بصمت.
+      - name: Verify the resolved deployment serves the platform
+        env:
+          RESOLVED_URL: ${{ steps.convex.outputs.url }}
+        run: |
+          set -uo pipefail
+          SITE="${RESOLVED_URL%.convex.cloud}.convex.site"
+          CODE=$(curl -sS -m 30 -o /tmp/h.json -w '%{http_code}' "$SITE/health" || echo 000)
+          BODY=$(head -c 300 /tmp/h.json 2>/dev/null || true)
+          if [ "$CODE" != "200" ] || printf '%s' "$BODY" | grep -q "does not have HTTP actions enabled"; then
+            echo "::error::النشر $RESOLVED_URL لا يخدم المنصة (HTTP $CODE) — لن ننشر PWA يشير إليه."
+            echo "::error::فعّل HTTP Actions عليه من لوحة Convex (Settings ← HTTP Actions) أو صحّح CONVEX_DEPLOY_KEY ليشير إلى النشر الحيّ $SITE."
+            printf '%s\n' "$BODY"
+            exit 1
+          fi
+          echo "✅ النشر $RESOLVED_URL يخدم المنصة فعلياً (HTTP $CODE) — النشر آمن."
+
       - name: Resolve app version for the build
         run: |
           VERSION=$(node -p 'require("./package.json").version')

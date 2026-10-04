@@ -95,13 +95,31 @@ jobs:
           git commit -m "chore(deps): رفع آمن لتبعيات المنصة (patch/minor)"
           git push --force origin "$BRANCH"
 
-          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          # ⚠️ سياسة بعض المستودعات تمنع GitHub Actions من إنشاء طلبات الدمج
+          # (Permissions → Actions → «Allow GitHub Actions to create and approve
+          # pull requests» مُعطَّلة). عندها كان السير كله يُخوَّل بالأحمر رغم أن
+          # فحص الأنواع والبناء نجحا ودُفع الفرع — فنُبقي ذلك تحذيراً واضحاً
+          # بدل إخفاق وهمي، مع بقاء فشل الدفع نفسه خطأً حقيقياً.
+          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty' || true)
           if [ -n "$EXISTING" ]; then
-            gh pr comment "$EXISTING" --body "🔄 تحديث آلي جديد — نجحت بوّابة فحص الأنواع والبناء لهذه الدفعة."
-          else
-            gh pr create \
+            gh pr comment "$EXISTING" --body "🔄 تحديث آلي جديد — نجحت بوّابة فحص الأنواع والبناء لهذه الدفعة." \
+              || echo "::warning::تعذّر التعليق على الطلب رقم $EXISTING — لا يؤثر على صحة التحديث."
+          elif gh pr create \
               --head "$BRANCH" \
               --base main \
               --title "chore(deps): تحديث آلي لتبعيات المنصة" \
-              --body "$(printf 'تحديث آلي آمن (patch/minor) داخل نطاقات SemVer.\n\n- ✅ `npm run typecheck` نجح\n- ✅ `npm run build` نجح\n- 📦 تفاصيل الحزم في ملخص سير العمل\n\n> لا يُدمج إلا بعد نجاح كل الفحوص.')"
+              --body "$(printf 'تحديث آلي آمن (patch/minor) داخل نطاقات SemVer.\n\n- ✅ `npm run typecheck` نجح\n- ✅ `npm run build` نجح\n- 📦 تفاصيل الحزم في ملخص سير العمل\n\n> لا يُدمج إلا بعد نجاح كل الفحوص.')"; then
+            echo "::notice::فُتح طلب دمج للتحديثات الآمنة."
+          else
+            echo "::warning::تعذّر إنشاء طلب الدمج تلقائياً — سياسة المستودع تمنع GitHub Actions من إنشاء الطلبات."
+            {
+              echo "### 🔓 طلب الدمج يحتاج تدخّلاً يدوياً"
+              echo ""
+              echo "نجح فحص الأنواع والبناء ودُفع فرع التحديث \`chore/deps-auto\`،"
+              echo "لكن المستودع يمنع Actions من إنشاء طلبات الدمج. لفتحه:"
+              echo ""
+              echo "1. Settings → Actions → General → Workflow permissions."
+              echo "2. فعّل «Allow GitHub Actions to create and approve pull requests»."
+              echo "3. أعد تشغيل هذا السير، أو افتح الطلب يدوياً من الفرع."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi

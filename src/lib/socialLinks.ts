@@ -40,3 +40,10 @@ export const INSTAGRAM_URL = "https://www.instagram.com/vipyemen1";
 
 /** حساب لينكدإن. */
 export const LINKEDIN_URL = "https://www.linkedin.com/in/ali-aldahan-57b5a2231";
+
+/**
+ * حساب X (تويتر) الرسمي — تحقّق فعلي بتاريخ 2026/10/04: يعمل 200 والاسم
+ * «ViPYemen — للتوظيف والتسويق والخدمات البرمجية · اليمن صنعاء».
+ * ⚠️ الحساب القديم `@ViPservicesYeme` لم يعد موجوداً (404) فلا يُستعمل أبداً.
+ */
+export const X_URL = "https://x.com/Vipyemen7";

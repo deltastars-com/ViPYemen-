@@ -45,37 +45,90 @@ jobs:
       - name: Checkout
         if: steps.check.outputs.ready == 'true'
         uses: actions/checkout@v7
+        with:
+          # نحتاج التاريخ الكامل للمقارنة مع الدفع السابق (هل تغيّرت مخططات
+          # حقيقية؟)، فعمق الاستخراج الافتراضي (1) لا يكفي.
+          fetch-depth: 0
+
+      # 🎯 هل هناك مخططات قاعدة بيانات جديدة فعلاً في هذه الدفعة؟
+      #
+      # المسارات التي تُطلق هذا السير تشمل `backend/sql/**` وهي ملفات بذر
+      # (seed) لا مخططات، فكانت أي دفعة من هذا النوع تُطلق `supabase link`
+      # وتختم بالفشل. الآن: لا مخططات ⇒ لا رابط ولا تطبيق، وينتهي السير بنجاح
+      # مع تنبيه واضح؛ وحين توجد مخططات فعلاً يبقى أي خطأ سبب فشل حقيقي.
+      - name: Detect real database migrations in this push
+        id: mig
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          set -uo pipefail
+          BEFORE="${{ github.event.before }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] \
+             || [ -z "$BEFORE" ] \
+             || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "run-trigger=manual — all migrations will be checked." >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" -- 'supabase/migrations/*.sql' | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "run-trigger=new-migrations" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "run-trigger=no-new-migrations" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup Supabase CLI
-        if: steps.check.outputs.ready == 'true'
+        if: steps.check.outputs.ready == 'true' && steps.mig.outputs.changed == 'true'
         uses: supabase/setup-cli@v3
         with:
           version: latest
 
+      # 🔐 تشخيص دقيق قبل الربط: نميّز بين توكن غير صالح وبين كلمة مرور خاطئة،
+      # بدل رسالة `Unauthorized` الغامضة من `supabase link`.
       - name: Link to Supabase project
-        if: steps.check.outputs.ready == 'true'
-        run: supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
+        if: steps.check.outputs.ready == 'true' && steps.mig.outputs.changed == 'true'
+        run: |
+          set -uo pipefail
+          CODE=$(curl -sS -o /tmp/proj.json -w '%{http_code}' \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID" || echo 000)
+          if [ "$CODE" != "200" ] && [ "$CODE" != "201" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN مرفوض من Supabase (HTTP $CODE). المتبقي: $(head -c 300 /tmp/proj.json)"
+            echo "::error::الحل: Supabase Dashboard ← Account Preferences ← Personal Access Tokens ← أنشئ توكناً جديداً، ثم حدّث السرّ SUPABASE_ACCESS_TOKEN في المستودع. (منطقة الاستجابة: $(head -c 120 /tmp/proj.json))"
+            exit 1
+          fi
+          supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
       - name: Push database migrations
-        if: steps.check.outputs.ready == 'true'
+        if: steps.check.outputs.ready == 'true' && steps.mig.outputs.changed == 'true'
         run: supabase db push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Generate TypeScript types
-        if: steps.check.outputs.ready == 'true'
+        if: steps.check.outputs.ready == 'true' && steps.mig.outputs.changed == 'true'
         run: |
           mkdir -p src/types
           supabase gen types typescript --linked > src/types/supabase.ts
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      # ✅ نجاح صريح عند عدم وجود مخططات: لا ربط، لا ❌، وتقرير واضح في الملخّص.
+      - name: No migrations in this push — nothing to apply
+        if: steps.check.outputs.ready == 'true' && steps.mig.outputs.changed == 'false'
+        run: |
+          echo "::notice::لا مخططات قاعدة بيانات جديدة في هذه الدفعة — لا حاجة لربط Supabase ولا لتطبيق أي شيء."
+          {
+            echo "### ℹ️ Supabase — لا مخططات في هذه الدفعة"
+            echo ""
+            echo "الملفات التي تغيّرت ليست مخططات \`supabase/migrations/*.SQL\` (غالباً بذر \`backend/sql\`)،"
+            echo "لذلك لم يُجرَ أي ربط بالمشروع ولا أي تطبيق. المشروع غير متأثر."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Commit updated types (if changed)
-        if: steps.check.outputs.ready == 'true'
+        if: steps.check.outputs.ready == 'true' && steps.mig.outputs.changed == 'true'
         run: |
           if [[ -f src/types/supabase.ts ]]; then
             git config user.name "github-actions[bot]"

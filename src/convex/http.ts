@@ -7,6 +7,7 @@
 //   GET /ping            → نبضة إبقاء-التشغيل (keep-alive) للمرايا المجانية
 //   GET /mirrors         → سجل مرايا الاستضافة المجانية للمنصة
 //   GET /channels        → قنوات المنصة الرسمية + صحة كل قناة
+//   POST /telegram/webhook → بوابة ردّ بوت تيليجرام (تترويسة سرّية فقط)
 //
 // لا تُرسل أي نقطة أسراراً ولا بيانات عملاء: أعداد وحالات فقط.
 import { httpRouter } from "convex/server";
@@ -79,6 +80,7 @@ http.route({
         "GET /ping      نبضة إبقاء التشغيل",
         "GET /mirrors   مرايا الاستضافة المجانية",
         "GET /channels  قنوات المنصة وصحتها",
+        "POST /telegram/webhook  بوابة رد البوت (تترويسة سرّية)",
       ].join("\n"),
       { headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" } }
     );
@@ -178,6 +180,51 @@ http.route({
   path: "/health",
   method: "OPTIONS",
   handler: httpAction(async () => new Response(null, { status: 204, headers: CORS })),
+});
+
+// ── 🤖 بوابة رد بوت تيليجرام (Webhook) ────────────────────────────────
+//
+// يدفع تيليجرام هنا كل تحديث، فنردّ على الرسائل والأوامر فوراً.
+//
+// 🔐 الأمان: لا يُقبل أي طلب بلا ترويسة `X-Telegram-Bot-Api-Secret-Token`
+//    مطابقة للسرّ المحفوظ في الإعدادات — فلا أحد غير تيليجرام يملأ
+//    المستودع بطلبات. وإن لم يُضبط السرّ بعد، تُرفض كل الطلبات (403).
+//
+// ⚡ نردّ دائماً بـ 200 حتى لو أخطأنا: غير ذلك يعيد تيليجرام الإرسال عشرات
+//    المرات فتغرق الخوادم بلا فائدة. الخطأ يُسجَّل بدل ذلك.
+http.route({
+  path: "/telegram/webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    let expected = "";
+    try {
+      expected = (await ctx.runQuery(internal.telegramBot.botStateInternal, {})).secret;
+    } catch (err: any) {
+      console.error("[Telegram:Webhook] تعذّر قراءة السرّ:", err?.message ?? err);
+    }
+    const provided = request.headers.get("x-telegram-bot-api-secret-token") ?? "";
+    if (!expected || provided !== expected) {
+      return json({ ok: false, error: "forbidden" }, 403);
+    }
+
+    let update: unknown = null;
+    try {
+      update = await request.json();
+    } catch {
+      return json({ ok: true, detail: "طلب بلا JSON" });
+    }
+    if (!update || typeof update !== "object") {
+      return json({ ok: true, detail: "طلب بلا تحديث" });
+    }
+
+    try {
+      const res = await ctx.runAction(internal.telegramBot.processUpdate, { update });
+      return json({ ok: true, detail: res.detail });
+    } catch (err: any) {
+      console.error("[Telegram:Webhook] فشل المعالجة:", err?.message ?? err);
+      return json({ ok: true, detail: "تعذّرت معالجة التحديث" });
+    }
+  }),
 });
 
 export default http;

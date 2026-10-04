@@ -554,7 +554,7 @@ setLanguage(language === "ar" ? "en" : "ar");
 | **إنستغرام** | https://www.instagram.com/vipyemen1 |
 | **تيك توك** | https://www.tiktok.com/@vip_yemen7 |
 | **يوتيوب** | https://www.youtube.com/@vipyemen1 |
-| **تويتر** | https://twitter.com/ViPservicesYeme |
+| **تويتر / X** | https://x.com/Vipyemen7 |
 | **لينكدإن** | https://www.linkedin.com/in/ali-aldahan-57b5a2231 |
 | **واتساب (تواصل مباشر)** | https://wa.me/967711780999 |
 | **Linktree** | https://linktr.ee/vipservicesyemen |

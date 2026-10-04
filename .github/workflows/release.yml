@@ -136,6 +136,25 @@ jobs:
             echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
           fi
 
+      # 🛡️ بوّابة السلامة: لا نبني حزمة تشير إلى نشر لا يخدم المنصة فعلاً.
+      # `convex deploy` يطبع رابط النشر الذي وُصل به؛ فإن كان نشراً جديداً فارغاً
+      # (بلا داتا ولا HTTP Actions) ل يحوّل التطبيق كله إلى منصة ميتة بصمت.
+      - name: Verify the resolved deployment serves the platform
+        env:
+          RESOLVED_URL: ${{ steps.convex.outputs.url }}
+        run: |
+          set -uo pipefail
+          SITE="${RESOLVED_URL%.convex.cloud}.convex.site"
+          CODE=$(curl -sS -m 30 -o /tmp/h.json -w '%{http_code}' "$SITE/health" || echo 000)
+          BODY=$(head -c 300 /tmp/h.json 2>/dev/null || true)
+          if [ "$CODE" != "200" ] || printf '%s' "$BODY" | grep -q "does not have HTTP actions enabled"; then
+            echo "::error::النشر $RESOLVED_URL لا يخدم المنصة (HTTP $CODE) —لن نبني حزمة تشير إليه."
+            echo "::error::فعّل HTTP Actions عليه من لوحة Convex (Settings ← HTTP Actions) أو صحّح CONVEX_DEPLOY_KEY ليشير إلى النشر الحيّ $SITE."
+            printf '%s\n' "$BODY"
+            exit 1
+          fi
+          echo "✅ النشر $RESOLVED_URL يخدم المنصة فعلياً (HTTP $CODE) — البناء آمن."
+
       - name: Build PWA
         run: npm run build
         env:
@@ -275,6 +294,23 @@ jobs:
             echo "::warning::No valid VITE_CONVEX_URL and no CONVEX_DEPLOY_KEY secret. Using the built-in live production URL (https://notable-shepherd-367.convex.cloud). Add CONVEX_DEPLOY_KEY as a repo SECRET to auto-deploy backend changes."
             echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
           fi
+
+      # 🛡️ بوّابة السلامة (أندرويد) — نفس الفحص قبل بناء الحزمة.
+      - name: Verify the resolved deployment serves the platform
+        env:
+          RESOLVED_URL: ${{ steps.convex.outputs.url }}
+        run: |
+          set -uo pipefail
+          SITE="${RESOLVED_URL%.convex.cloud}.convex.site"
+          CODE=$(curl -sS -m 30 -o /tmp/h.json -w '%{http_code}' "$SITE/health" || echo 000)
+          BODY=$(head -c 300 /tmp/h.json 2>/dev/null || true)
+          if [ "$CODE" != "200" ] || printf '%s' "$BODY" | grep -q "does not have HTTP actions enabled"; then
+            echo "::error::النشر $RESOLVED_URL لا يخدم المنصة (HTTP $CODE) — لن نبني حزمة تشير إليه."
+            echo "::error::فعّل HTTP Actions عليه من لوحة Convex (Settings ← HTTP Actions) أو صحّح CONVEX_DEPLOY_KEY ليشير إلى النشر الحيّ $SITE."
+            printf '%s\n' "$BODY"
+            exit 1
+          fi
+          echo "✅ النشر $RESOLVED_URL يخدم المنصة فعلياً (HTTP $CODE) — البناء آمن."
 
       - name: Build web
         run: npm run build

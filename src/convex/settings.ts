@@ -6,6 +6,7 @@ import {
   INSTAGRAM_URL,
   TELEGRAM_CHANNEL_URL,
   TIKTOK_URL,
+  X_URL,
   YOUTUBE_URL,
 } from "../lib/socialLinks";
 
@@ -83,7 +84,7 @@ export const ensureDefaults = mutation({
       facebook: FACEBOOK_PAGE_URL,
       tiktok: TIKTOK_URL,
       instagram: INSTAGRAM_URL,
-      twitter: "https://twitter.com/ViPservicesYeme",
+      twitter: X_URL,
       linkedin: "https://www.linkedin.com/in/ali-aldahan-57b5a2231",
       youtube: YOUTUBE_URL,
       telegram: TELEGRAM_CHANNEL_URL,

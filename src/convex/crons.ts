@@ -48,4 +48,15 @@ crons.interval(
   internal.campaigns.emailTick
 );
 
+// ── 🤖 رد بوت تيليجرام بالاستعلام (كل 5 ثوان) ────────────────────────
+// احتياطي عن الـ webhook: يعمل فقط إن كان مُفعّلاً من اللوحة، ويقف تلقائياً
+// ما دام الـ webhook مُفعّلاً لأن تيليجرام لا يسمح بالجمع بينهما (409).
+// بلا مستخدمين لا يفعل الفحص أي نداء خارجي (بلا توكن = لا استعلام).
+crons.interval(
+  "telegram-polling",
+  { seconds: 5 },
+  internal.telegramBot.pollUpdates,
+  {}
+);
+
 export default crons;

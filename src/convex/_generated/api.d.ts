@@ -43,6 +43,7 @@ import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
 import type * as storage from "../storage.js";
 import type * as submissions from "../submissions.js";
+import type * as telegramBot from "../telegramBot.js";
 import type * as users from "../users.js";
 import type * as whatsapp from "../whatsapp.js";
 import type * as whatsappBody from "../whatsappBody.js";
@@ -90,6 +91,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   storage: typeof storage;
   submissions: typeof submissions;
+  telegramBot: typeof telegramBot;
   users: typeof users;
   whatsapp: typeof whatsapp;
   whatsappBody: typeof whatsappBody;

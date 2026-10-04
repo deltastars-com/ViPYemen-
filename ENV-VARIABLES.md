@@ -11,7 +11,13 @@
 > ⚠️ **مهم:** بدون `CONVEX_DEPLOY_KEY` لا ينفّذ سير `release.yml` أمر
 > `convex deploy` على الإنتاج، فتصل تغييرات الواجهة فقط ويبقى الباك اند
 > على نسخته القديمة (نقاط `/health` و`/channels` ترجع 404). أضف السر إلى
-> GitHub Secrets لتصل كل التحسينات إلى الإنتاج تلقائياً مع كل دفعة.
+> GitHub Secrets لتصل كل التحسينات إلى الإنتاج.
+>
+> 🔸 **متى يُطبَّق فعلاً؟** أمر `convex deploy` موجود داخل `release.yml` وحده،
+> وهذا السير يعمل **على وسم `v*` فقط** (`on: push: tags: v*`) لا على الدفع
+> العادي إلى `main`. فدفع فرع main ينشر الواجهة فقط؛ ونشر الباك اند يحتاج
+> وسم إصدار. أما أسرار القنوات (تيليجرام/فيسبوك/يوتيوب) فتُزامَن مع كل دفع
+> إلى main عبر `convex-env-sync.yml`.
 
 > ℹ️ **مفاتيح تيليجرام ويوتيوب** يمكن إضافتها أيضاً من لوحة التحكم:
 > تبويب «النشر اليدوي في القنوات» ← بطاقة «مفاتيح تيليجرام ويوتيوب».
@@ -29,6 +35,12 @@
 ## TELEGRAM (Channel Auto-Publishing) — Bot: @vipyemen_bot
 - `TELEGRAM_BOT_TOKEN` — Bot token (default: built-in for @vipyemen_bot)
 - `TELEGRAM_CHAT_ID` — Channel: `@vipyemen77` (comma-separated for several chats)
+- `CONVEX_HTTP_ACTIONS_URL` — **(جديد)** رابط HTTP Actions العام للناشر، بصيغة
+  `https://<deployment>.convex.site`. يبني عليه البوت رابط الردّ
+  (`<base>/telegram/webhook`) عبر `setWebhook`. إن لم تُضبط، يُستنتج الرابط من
+  `CONVEX_SITE_URL` مع تحويل النطاق إلى `.convex.site` تلقائياً.
+  البدائل المقبولة بالاسم نفسه: `TELEGRAM_WEBHOOK_BASE_URL` · `CONVEX_ACTIONS_URL` ·
+  `HTTP_ACTIONS_URL` — أيّها وُجد أولاً هو المستخدم.
 
 ## WHATSAPP (Channel Auto-Publishing)
 - `WHATSAPP_ACCESS_TOKEN` — Cloud API access token

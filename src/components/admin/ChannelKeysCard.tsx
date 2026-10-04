@@ -14,7 +14,7 @@
  */
 import { useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
-import { KeyRound, Save, ShieldCheck, Stethoscope, Youtube, Send } from "lucide-react";
+import { KeyRound, Save, ShieldCheck, Stethoscope, Youtube, Send, Radio, Bot, RefreshCw } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Button, Card, Input, Label, Textarea } from "@/components/ui";
 
@@ -23,6 +23,22 @@ type TestResult = {
   telegram: { ok: boolean; detail: string };
   youtube: { ok: boolean; detail: string };
 } | null;
+
+type BotMode = {
+  ok: boolean;
+  detail: string;
+  botUsername: string;
+  webhookActive: boolean;
+  webhookUrl: string;
+  expectedUrl: string;
+  pending: number;
+  telegramError: string;
+  hasSecret: boolean;
+  pollingEnabled: boolean;
+  lastPollAt: number;
+  lastError: string;
+  commands: { command: string; description: string }[];
+};
 
 const SOURCE_LABEL: Record<string, string> = {
   env: "متغير بيئة Convex",
@@ -54,19 +70,118 @@ export function ChannelKeysCard({ token }: { token: string }) {
   const test = useAction(api.channelKeys.test);
   const loadProfile = useAction(api.channelKeys.getBotProfile);
   const setProfile = useAction(api.channelKeys.setBotProfile);
+  const loadWebhook = useAction(api.telegramBot.webhookStatus);
+  const enableWebhook = useAction(api.telegramBot.registerWebhook);
+  const disableWebhook = useAction(api.telegramBot.unregisterWebhook);
+  const publishCommands = useAction(api.telegramBot.syncCommands);
+  const pollImmediately = useAction(api.telegramBot.pollNow);
+  const togglePolling = useMutation(api.telegramBot.setPolling);
 
   const [tgToken, setTgToken] = useState("");
   const [tgChats, setTgChats] = useState("");
   const [ytId, setYtId] = useState("");
   const [ytSecret, setYtSecret] = useState("");
   const [ytRefresh, setYtRefresh] = useState("");
-  const [busy, setBusy] = useState<"" | "tg" | "yt" | "test" | "profileLoad" | "profileSave">("");
+  const [busy, setBusy] = useState<
+    "" | "tg" | "yt" | "test" | "profileLoad" | "profileSave" | "webhookLoad" | "webhookOn" | "webhookOff" | "commands" | "pollNow" | "pollToggle"
+  >("");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<TestResult>(null);
   const [botName, setBotName] = useState("");
   const [botDesc, setBotDesc] = useState("");
   const [botShort, setBotShort] = useState("");
   const [profileMsg, setProfileMsg] = useState("");
+  const [botMode, setBotMode] = useState<BotMode | null>(null);
+  const [botMsg, setBotMsg] = useState("");
+
+  async function refreshWebhook() {
+    setBusy("webhookLoad");
+    setBotMsg("");
+    try {
+      const r = await loadWebhook({ token });
+      setBotMode({
+        ok: r.ok,
+        detail: r.detail,
+        botUsername: r.botUsername,
+        webhookActive: r.webhookActive,
+        webhookUrl: r.webhookUrl,
+        expectedUrl: r.expectedUrl,
+        pending: r.pending,
+        telegramError: r.telegramError,
+        hasSecret: r.hasSecret,
+        pollingEnabled: r.pollingEnabled,
+        lastPollAt: r.lastPollAt,
+        lastError: r.lastError,
+        commands: r.commands,
+      });
+    } catch (err: any) {
+      setBotMsg(`⛔ ${err?.message ?? "تعذّر قراءة الحالة"}`);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  /** ملف إجرائي واحد للأزرار الخمسة: يشغّل فعلاً ثم يحدّث الحالة. */
+  async function runBotAction(
+    key: "webhookOn" | "webhookOff" | "commands" | "pollNow",
+    fn: () => Promise<{ ok: boolean; detail?: string }>
+  ) {
+    setBusy(key);
+    setBotMsg("");
+    try {
+      const r = await fn();
+      setBotMsg(r.ok ? r.detail ?? "✅ تم" : `⛔ ${r.detail ?? "فشل"}`);
+    } catch (err: any) {
+      setBotMsg(`⛔ ${err?.message ?? "تعذّر التنفيذ"}`);
+    } finally {
+      setBusy("");
+    }
+    try {
+      const r = await loadWebhook({ token });
+      setBotMode({
+        ok: r.ok,
+        detail: r.detail,
+        botUsername: r.botUsername,
+        webhookActive: r.webhookActive,
+        webhookUrl: r.webhookUrl,
+        expectedUrl: r.expectedUrl,
+        pending: r.pending,
+        telegramError: r.telegramError,
+        hasSecret: r.hasSecret,
+        pollingEnabled: r.pollingEnabled,
+        lastPollAt: r.lastPollAt,
+        lastError: r.lastError,
+        commands: r.commands,
+      });
+    } catch {
+      /* التحديث補助ي غير حرج */
+    }
+  }
+
+  async function flipPolling() {
+    if (!botMode) return;
+    const next = !botMode.pollingEnabled;
+    setBusy("pollToggle");
+    setBotMsg("");
+    try {
+      await togglePolling({ token, enabled: next });
+      setBotMsg(
+        next
+          ? "✅ فُعّل الاستعلام الدوري (كل ٥ ثوان) — يعمل حين لا يكون الويب هوك مُفعّلاً."
+          : "🔇 أُوقف الاستعلام الدوري."
+      );
+    } catch (err: any) {
+      setBotMsg(`⛔ ${err?.message ?? "تعذّر التغيير"}`);
+    } finally {
+      setBusy("");
+    }
+    try {
+      const r = await loadWebhook({ token });
+      setBotMode({ ...botMode, pollingEnabled: r.pollingEnabled });
+    } catch {
+      /* تجاهل */
+    }
+  }
 
   async function readProfile() {
     setBusy("profileLoad");
@@ -343,6 +458,134 @@ export function ChannelKeysCard({ token }: { token: string }) {
         {profileMsg && (
           <p className="mt-2 rounded-lg border border-gold-500/30 bg-gold-500/10 p-2.5 text-[11px] font-bold text-gold-200">
             {profileMsg}
+          </p>
+        )}
+      </div>
+
+      {/* ── وضع ردّ البوت (Webhook + استعلام دوري) ───────────── */}
+      <div className="mb-4 rounded-xl border border-sky-500/30 bg-sky-500/[0.04] p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="flex items-center gap-2 text-sm font-black text-cream">
+            <Bot className="h-4 w-4 text-sky-300" /> وضع ردّ البوت (يستقبل ويجيب)
+          </p>
+          <Button
+            variant="ghost"
+            loading={busy === "webhookLoad"}
+            onClick={refreshWebhook}
+            className="!py-1.5 text-[11px]"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> قراءة الحالة
+          </Button>
+        </div>
+
+        {botMode ? (
+          <div className="mb-3 grid gap-2 text-[11px] font-bold sm:grid-cols-2">
+            <p
+              className={`rounded-lg border p-2.5 ${
+                botMode.webhookActive
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                  : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+              }`}
+            >
+              {botMode.webhookActive ? "🟢" : "🟡"} الردّ:{" "}
+              {botMode.webhookActive ? "فوري عبر Webhook" : "غير مفعّل — لا يردّ على الرسائل"}
+              {botMode.botUsername ? ` (@${botMode.botUsername})` : ""}
+            </p>
+            <p
+              className={`rounded-lg border p-2.5 ${
+                botMode.pollingEnabled && !botMode.webhookActive
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                  : "border-ink-700/60 bg-ink-900/40 text-ink-300"
+              }`}
+            >
+              <Radio className="mr-1 inline h-3.5 w-3.5" />
+              الاستعلام الدوري (getUpdates):{" "}
+              {botMode.pollingEnabled ? "مُفعّل" : "معطّل"}
+              {botMode.webhookActive ? " (متوقف لأن الويب هوك شغّال)" : ""}
+              {botMode.lastPollAt ? ` — آخر فحص ${new Date(botMode.lastPollAt).toLocaleTimeString("ar-EG")}` : ""}
+            </p>
+            {botMode.webhookActive && (
+              <p className="rounded-lg border border-ink-700/60 bg-ink-900/40 p-2.5 text-ink-300" dir="ltr">
+                <span className="font-black text-cream">POST </span>
+                {botMode.webhookUrl}
+              </p>
+            )}
+            <p className="rounded-lg border border-ink-700/60 bg-ink-900/40 p-2.5 text-ink-300">
+              🔐 سرّ البوابة: {botMode.hasSecret ? "مضبوط ✅" : "غير مضبوط ⛔ — فعّل الويب هوك ليُنشأ"} · رسائل
+              بانتظار المعالجة: {botMode.pending}
+            </p>
+            {(botMode.telegramError || botMode.lastError) && (
+              <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-rose-300 sm:col-span-2">
+                ⛔ خطأ تيليجرام: {botMode.telegramError || botMode.lastError}
+              </p>
+            )}
+            {botMode.commands.length > 0 && (
+              <p className="rounded-lg border border-ink-700/60 bg-ink-900/40 p-2.5 text-ink-300 sm:col-span-2">
+                ⌨️ أوامر منشورة في تيليجرام ({botMode.commands.length}):{" "}
+                {botMode.commands.map((c) => `/${c.command}`).join(" · ")}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="mb-3 text-[11px] leading-relaxed text-ink-400">
+            اضغط «قراءة الحالة» لتعرف هل البوت مربوط ببوابة ردّ، وهل الأوامر منشورة في تيليجرام.
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            loading={busy === "webhookOn"}
+            onClick={() => runBotAction("webhookOn", () => enableWebhook({ token }))}
+            className="!py-2 text-xs"
+          >
+            <Radio className="h-4 w-4" /> تفعيل الرد الفوري (Webhook)
+          </Button>
+          <Button
+            variant="ghost"
+            loading={busy === "webhookOff"}
+            onClick={() => runBotAction("webhookOff", () => disableWebhook({ token }))}
+            className="!py-2 text-xs"
+          >
+            إيقاف الويب هوك
+          </Button>
+          <Button
+            variant="ghost"
+            loading={busy === "commands"}
+            onClick={() => runBotAction("commands", () => publishCommands({ token }))}
+            className="!py-2 text-xs"
+          >
+            <Send className="h-4 w-4" /> نشر الأوامر في تيليجرام
+          </Button>
+          <Button
+            variant="ghost"
+            loading={busy === "pollNow"}
+            onClick={() => runBotAction("pollNow", () => pollImmediately({ token }))}
+            className="!py-2 text-xs"
+          >
+            استعلام الآن
+          </Button>
+          {botMode && (
+            <Button
+              variant="ghost"
+              loading={busy === "pollToggle"}
+              onClick={flipPolling}
+              className="!py-2 text-xs"
+            >
+              {botMode.pollingEnabled ? "🔇 إيقاف الاستعلام الدوري" : "▶️ تفعيل الاستعلام الدوري"}
+            </Button>
+          )}
+        </div>
+
+        <p className="mt-3 rounded-lg border border-sky-500/30 bg-sky-500/[0.06] p-2.5 text-[10px] leading-relaxed text-sky-100/85">
+          ℹ️ <b className="text-cream">الويبهوك</b> يجعل الرد فورياً (مستحسن في الإنتاج)، و
+          <b className="text-cream"> الاستعلام الدوري</b> بديل كل ٥ ثوان يعمل فقط حين لا يكون الويب هوك
+          مُفعّلاً — لأن تيليجرام لا يسمح بالجمع بينهما. البوابة محميّة بترويسة سرّية فلا يمرّ منها إلا
+          تيليجرام. بعد التفعيل جرّب: أرسل <b className="text-cream" dir="ltr">/start</b> أو{" "}
+          <b className="text-cream" dir="ltr">/jobs</b> للبوت في المحادثة الخاصة.
+        </p>
+        {botMsg && (
+          <p className="mt-2 rounded-lg border border-gold-500/30 bg-gold-500/10 p-2.5 text-[11px] font-bold text-gold-200">
+            {botMsg}
           </p>
         )}
       </div>

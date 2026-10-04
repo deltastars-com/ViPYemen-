@@ -37,6 +37,7 @@ import {
   TELEGRAM_CHANNEL_URL,
   TIKTOK_URL,
   WHATSAPP_COMMUNITY_URL,
+  X_URL,
   YOUTUBE_URL,
 } from "@/lib/socialLinks";
 
@@ -104,7 +105,7 @@ const SOCIALS = [
   { icon: Facebook, href: FACEBOOK_GROUP_URL, brand: "#1877F2", labelAr: "مجموعة فيسبوك", labelEn: "Facebook Group" },
   { icon: InstagramIcon, href: INSTAGRAM_URL, brand: "#E1306C", labelAr: "إنستغرام", labelEn: "Instagram" },
   { icon: TikTokIcon, href: TIKTOK_URL, brand: "#25F4EE", labelAr: "تيك توك", labelEn: "TikTok" },
-  { icon: XIcon, href: "https://twitter.com/ViPservicesYeme", brand: "#FFFFFF", labelAr: "تويتر / X", labelEn: "Twitter / X" },
+  { icon: XIcon, href: X_URL, brand: "#FFFFFF", labelAr: "تويتر / X", labelEn: "Twitter / X" },
   { icon: YouTubeIcon, href: YOUTUBE_URL, brand: "#FF0000", labelAr: "يوتيوب", labelEn: "YouTube" },
   { icon: LinkedInIcon, href: LINKEDIN_URL, brand: "#0A66C2", labelAr: "لينكدإن", labelEn: "LinkedIn" },
 ];

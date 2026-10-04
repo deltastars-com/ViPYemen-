@@ -37,7 +37,7 @@ INSERT INTO public.settings (key, value) VALUES
   ('facebook_page', '"https://www.facebook.com/vipyemen1"'),
   ('facebook_group', '"https://www.facebook.com/groups/346010664332427"'),
   ('instagram', '"https://www.instagram.com/vipyemen1"'),
-  ('twitter', '"https://twitter.com/ViPservicesYeme"'),
+  ('twitter', '"https://x.com/Vipyemen7"'),
   ('youtube', '"https://www.youtube.com/@vipyemen1"'),
   ('tiktok', '"https://www.tiktok.com/@vip_yemen7"'),
   ('whatsapp_community', '"https://chat.whatsapp.com/FWq6W6zHbDF8kgWlGHSMqb"'),

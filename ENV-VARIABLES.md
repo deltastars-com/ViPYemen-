@@ -6,7 +6,12 @@
 
 ## CONVEX (Primary Backend)
 - `VITE_CONVEX_URL` — Backend URL (e.g., `https://xxx.convex.cloud`)
+  ⚠️ يجب أن يكون رابط **`.convex.cloud`** (عنوان العميل). إن أُعطي رابط
+  HTTP Actions (`.convex.site`) حوّلته سير العمل تلقائياً إلى `.convex.cloud`.
+  ويُقبل أيضاً الاسم البديل `VITE_CLOUD_URL`.
 - `CONVEX_DEPLOY_KEY` — Deploy key for CI/CD (server-side only)
+  ويُقبل الاسم البديل `VITE_CONVEX_DEPLOY_KEY` — إن وُجد المفتاحان فسير العمل
+  ينشر بكلٍّ منهما ويُفضّل الذي يستهدف النشر الحيّ الحامل للبيانات.
 
 > ⚠️ **مهم:** بدون `CONVEX_DEPLOY_KEY` لا ينفّذ سير `release.yml` أمر
 > `convex deploy` على الإنتاج، فتصل تغييرات الواجهة فقط ويبقى الباك اند
@@ -39,8 +44,9 @@
   `https://<deployment>.convex.site`. يبني عليه البوت رابط الردّ
   (`<base>/telegram/webhook`) عبر `setWebhook`. إن لم تُضبط، يُستنتج الرابط من
   `CONVEX_SITE_URL` مع تحويل النطاق إلى `.convex.site` تلقائياً.
-  البدائل المقبولة بالاسم نفسه: `TELEGRAM_WEBHOOK_BASE_URL` · `CONVEX_ACTIONS_URL` ·
-  `HTTP_ACTIONS_URL` — أيّها وُجد أولاً هو المستخدم.
+  البدائل المقبولة بالاسم نفسه: `TELEGRAM_WEBHOOK_BASE_URL` · `VITE_HTTP_ACTIONS_URL` ·
+  `VITE_CONVEX_SITE_URL` · `CONVEX_ACTIONS_URL` · `HTTP_ACTIONS_URL` — أيّها وُجد
+  أولاً هو المستخدم.
 
 ## WHATSAPP (Channel Auto-Publishing)
 - `WHATSAPP_ACCESS_TOKEN` — Cloud API access token

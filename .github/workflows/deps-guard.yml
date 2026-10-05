@@ -76,7 +76,7 @@ jobs:
       - name: بوّابة الجودة (فحص الأنواع + بناء Convex)
         if: steps.bump.outputs.changed == 'true'
         env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY || secrets.VITE_CONVEX_DEPLOY_KEY }}
         run: |
           npm run typecheck
           npm run build

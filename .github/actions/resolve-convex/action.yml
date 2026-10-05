@@ -1,0 +1,202 @@
+# 🛰️ إجراء مركزي واحد (Composite Action) يحدّد *نشر Convex الحيّ* الذي سيتصل
+# به التطبيق في كل المنصات (PWA · Android · iOS)، وينشر الشيفرة إليه إن أمكن،
+# ويتحقق فعلياً أن المنصة ترد بمحتواها — بدل تكرار هذا المنطق في ثلاثة سير عمل.
+#
+# لماذا وُجد؟ كل نشر في Convex له قاعدة بياناته **المستقلة**، وقد واجهنا فعلاً:
+# مفتاح نشر يشير إلى نشر جديد فارغ بينما بيانات المستخدمين في نشر آخر — فيُبنى
+# التطبيق «ناجحاً» وهو ميت بصمت (0 طلب · 0 إعلان). هذا الإجراء يمنع ذلك:
+#   1. العنوان المُعدّ في المستودع (VITE_CONVEX_URL) هو المرجع، وإلا فالنشر
+#      الحيّ المعروف الحامل للبيانات.
+#   2. إن كان المرجع فارغاً أو لا يستجيب، نعود تلقائياً إلى النشر الحامل
+#      للبيانات مع تحذير صاخب وطريق إصلاح واضح.
+#   3. لا نُصدر أبداً عنواناً لا يردّ فعلياً على استعلام المنصة (publicState).
+#
+# يقبل مفتاحي نشر: السرّ الأساسي CONVEX_DEPLOY_KEY والاسم البديل
+# VITE_CONVEX_DEPLOY_KEY، ويفضّل الذي يستهدف العنوان المُعدّ (بيانات المستخدمين).
+
+name: Resolve Convex deployment (deploy + verify)
+description: يختار نشر Convex الحيّ الحامل للبيانات وينشر الشيفرة إليه ويتحقق أن المنصة ترد.
+
+inputs:
+  deploy-key:
+    description: مفتاح النشر الأساسي (سر المستودع CONVEX_DEPLOY_KEY)
+    required: false
+    default: ""
+  deploy-key-alt:
+    description: مفتاح نشر بديل (سر المستودع VITE_CONVEX_DEPLOY_KEY) — يُجرَّب إن لم يستهدف الأول النشر الصحيح
+    required: false
+    default: ""
+  configured-url:
+    description: العنوان المُعدّ في متغيرات المستودع (VITE_CONVEX_URL أو ما يعادله)
+    required: false
+    default: ""
+  gemini-key:
+    description: مفتاح Gemini لمزامنته إلى بيئة النشر المختار (لا يُطبع أبداً)
+    required: false
+    default: ""
+  mode:
+    description: "deploy: انشر الشيفرة أيضاً — resolve: تحقّق واختر العنوان فقط"
+    required: false
+    default: deploy
+
+outputs:
+  url:
+    description: عنوان النشر الحيّ الذي يجب أن يشير إليه التطبيق (‎*.convex.cloud‎)
+    value: ${{ steps.resolve.outputs.url }}
+  deploy_host:
+    description: النشر الذي نُشرت إليه الشيفرة (فارغ في وضع resolve)
+    value: ${{ steps.resolve.outputs.deploy_host }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve, deploy and verify
+      id: resolve
+      shell: bash
+      env:
+        KEY_PRIMARY: ${{ inputs.deploy-key }}
+        KEY_ALT: ${{ inputs.deploy-key-alt }}
+        CONFIGURED_URL: ${{ inputs.configured-url }}
+        GEMINI_KEY_SECRET: ${{ inputs.gemini-key }}
+        MODE: ${{ inputs.mode }}
+      run: |
+        set -uo pipefail
+
+        CLI="./node_modules/.bin/convex"
+        DEFAULT_URL="https://notable-shepherd-367.convex.cloud"
+
+        host_of() { printf '%s' "$1" | sed -E 's#^https://([^/]+).*#\1#'; }
+        url_of() { printf '%s' "$1" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true; }
+
+        # يطبع ok | empty | dead — يتحقق أن النشر يردّ فعلياً وأن فيه محتوى.
+        probe() {
+          local body=""
+          body=$(curl -sS -m 30 -X POST "$1/api/query" \
+            -H 'content-type: application/json' \
+            -d '{"path":"controlPanel:publicState","args":{},"format":"json"}' 2>/dev/null) || true
+          if ! printf '%s' "$body" | grep -q '"status":"success"'; then
+            printf 'dead'
+            return 0
+          fi
+          if printf '%s' "$body" | grep -qE '"(published|open|activeAds|liveOffers)":[1-9]'; then
+            printf 'ok'
+          else
+            printf 'empty'
+          fi
+        }
+
+        echo "── تحديد نشر Convex الحيّ ──"
+
+        # 0) تطبيع العنوان المُعدّ: روابط HTTP Actions (‎.convex.site‎) ليست
+        #    عناوين عميل Convex. نصحّحها تلقائياً بدل تجاهل قيمة المستخدم.
+        if [ -n "${CONFIGURED_URL:-}" ] && [[ "$CONFIGURED_URL" == *.convex.site ]]; then
+          echo "::warning::العنوان المُعدّ هو رابط HTTP Actions (‎.convex.site‎) — عنوان التطبيق يجب أن يكون ‎.convex.cloud‎؛ صحّحناه تلقائياً."
+          CONFIGURED_URL="${CONFIGURED_URL%.convex.site}.convex.cloud"
+        fi
+        if ! [[ "${CONFIGURED_URL:-}" =~ ^https://[a-z0-9-]+\.convex\.cloud$ ]]; then
+          if [ -n "${CONFIGURED_URL:-}" ]; then
+            echo "::warning::قيمة العنوان المُعدّ غير صالحة ($CONFIGURED_URL) — نتجاهلها ونستخدم النشر الحيّ الحامل للبيانات."
+          else
+            echo "::notice::لا يوجد عنوان مُعدّ في متغيرات المستودع — سيُستخدم النشر الحيّ الحامل للبيانات $DEFAULT_URL."
+          fi
+          CONFIGURED_URL="$DEFAULT_URL"
+        fi
+        CONFIGURED_HOST=$(host_of "$CONFIGURED_URL")
+
+        # 1) النشر (في وضع deploy): نجرّب المفاتيح المتاحة، ونفضّل المفتاح الذي
+        #    يستهدف العنوان المُعدّ — لأن النشر إليه هو المقصود بالحفاظ على
+        #    بيانات المستخدمين. وإن لم يوجد، ننشر بأول مفتاح يعمل على الأقل.
+        DEPLOY_HOST=""
+        CHOSEN_KEY=""
+        FAILED_LAST=""
+        KEYS=()
+        [ -n "${KEY_PRIMARY:-}" ] && KEYS+=("$KEY_PRIMARY")
+        if [ -n "${KEY_ALT:-}" ] && [ "$KEY_ALT" != "$KEY_PRIMARY" ]; then
+          KEYS+=("$KEY_ALT")
+        fi
+        if [ "${MODE:-deploy}" = "deploy" ]; then
+          if [ ${#KEYS[@]} -eq 0 ]; then
+            echo "::warning::لا يوجد أي مفتاح نشر (CONVEX_DEPLOY_KEY / VITE_CONVEX_DEPLOY_KEY) — تُخطّى ترقية الباك اند، ويستمر البناء على النشر الحيّ."
+          fi
+          for KEY in ${KEYS[@]+"${KEYS[@]}"}; do
+            echo "… نشر الشيفرة إلى نشر Convex المرتبط بأحد مفاتيح النشر…"
+            if OUT_TXT=$(CONVEX_DEPLOY_KEY="$KEY" "$CLI" deploy 2>&1); then
+              HOST=$(host_of "$(url_of "$OUT_TXT")")
+              if [ -z "$HOST" ]; then
+                echo "::warning::نجح النشر لكن تعذّر استخراج اسم النشر من المخرجات — يُجرّب المفتاح التالي إن وُجد."
+                continue
+              fi
+              echo "✅ نُشرت الشيفرة بنجاح إلى $HOST"
+              CHOSEN_KEY="$KEY"
+              [ -z "$DEPLOY_HOST" ] && DEPLOY_HOST="$HOST"
+              if [ "$HOST" = "$CONFIGURED_HOST" ]; then
+                DEPLOY_HOST="$HOST"
+                break
+              fi
+            else
+              FAILED_LAST="$OUT_TXT"
+              echo "::warning::فشل النشر بأحد مفاتيح النشر — يُجرّب المفتاح التالي إن وُجد."
+            fi
+          done
+          if [ -z "$DEPLOY_HOST" ]; then
+            printf '%s\n' "$FAILED_LAST" | tail -1 | cut -c1-300
+            echo "::error::فشل نشر Convex بكل المفاتيح المتاحة — تحقّق من سرّي المستودع CONVEX_DEPLOY_KEY / VITE_CONVEX_DEPLOY_KEY ثم أعد التشغيل."
+            exit 1
+          fi
+          # مزامنة مفتاح Gemini إلى بيئة النشر المختار (القيمة لا تُطبع أبداً).
+          if [ -n "${GEMINI_KEY_SECRET:-}" ] && [ -n "$CHOSEN_KEY" ]; then
+            if CONVEX_DEPLOY_KEY="$CHOSEN_KEY" "$CLI" env set GEMINI_KEY "$GEMINI_KEY_SECRET" >/dev/null 2>&1 \
+              || CONVEX_DEPLOY_KEY="$CHOSEN_KEY" "$CLI" env set GEMINI_KEY "$GEMINI_KEY_SECRET" --prod >/dev/null 2>&1; then
+              echo "✅ GEMINI_KEY مُزامَن في بيئة النشر المختار (القيمة لا تُطبع في السجلات)."
+            else
+              echo "::warning::تعذّرت مزامنة GEMINI_KEY — سيعمل الذكاء الاصطناعي بالمحرك المجاني حتى تضبطه في لوحة Convex."
+            fi
+          fi
+        else
+          echo "… وضع التحقق فقط (resolve) — لا نشر للشيفرة في هذه المهمة."
+        fi
+
+        # 2) اختيار عنوان التطبيق: المُعدّ إن كان حياً **وفيه محتوى**، وإلا النشر
+        #    الحامل للبيانات — مع تحذير صاخب ومسار إصلاح واضح.
+        STATE=$(probe "$CONFIGURED_URL")
+        APP_URL="$CONFIGURED_URL"
+        if [ "$STATE" = "ok" ]; then
+          echo "✅ النشر المُعدّ $CONFIGURED_URL حيّ ويحمل محتوى (فحص استعلام المنصة)."
+        elif [ "$CONFIGURED_URL" != "$DEFAULT_URL" ]; then
+          if [ "$STATE" = "empty" ]; then
+            echo "::warning::النشر المُعدّ $CONFIGURED_URL حيّ لكنه **فارغ** (0 طلب/إعلان/عرض) — والتطبيق لا يُشحن على منصة فارغة."
+          else
+            echo "::warning::النشر المُعدّ $CONFIGURED_URL لا يستجيب لاستعلامات المنصة."
+          fi
+          echo "::warning::ثبّتنا عنوان التطبيق على النشر الحامل للبيانات $DEFAULT_URL. لنقل المنصة إلى $CONFIGURED_URL: انسخ البيانات إليه من لوحة Convex (Settings ← Backup & Restore أو Export/Import) ثم أعد تشغيل السير عمل."
+          APP_URL="$DEFAULT_URL"
+          STATE=$(probe "$APP_URL")
+          if [ "$STATE" = "dead" ]; then
+            echo "::error::حتى النشر الحامل للبيانات $APP_URL لا يستجيب — أوقفنا البناء بدل شحن تطبيق ميت."
+            exit 1
+          fi
+          echo "✅ النشر الحامل للبيانات $APP_URL حيّ ($STATE)."
+        else
+          echo "::error::النشر الحامل للبيانات $APP_URL لا يستجيب لاستعلامات المنصة ($STATE) — لا يمكن بناء تطبيق سليم."
+          exit 1
+        fi
+
+        # 3) فحص HTTP Actions: معلوماتي فقط — بوت تيليجرام يعمل بالاستطلاع
+        #    الدوري (cron) أيضاً، فالويب هوك ميزة إضافية لا شرط للبناء.
+        SITE="${APP_URL%.convex.cloud}.convex.site"
+        CODE=$(curl -sS -m 30 -o /tmp/convex-health.json -w '%{http_code}' "$SITE/health" 2>/dev/null || echo 000)
+        if [ "$CODE" = "200" ]; then
+          echo "✅ النشر $APP_URL يخدم HTTP Actions (‎/health‎ → 200)."
+        else
+          echo "::warning::النشر $APP_URL لا يخدم HTTP Actions بعد (HTTP $CODE) — البوت يعمل بالاستطلاع الدوري؛ فعّل HTTP Actions من لوحة Convex إن أردت الويب هوك الفوري."
+        fi
+
+        # 4) تنبيه إن اختلف نشر الشيفرة عن نشر التطبيق (قواعد البيانات منفصلة).
+        if [ -n "$DEPLOY_HOST" ] && [ "$DEPLOY_HOST" != "$(host_of "$APP_URL")" ]; then
+          echo "::warning::نُشرت الشيفرة إلى $DEPLOY_HOST بينما التطبيق يتصل بـ $APP_URL — ولكل نشر قاعدة بياناته المستقلة."
+          echo "::warning::لتفعيل أحدث الوظائف (مثل بوت تيليجرام) على النشر الذي يتصل به التطبيق: أنشئ مفتاح نشر للنشر $APP_URL من لوحة Convex وضعه في سرّ CONVEX_DEPLOY_KEY، أو انقل بياناتك إلى $DEPLOY_HOST ثم اجعل VITE_CONVEX_URL يشير إليه."
+        fi
+
+        echo "url=$APP_URL" >> "$GITHUB_OUTPUT"
+        echo "deploy_host=$DEPLOY_HOST" >> "$GITHUB_OUTPUT"
+        echo "── العنوان النهائي للتطبيق: $APP_URL ──"

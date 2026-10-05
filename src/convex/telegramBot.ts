@@ -190,10 +190,14 @@ function normalizeSiteUrl(value: string): string {
 /**
  * أسماء المتغيرات التي تحتمل أن تحمل «HTTP Actions URL» كما يضيفها المالك في
  * لوحة Convex وفي أسرار المستودع — نقبل أياً منها مرتّبةً من الأدق.
+ * وتشمل صيغتَي VITE_ الشائعتين حتى يصلح الإعداد نفسه محلياً وعلى المنصّات
+ * (Vercel / Render / Supabase) بلا تغيير أسماء.
  */
 const WEBHOOK_BASE_ENV_NAMES = [
   "TELEGRAM_WEBHOOK_BASE_URL",
   "CONVEX_HTTP_ACTIONS_URL",
+  "VITE_HTTP_ACTIONS_URL",
+  "VITE_CONVEX_SITE_URL",
   "CONVEX_ACTIONS_URL",
   "HTTP_ACTIONS_URL",
 ] as const;
@@ -241,7 +245,7 @@ function convexSiteUrl(): string {
   const url = resolveWebhookBase();
   if (!url) {
     throw new ConvexError(
-      "تعذّر معرفة رابط HTTP Actions العامة. أضف متغير CONVEX_HTTP_ACTIONS_URL (أو TELEGRAM_WEBHOOK_BASE_URL) بقيمة https://<name>.convex.site — أو استخدم الاستعلام الدوري بدل الويب هوك."
+      "تعذّر معرفة رابط HTTP Actions العامة. أضف متغير CONVEX_HTTP_ACTIONS_URL (أو VITE_HTTP_ACTIONS_URL أو TELEGRAM_WEBHOOK_BASE_URL) بقيمة https://<name>.convex.site — أو استخدم الاستعلام الدوري بدل الويب هوك."
     );
   }
   return url;

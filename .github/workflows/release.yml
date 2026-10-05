@@ -74,125 +74,19 @@ jobs:
       # — so the dashboard and every data-driven section work. A missing or
       # invalid key FAILS the build loudly instead of silently shipping a
       # broken bundle.
-      - name: Deploy Convex backend and resolve URL
+      # 🛡️ نشر الباك اند + تحديد العنوان الحيّ الذي سيتصل به التطبيق:
+      # المنطق في إجراء مركزي واحد (‎.github/actions/resolve-convex‎) —
+      # يختار النشر الحامل للبيانات، ينشر الشيفرة بالمفتاح المناسب
+      # (CONVEX_DEPLOY_KEY أو VITE_CONVEX_DEPLOY_KEY)، ويتحقق فعلياً أن
+      # استعلامات المنصة ترد قبل بناء الحزمة.
+      - name: Resolve the live Convex deployment (deploy + verify)
         id: convex
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-          GEMINI_KEY_SECRET: ${{ secrets.VITE_GEMINI_KEY }}
-          VITE_CONVEX_URL_VAR: ${{ vars.VITE_CONVEX_URL }}
-        run: |
-          # Keep the Gemini key in the Convex SERVER environment (never in the
-          # client bundle) — synced from the repo secret on every backend push.
-          if [[ -n "$GEMINI_KEY_SECRET" && -n "$CONVEX_DEPLOY_KEY" ]]; then
-            ./node_modules/.bin/convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" >/dev/null 2>&1 && \
-              echo "GEMINI_KEY synced to Convex server env" || \
-              echo "::warning::Could not sync GEMINI_KEY to Convex env — AI falls back to the free engine until the key is set in the Convex dashboard."
-          fi
-          # 🛡️ العنوان المُعدّ هو المرجع دائماً، ومفتاح النشر يُستخدم للنشر فقط.
-          # سبب هذه القاعدة: كل نشر في Convex له قاعدة بياناته الخاصة. لو نشر
-          # المفتاح إلى نشر فارغ وكنا استبدلنا به العنوان المُعدّ، لباع التطبيق
-          # بمحتوى فارغ (0 طلب · 0 إعلان) وبات يبدو «ناجحاً» — وهو أسوأ من الفشل.
-          if [[ -n "$VITE_CONVEX_URL_VAR" && "$VITE_CONVEX_URL_VAR" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
-            if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-              DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
-                echo "$DEPLOY_OUT"
-                echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
-                exit 1
-              }
-              echo "$DEPLOY_OUT"
-              DEPLOYED=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
-              CONFIGURED_HOST=$(printf '%s' "$VITE_CONVEX_URL_VAR" | sed -E 's#^https://([^/]+).*#\1#')
-              DEPLOYED_HOST=$(printf '%s' "$DEPLOYED" | sed -E 's#^https://([^/]+).*#\1#')
-              if [[ -n "$DEPLOYED_HOST" && "$DEPLOYED_HOST" != "$CONFIGURED_HOST" ]]; then
-                echo "::error::CONVEX_DEPLOY_KEY ينشر إلى ($DEPLOYED_HOST) بينما عنوان الإنتاج المُعدّ ($CONFIGURED_HOST) — قواعد البيانات منفصلة، فالتطبيق سيُبنى على منصة فارغة."
-                echo "::error::الحل: إما أنشئ مفتاح نشر للنشر $CONFIGURED_HOST من لوحته، أو اجعل عنوان الإنتاج يشير إلى $DEPLOYED_HOST بعد نقل البيانات إليه."
-                exit 1
-              fi
-            fi
-            echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
-            echo "using repo variable VITE_CONVEX_URL"
-          elif [[ -n "$VITE_CONVEX_URL_VAR" ]]; then
-            echo "::warning::VITE_CONVEX_URL repo variable is not a valid Convex URL (ignored) — resolving the real URL via CONVEX_DEPLOY_KEY instead."
-            if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-              echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-              DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
-                echo "$DEPLOY_OUT"
-                echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
-                exit 1
-              }
-              echo "$DEPLOY_OUT"
-              URL=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
-              if [[ -z "$URL" ]]; then
-                echo "::error::Convex deploy succeeded but no deployment URL was found in its output."
-                exit 1
-              fi
-              echo "url=$URL" >> "$GITHUB_OUTPUT"
-              echo "deployed and resolved: $URL"
-            else
-              echo "::warning::VITE_CONVEX_URL is invalid and CONVEX_DEPLOY_KEY is not set. Using the built-in live production URL — the app still connects to the live backend."
-              echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
-            fi
-          elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-            echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-            DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
-              echo "$DEPLOY_OUT"
-              echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
-              exit 1
-            }
-            echo "$DEPLOY_OUT"
-            URL=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
-            if [[ -z "$URL" ]]; then
-              echo "::error::Convex deploy succeeded but no deployment URL was found in its output."
-              exit 1
-            fi
-            echo "url=$URL" >> "$GITHUB_OUTPUT"
-            echo "deployed and resolved: $URL"
-          else
-            # No valid URL and no deploy key: the client bundle carries the
-            # known-good live deployment URL as its built-in fallback, so the
-            # app still connects to the live backend. Warn loudly instead of
-            # failing the whole release build.
-            echo "::warning::No valid VITE_CONVEX_URL and no CONVEX_DEPLOY_KEY secret. Using the built-in live production URL (https://notable-shepherd-367.convex.cloud). Add CONVEX_DEPLOY_KEY as a repo SECRET to auto-deploy backend changes."
-            echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
-          fi
-
-          # 🛡️ حارس العنوان: العنوان المُعدّ (متغير المستودع، وإلا الافتراضي الحيّ
-          # الحامل لبيانات المستخدمين) هو ما يتّصل به التطبيق — دائماً.
-          # إن نشر `convex deploy` إلى نشر آخر، فقواعد البيانات منفصلة: التطبيق
-          # سيُبنى على منصة فارغة (0 طلب · 0 إعلان). لذلك نصحّح العنوان هنا
-          # ونُطلق تحذيراً صاخباً بدل شحن تطبيق ميت.
-          CONFIGURED_URL="$VITE_CONVEX_URL_VAR"
-          if ! [[ "$CONFIGURED_URL" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
-            CONFIGURED_URL="https://notable-shepherd-367.convex.cloud"
-          fi
-          RESOLVED_URL=$(grep -E '^url=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2- || true)
-          if [[ -n "$RESOLVED_URL" && "$RESOLVED_URL" != "$CONFIGURED_URL" ]]; then
-            echo "::error::نشر مفتاح النشر إلى ($RESOLVED_URL) بينما العنوان المُعدّ ($CONFIGURED_URL). قواعد البيانات منفصلة، فالتطبيق على الأول سيظهر فارغاً."
-            echo "::warning::تم تثبيت عنوان التطبيق على $CONFIGURED_URL. الشيفرة نُشرت إلى $RESOLVED_URL."
-            grep -v '^url=' "$GITHUB_OUTPUT" > "$GITHUB_OUTPUT.tmp" || true
-            mv "$GITHUB_OUTPUT.tmp" "$GITHUB_OUTPUT"
-            echo "url=$CONFIGURED_URL" >> "$GITHUB_OUTPUT"
-          fi
-
-      # 🛡️ بوّابة السلامة: لا نبني حزمة تشير إلى نشر لا يخدم المنصة فعلاً.
-      # `convex deploy` يطبع رابط النشر الذي وُصل به؛ فإن كان نشراً جديداً فارغاً
-      # (بلا داتا ولا HTTP Actions) ل يحوّل التطبيق كله إلى منصة ميتة بصمت.
-      - name: Verify the resolved deployment serves the platform
-        env:
-          RESOLVED_URL: ${{ steps.convex.outputs.url }}
-        run: |
-          set -uo pipefail
-          SITE="${RESOLVED_URL%.convex.cloud}.convex.site"
-          CODE=$(curl -sS -m 30 -o /tmp/h.json -w '%{http_code}' "$SITE/health" || echo 000)
-          BODY=$(head -c 300 /tmp/h.json 2>/dev/null || true)
-          if [ "$CODE" != "200" ] || printf '%s' "$BODY" | grep -q "does not have HTTP actions enabled"; then
-            echo "::error::النشر $RESOLVED_URL لا يخدم المنصة (HTTP $CODE) —لن نبني حزمة تشير إليه."
-            echo "::error::فعّل HTTP Actions عليه من لوحة Convex (Settings ← HTTP Actions) أو صحّح CONVEX_DEPLOY_KEY ليشير إلى النشر الحيّ $SITE."
-            printf '%s\n' "$BODY"
-            exit 1
-          fi
-          echo "✅ النشر $RESOLVED_URL يخدم المنصة فعلياً (HTTP $CODE) — البناء آمن."
-
+        uses: ./.github/actions/resolve-convex
+        with:
+          deploy-key: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          deploy-key-alt: ${{ secrets.VITE_CONVEX_DEPLOY_KEY }}
+          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL }}
+          gemini-key: ${{ secrets.VITE_GEMINI_KEY }}
       - name: Build PWA
         run: npm run build
         env:
@@ -275,114 +169,19 @@ jobs:
       # Same Convex deployment as the web job: push the backend with the
       # deploy key and use the deployment URL Convex prints, so the APK/AAB
       # always connect to the live backend. Invalid/missing key fails loudly.
-      - name: Deploy Convex backend and resolve URL
+      # 🛡️ نشر الباك اند + تحديد العنوان الحيّ الذي سيتصل به التطبيق:
+      # المنطق في إجراء مركزي واحد (‎.github/actions/resolve-convex‎) —
+      # يختار النشر الحامل للبيانات، ينشر الشيفرة بالمفتاح المناسب
+      # (CONVEX_DEPLOY_KEY أو VITE_CONVEX_DEPLOY_KEY)، ويتحقق فعلياً أن
+      # استعلامات المنصة ترد قبل بناء الحزمة.
+      - name: Resolve the live Convex deployment (deploy + verify)
         id: convex
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-          GEMINI_KEY_SECRET: ${{ secrets.VITE_GEMINI_KEY }}
-          VITE_CONVEX_URL_VAR: ${{ vars.VITE_CONVEX_URL }}
-        run: |
-          # Keep the Gemini key in the Convex SERVER environment (never in the
-          # client bundle) — synced from the repo secret on every backend push.
-          if [[ -n "$GEMINI_KEY_SECRET" && -n "$CONVEX_DEPLOY_KEY" ]]; then
-            ./node_modules/.bin/convex env set GEMINI_KEY "$GEMINI_KEY_SECRET" >/dev/null 2>&1 && \
-              echo "GEMINI_KEY synced to Convex server env" || \
-              echo "::warning::Could not sync GEMINI_KEY to Convex env — AI falls back to the free engine until the key is set in the Convex dashboard."
-          fi
-          # 🛡️ العنوان المُعدّ هو المرجع دائماً، ومفتاح النشر يُستخدم للنشر فقط.
-          # سبب هذه القاعدة: كل نشر في Convex له قاعدة بياناته الخاصة. لو نشر
-          # المفتاح إلى نشر فارغ وكنا استبدلنا به العنوان المُعدّ، لباع التطبيق
-          # بمحتوى فارغ (0 طلب · 0 إعلان) وبات يبدو «ناجحاً» — وهو أسوأ من الفشل.
-          if [[ -n "$VITE_CONVEX_URL_VAR" && "$VITE_CONVEX_URL_VAR" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
-            if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-              DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
-                echo "$DEPLOY_OUT"
-                echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
-                exit 1
-              }
-              echo "$DEPLOY_OUT"
-              DEPLOYED=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
-              CONFIGURED_HOST=$(printf '%s' "$VITE_CONVEX_URL_VAR" | sed -E 's#^https://([^/]+).*#\1#')
-              DEPLOYED_HOST=$(printf '%s' "$DEPLOYED" | sed -E 's#^https://([^/]+).*#\1#')
-              if [[ -n "$DEPLOYED_HOST" && "$DEPLOYED_HOST" != "$CONFIGURED_HOST" ]]; then
-                echo "::error::CONVEX_DEPLOY_KEY ينشر إلى ($DEPLOYED_HOST) بينما عنوان الإنتاج المُعدّ ($CONFIGURED_HOST) — قواعد البيانات منفصلة، فالتطبيق سيُبنى على منصة فارغة."
-                echo "::error::الحل: إما أنشئ مفتاح نشر للنشر $CONFIGURED_HOST من لوحته، أو اجعل عنوان الإنتاج يشير إلى $DEPLOYED_HOST بعد نقل البيانات إليه."
-                exit 1
-              fi
-            fi
-            echo "url=$VITE_CONVEX_URL_VAR" >> "$GITHUB_OUTPUT"
-            echo "using repo variable VITE_CONVEX_URL"
-          elif [[ -n "$VITE_CONVEX_URL_VAR" ]]; then
-            echo "::warning::VITE_CONVEX_URL repo variable is not a valid Convex URL (ignored) — resolving the real URL via CONVEX_DEPLOY_KEY instead."
-            if [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-              echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-              DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
-                echo "$DEPLOY_OUT"
-                echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
-                exit 1
-              }
-              echo "$DEPLOY_OUT"
-              URL=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
-              if [[ -z "$URL" ]]; then
-                echo "::error::Convex deploy succeeded but no deployment URL was found in its output."
-                exit 1
-              fi
-              echo "url=$URL" >> "$GITHUB_OUTPUT"
-              echo "deployed and resolved: $URL"
-            else
-              echo "::warning::VITE_CONVEX_URL is invalid and CONVEX_DEPLOY_KEY is not set. Using the built-in live production URL — the app still connects to the live backend."
-              echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
-            fi
-          elif [[ -n "$CONVEX_DEPLOY_KEY" ]]; then
-            echo "Deploying Convex backend with CONVEX_DEPLOY_KEY..."
-            DEPLOY_OUT=$(./node_modules/.bin/convex deploy 2>&1) || {
-              echo "$DEPLOY_OUT"
-              echo "::error::Convex deploy failed — CONVEX_DEPLOY_KEY is invalid or the deployment no longer exists. Get a fresh key from your Convex dashboard (Project Settings → Deploy Keys) and update the repo secret, then re-run."
-              exit 1
-            }
-            echo "$DEPLOY_OUT"
-            URL=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true)
-            if [[ -z "$URL" ]]; then
-              echo "::error::Convex deploy succeeded but no deployment URL was found in its output."
-              exit 1
-            fi
-            echo "url=$URL" >> "$GITHUB_OUTPUT"
-            echo "deployed and resolved: $URL"
-          else
-            echo "::warning::No valid VITE_CONVEX_URL and no CONVEX_DEPLOY_KEY secret. Using the built-in live production URL (https://notable-shepherd-367.convex.cloud). Add CONVEX_DEPLOY_KEY as a repo SECRET to auto-deploy backend changes."
-            echo "url=https://notable-shepherd-367.convex.cloud" >> "$GITHUB_OUTPUT"
-          fi
-
-          # 🛡️ حارس العنوان (أندرويد): نفس القاعدة — العنوان المُعدّ هو المرجع.
-          CONFIGURED_URL="$VITE_CONVEX_URL_VAR"
-          if ! [[ "$CONFIGURED_URL" =~ ^https://[a-z0-9-]+\.convex\.(cloud|site)$ ]]; then
-            CONFIGURED_URL="https://notable-shepherd-367.convex.cloud"
-          fi
-          RESOLVED_URL=$(grep -E '^url=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2- || true)
-          if [[ -n "$RESOLVED_URL" && "$RESOLVED_URL" != "$CONFIGURED_URL" ]]; then
-            echo "::error::نشر مفتاح النشر إلى ($RESOLVED_URL) بينما العنوان المُعدّ ($CONFIGURED_URL) — سنمنع بناء حزمة تشير إلى قاعدة بيانات فارغة."
-            grep -v '^url=' "$GITHUB_OUTPUT" > "$GITHUB_OUTPUT.tmp" || true
-            mv "$GITHUB_OUTPUT.tmp" "$GITHUB_OUTPUT"
-            echo "url=$CONFIGURED_URL" >> "$GITHUB_OUTPUT"
-          fi
-
-      # 🛡️ بوّابة السلامة (أندرويد) — نفس الفحص قبل بناء الحزمة.
-      - name: Verify the resolved deployment serves the platform
-        env:
-          RESOLVED_URL: ${{ steps.convex.outputs.url }}
-        run: |
-          set -uo pipefail
-          SITE="${RESOLVED_URL%.convex.cloud}.convex.site"
-          CODE=$(curl -sS -m 30 -o /tmp/h.json -w '%{http_code}' "$SITE/health" || echo 000)
-          BODY=$(head -c 300 /tmp/h.json 2>/dev/null || true)
-          if [ "$CODE" != "200" ] || printf '%s' "$BODY" | grep -q "does not have HTTP actions enabled"; then
-            echo "::error::النشر $RESOLVED_URL لا يخدم المنصة (HTTP $CODE) — لن نبني حزمة تشير إليه."
-            echo "::error::فعّل HTTP Actions عليه من لوحة Convex (Settings ← HTTP Actions) أو صحّح CONVEX_DEPLOY_KEY ليشير إلى النشر الحيّ $SITE."
-            printf '%s\n' "$BODY"
-            exit 1
-          fi
-          echo "✅ النشر $RESOLVED_URL يخدم المنصة فعلياً (HTTP $CODE) — البناء آمن."
-
+        uses: ./.github/actions/resolve-convex
+        with:
+          deploy-key: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          deploy-key-alt: ${{ secrets.VITE_CONVEX_DEPLOY_KEY }}
+          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL }}
+          gemini-key: ${{ secrets.VITE_GEMINI_KEY }}
       - name: Build web
         run: npm run build
         env:
@@ -554,13 +353,21 @@ jobs:
       - name: Generate icons
         run: npm run icons
 
+      # نفس منطق بقية المنصات: العنوان الحيّ الحامل للبيانات هو ما يتّصل به
+      # التطبيق — يُتحقق منه فعلياً قبل البناء (إجراء resolve-convex المركزي).
+      - name: Resolve the live Convex deployment (resolve only)
+        id: convex
+        uses: ./.github/actions/resolve-convex
+        with:
+          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL }}
+          mode: resolve
+
       - name: Build web
         run: npm run build
         env:
           VITE_APP_VERSION: ${{ github.ref_name }}
-          # Same built-in live production URL as the other jobs — the iOS app
-          # must connect to the real backend even when repo variables are absent.
-          VITE_CONVEX_URL: https://notable-shepherd-367.convex.cloud
+          # العنوان الحيّ المحقَّق منه في الخطوة السابقة — لا عنوان مكتوب يدوياً.
+          VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
@@ -659,11 +466,18 @@ jobs:
       - name: Generate icons
         run: npm run icons
 
+      - name: Resolve the live Convex deployment (resolve only)
+        id: convex
+        uses: ./.github/actions/resolve-convex
+        with:
+          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL }}
+          mode: resolve
+
       - name: Build web
         run: npm run build
         env:
           VITE_APP_VERSION: ${{ github.ref_name }}
-          VITE_CONVEX_URL: https://notable-shepherd-367.convex.cloud
+          VITE_CONVEX_URL: ${{ steps.convex.outputs.url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 

@@ -4,9 +4,11 @@ import { cn } from "@/lib/utils";
 import {
   FacebookIcon,
   InstagramIcon,
+  LinkedInIcon,
   TelegramIcon,
   TikTokIcon,
   WhatsAppIcon,
+  XIcon,
   YouTubeIcon,
 } from "./ChannelIcons";
 import type { ComponentType, SVGProps } from "react";
@@ -21,6 +23,8 @@ const CHANNEL_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
   youtube: YouTubeIcon,
   tiktok: TikTokIcon,
   instagram: InstagramIcon,
+  x: XIcon,
+  linkedin: LinkedInIcon,
 };
 
 export function ChannelsSection({ className }: { className?: string }) {

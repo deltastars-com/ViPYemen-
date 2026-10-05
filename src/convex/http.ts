@@ -18,10 +18,12 @@ import {
   FACEBOOK_GROUP_URL,
   FACEBOOK_PAGE_URL,
   INSTAGRAM_URL,
+  LINKEDIN_URL,
   TELEGRAM_BOT_URL,
   TELEGRAM_CHANNEL_URL,
   TIKTOK_URL,
   WHATSAPP_COMMUNITY_URL,
+  X_URL,
   YOUTUBE_URL,
 } from "../lib/socialLinks";
 
@@ -56,6 +58,8 @@ const CHANNELS: { id: string; label: string; url: string }[] = [
   { id: "youtube", label: "قناة يوتيوب", url: YOUTUBE_URL },
   { id: "tiktok", label: "حساب تيك توك", url: TIKTOK_URL },
   { id: "instagram", label: "حساب انستغرام", url: INSTAGRAM_URL },
+  { id: "x", label: "تويتر / X", url: X_URL },
+  { id: "linkedin", label: "لينكدإن", url: LINKEDIN_URL },
 ];
 
 function json(body: unknown, status = 200): Response {

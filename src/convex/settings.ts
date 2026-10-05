@@ -4,6 +4,7 @@ import { requireAdmin } from "./auth";
 import {
   FACEBOOK_PAGE_URL,
   INSTAGRAM_URL,
+  LINKEDIN_URL,
   TELEGRAM_CHANNEL_URL,
   TIKTOK_URL,
   X_URL,
@@ -85,7 +86,7 @@ export const ensureDefaults = mutation({
       tiktok: TIKTOK_URL,
       instagram: INSTAGRAM_URL,
       twitter: X_URL,
-      linkedin: "https://www.linkedin.com/in/ali-aldahan-57b5a2231",
+      linkedin: LINKEDIN_URL,
       youtube: YOUTUBE_URL,
       telegram: TELEGRAM_CHANNEL_URL,
       beacons: "https://beacons.ai/vipservicesyemen",

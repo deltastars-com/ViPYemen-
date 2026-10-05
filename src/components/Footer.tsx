@@ -4,7 +4,6 @@ import { api } from "../convex/_generated/api";
 import { LogoMark } from "@/components/Logo";
 import { UpdateBadge } from "./UpdateNotice";
 import {
-  Facebook,
   Mail,
   Phone,
   MapPin,
@@ -20,6 +19,7 @@ import { useLang } from "@/lib/i18n";
 import { PLATFORM_WHATSAPP_LINK, openExternal } from "@/lib/utils";
 import { isNativeApp } from "@/lib/native";
 import {
+  FacebookIcon,
   TelegramIcon,
   WhatsAppIcon,
   TikTokIcon,
@@ -101,8 +101,8 @@ const SOCIALS = [
   { icon: WhatsAppIcon, href: WHATSAPP_COMMUNITY_URL, brand: "#25D366", labelAr: "مجتمع واتساب", labelEn: "WhatsApp Community" },
   { icon: TelegramIcon, href: TELEGRAM_CHANNEL_URL, brand: "#229ED9", labelAr: "قناة تيليجرام", labelEn: "Telegram Channel" },
   { icon: TelegramIcon, href: TELEGRAM_BOT_URL, brand: "#229ED9", labelAr: "بوت تيليجرام", labelEn: "Telegram Bot" },
-  { icon: Facebook, href: FACEBOOK_PAGE_URL, brand: "#1877F2", labelAr: "صفحة فيسبوك", labelEn: "Facebook Page" },
-  { icon: Facebook, href: FACEBOOK_GROUP_URL, brand: "#1877F2", labelAr: "مجموعة فيسبوك", labelEn: "Facebook Group" },
+  { icon: FacebookIcon, href: FACEBOOK_PAGE_URL, brand: "#1877F2", labelAr: "صفحة فيسبوك", labelEn: "Facebook Page" },
+  { icon: FacebookIcon, href: FACEBOOK_GROUP_URL, brand: "#1877F2", labelAr: "مجموعة فيسبوك", labelEn: "Facebook Group" },
   { icon: InstagramIcon, href: INSTAGRAM_URL, brand: "#E1306C", labelAr: "إنستغرام", labelEn: "Instagram" },
   { icon: TikTokIcon, href: TIKTOK_URL, brand: "#25F4EE", labelAr: "تيك توك", labelEn: "TikTok" },
   { icon: XIcon, href: X_URL, brand: "#FFFFFF", labelAr: "تويتر / X", labelEn: "Twitter / X" },

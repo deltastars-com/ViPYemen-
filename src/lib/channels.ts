@@ -6,6 +6,7 @@ import {
   TELEGRAM_CHANNEL_URL,
   TIKTOK_URL,
   WHATSAPP_COMMUNITY_URL,
+  X_URL,
   YOUTUBE_URL,
 } from "./socialLinks";
 
@@ -122,6 +123,18 @@ export const CHANNELS: Channel[] = [
     badge: "border-[#e1306c]/40 bg-[#e1306c]/10 text-pink-300",
     cta: "تابع الحساب",
   },
+  {
+    id: "x",
+    name: "حساب X (تويتر)",
+    description:
+      "أخبار المنصة والمنشورات الرسمية على منصة X — تغطية سريعة ومتابعة لحظية لكل جديد.",
+    href: X_URL,
+    color: "text-cream",
+    bg: "bg-white/10",
+    hover: "hover:border-white/40",
+    badge: "border-white/30 bg-white/10 text-cream",
+    cta: "تابع الحساب",
+  },
 ];
 
 /** لون العلامة التجارية لكل قناة — يُستخدم لتلوين الأيقونات في كل الواجهات. */
@@ -134,4 +147,5 @@ export const CHANNEL_BRAND_COLOR: Record<string, string> = {
   youtube: "#FF0000",
   tiktok: "#25F4EE",
   instagram: "#E1306C",
+  x: "#FFFFFF",
 };

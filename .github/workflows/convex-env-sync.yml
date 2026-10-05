@@ -82,11 +82,14 @@ jobs:
               skipped=$((skipped + 1))
               continue
             fi
-            if ./node_modules/.bin/convex env set "$key" "$value" >/dev/null 2>&1; then
+            # ⚠️ الفاصلة `--` ضرورية قبل القيمة: معرّفات محادثات تيليجرام
+            # (المجموعات تبدأ بـ -) كان الـ CLI المثبّت في CI (convex@1.24)
+            # يفسّرها كخيار مجهول ويُفشل المزامنة صامتاً — مُثبت تجريبياً.
+            if err=$(./node_modules/.bin/convex env set "$key" -- "$value" 2>&1 >/dev/null); then
               echo "✅ $key synced to Convex (القيمة لا تُطبع أبداً)"
               synced=$((synced + 1))
             else
-              echo "::warning::تعذّرت مزامنة $key إلى بيئة Convex — تحقّق من CONVEX_DEPLOY_KEY"
+              echo "::warning::تعذّرت مزامنة $key إلى بيئة Convex — ${err:-تحقّق من CONVEX_DEPLOY_KEY}"
             fi
           done
           echo "synced=$synced skipped_unset=$skipped"

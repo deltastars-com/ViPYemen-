@@ -68,7 +68,7 @@ jobs:
         with:
           deploy-key: ${{ secrets.CONVEX_DEPLOY_KEY }}
           deploy-key-alt: ${{ secrets.VITE_CONVEX_DEPLOY_KEY }}
-          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL }}
+          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL || secrets.VITE_CONVEX_URL || secrets.VITE_CLOUD_URL }}
           gemini-key: ${{ secrets.VITE_GEMINI_KEY }}
 
       # GitHub Pages serves this repo under /ViPYemen-/, so the Pages build

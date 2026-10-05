@@ -85,7 +85,7 @@ jobs:
         with:
           deploy-key: ${{ secrets.CONVEX_DEPLOY_KEY }}
           deploy-key-alt: ${{ secrets.VITE_CONVEX_DEPLOY_KEY }}
-          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL }}
+          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL || secrets.VITE_CONVEX_URL || secrets.VITE_CLOUD_URL }}
           gemini-key: ${{ secrets.VITE_GEMINI_KEY }}
       - name: Build PWA
         run: npm run build
@@ -180,7 +180,7 @@ jobs:
         with:
           deploy-key: ${{ secrets.CONVEX_DEPLOY_KEY }}
           deploy-key-alt: ${{ secrets.VITE_CONVEX_DEPLOY_KEY }}
-          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL }}
+          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL || secrets.VITE_CONVEX_URL || secrets.VITE_CLOUD_URL }}
           gemini-key: ${{ secrets.VITE_GEMINI_KEY }}
       - name: Build web
         run: npm run build
@@ -359,7 +359,7 @@ jobs:
         id: convex
         uses: ./.github/actions/resolve-convex
         with:
-          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL }}
+          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL || secrets.VITE_CONVEX_URL || secrets.VITE_CLOUD_URL }}
           mode: resolve
 
       - name: Build web
@@ -470,7 +470,7 @@ jobs:
         id: convex
         uses: ./.github/actions/resolve-convex
         with:
-          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL }}
+          configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL || secrets.VITE_CONVEX_URL || secrets.VITE_CLOUD_URL }}
           mode: resolve
 
       - name: Build web

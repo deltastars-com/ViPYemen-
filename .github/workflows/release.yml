@@ -128,7 +128,17 @@ jobs:
             exit 1
           fi
           ls -la "${files[@]}"
-          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
+          # إعادة المحاولة: منصة GitHub قد تردّ 404 عابراً على رفع الأصول،
+          # فلا يفشل الإصدار كله بسبب خلل شبكي مؤقت.
+          for attempt in 1 2 3 4; do
+            if gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"; then
+              echo "✔ رُفعت أصول الويب (محاولة $attempt)"
+              break
+            fi
+            [ "$attempt" = "4" ] && { echo "::error::فشل رفع أصول الويب 4 مرات"; exit 1; }
+            echo "::warning::محاولة الرفع $attempt فشلت — إعادة بعد $((attempt * 5))ث"
+            sleep $((attempt * 5))
+          done
 
   build-android:
     name: Build signed APK + AAB
@@ -276,7 +286,15 @@ jobs:
             exit 1
           fi
           ls -la "$APK" "$AAB"
-          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "$APK" "$AAB"
+          for attempt in 1 2 3 4; do
+            if gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "$APK" "$AAB"; then
+              echo "✔ رُفع APK + AAB (محاولة $attempt)"
+              break
+            fi
+            [ "$attempt" = "4" ] && { echo "::error::فشل رفع APK/AAB 4 مرات"; exit 1; }
+            echo "::warning::محاولة الرفع $attempt فشلت — إعادة بعد $((attempt * 5))ث"
+            sleep $((attempt * 5))
+          done
 
   # Final gate: every platform asset MUST be present on the release before it
   # is flipped from draft to public. Uploads happen directly from the build
@@ -436,7 +454,15 @@ jobs:
             exit 1
           fi
           ls -la "${files[@]}"
-          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
+          for attempt in 1 2 3 4; do
+            if gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"; then
+              echo "✔ رُفعت أصول iOS (IPA + الميتاداتا، محاولة $attempt)"
+              break
+            fi
+            [ "$attempt" = "4" ] && { echo "::error::فشل رفع أصول iOS 4 مرات"; exit 1; }
+            echo "::warning::محاولة الرفع $attempt فشلت — إعادة بعد $((attempt * 5))ث"
+            sleep $((attempt * 5))
+          done
 
   # ── Signed iOS build (App Store Connect ready) ──────────────────────────
   # OPTIONAL extra pass. Runs only when the repository VARIABLE
@@ -557,5 +583,13 @@ jobs:
           IPA=$(ls ios/App/build/export/*.ipa | head -1)
           mkdir -p release/ios-signed
           cp "$IPA" "release/ios-signed/vip-yemen-ios-signed-${TAG}.ipa"
-          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "release/ios-signed/vip-yemen-ios-signed-${TAG}.ipa"
+          for attempt in 1 2 3 4; do
+            if gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "release/ios-signed/vip-yemen-ios-signed-${TAG}.ipa"; then
+              echo "✔ رُفع IPA الموقّع (محاولة $attempt)"
+              break
+            fi
+            [ "$attempt" = "4" ] && { echo "::error::فشل رفع IPA الموقّع 4 مرات"; exit 1; }
+            echo "::warning::محاولة الرفع $attempt فشلت — إعادة بعد $((attempt * 5))ث"
+            sleep $((attempt * 5))
+          done
           echo "✔ signed IPA attached (App Store Connect ready)"

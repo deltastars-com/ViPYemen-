@@ -2,9 +2,13 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./auth";
 import {
+  BEACONS_URL,
+  ALLMYLINKS_URL,
   FACEBOOK_PAGE_URL,
   INSTAGRAM_URL,
   LINKEDIN_URL,
+  LINKFLY_URL,
+  TAPLINK_URL,
   TELEGRAM_CHANNEL_URL,
   TIKTOK_URL,
   X_URL,
@@ -89,10 +93,11 @@ export const ensureDefaults = mutation({
       linkedin: LINKEDIN_URL,
       youtube: YOUTUBE_URL,
       telegram: TELEGRAM_CHANNEL_URL,
-      beacons: "https://beacons.ai/vipservicesyemen",
-      linkfly: "https://linkfly.to/vipservicesyemen",
-      taplink: "https://taplink.cc/vipservicesyemen",
-      allmylinks: "https://allmylinks.com/vipservicesyemen",
+      // صفحات الربط المحدَّثة — من المصدر الواحد socialLinks.ts
+      beacons: BEACONS_URL,
+      linkfly: LINKFLY_URL,
+      taplink: TAPLINK_URL,
+      allmylinks: ALLMYLINKS_URL,
       // Android: APKPure (live). iOS: empty until the App Store link is added
       // from the Developer dashboard section — the footer icon waits silently.
       androidDownloadUrl: "https://apkpure.com/vipyemen/com.vip.yemen/download",

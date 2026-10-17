@@ -3,7 +3,7 @@ import { LogoMark } from "@/components/Logo";
 import { useMutation } from "convex/react";
 import { useSnapshotQuery } from "@/lib/snapshot";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Reveal } from "@/components/Reveal";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -35,11 +35,6 @@ import { Spinner } from "@/components/ui";
 import { SectionHeading } from "@/components/SectionHeading";
 import { useLang } from "@/lib/i18n";
 import { PLATFORM_WHATSAPP_DISPLAY, PLATFORM_WHATSAPP_LINK } from "@/lib/utils";
-
-const fade = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 export function Landing() {
   const { t } = useLang();
@@ -83,7 +78,7 @@ export function Landing() {
           }}
         />
         <div className="container-app relative pb-20 pt-16 text-center sm:pt-24">
-          <motion.div initial="hidden" animate="show" variants={fade}>
+          <Reveal immediate>
             <span className="chip mx-auto !border-gold-500/40 !bg-gold-500/10 !text-gold-300">
               <Crown className="h-3.5 w-3.5" />
               {t("heroBadge")}
@@ -109,12 +104,11 @@ export function Landing() {
               <VerifiedSeal className="h-5 w-5" />
               {t("verified")}
             </div>
-          </motion.div>
+          </Reveal>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.6 }}
+          <Reveal
+            immediate
+            delay={250}
             className="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4"
           >
             {[
@@ -129,24 +123,16 @@ export function Landing() {
                 <p className="mt-0.5 text-[11px] font-semibold text-ink-300">{s.label}</p>
               </div>
             ))}
-          </motion.div>
+          </Reveal>
         </div>
       </section>
 
       {/* ============ Services ============ */}
       <section className="container-app py-16">
-        <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fade}>
-          <SectionHeading icon={LayoutGrid} title={t("sectionsTitle")} subtitle={t("sectionsSub")} center />
-        </motion.div>
+        <SectionHeading icon={LayoutGrid} title={t("sectionsTitle")} subtitle={t("sectionsSub")} center />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {CATEGORIES.map((c, i) => (
-            <motion.div
-              key={c.key}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ delay: i * 0.08, duration: 0.5 }}
-            >
+            <Reveal key={c.key} delay={i * 80} className="h-full">
               <Link
                 to={`/${c.key === "real_estate" ? "real-estate" : c.key === "emarket" ? "emarket" : c.key === "software" ? "software" : "jobs"}`}
                 className="card-surface card-surface-hover group block h-full p-6"
@@ -161,7 +147,7 @@ export function Landing() {
                   <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
                 </p>
               </Link>
-            </motion.div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -169,9 +155,7 @@ export function Landing() {
       {/* ============ How it works ============ */}
       <section className="border-y border-ink-700/40 bg-ink-900/40 py-16">
         <div className="container-app">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fade}>
-            <SectionHeading icon={ShieldCheck} title={t("howTitle")} subtitle={t("howSub")} center />
-          </motion.div>
+          <SectionHeading icon={ShieldCheck} title={t("howTitle")} subtitle={t("howSub")} center />
           <div className="grid gap-4 md:grid-cols-4">
             {[
               { icon: PenLineIcon, title: t("step1"), text: t("step1Text") },

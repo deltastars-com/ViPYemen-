@@ -10,6 +10,7 @@ name: Mirrors (multi-provider free hosting)
 #   • GitHub Pages      — سير العمل pages.yml (مجاني رسمياً)
 #   • Netlify           — هنا، عند وجود NETLIFY_AUTH_TOKEN + NETLIFY_SITE_ID
 #   • Cloudflare Pages  — هنا، عند وجود CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
+#   • EdgeOne Pages     — هنا، عند وجود EDGEONE_API_TOKEN (+ EDGEONE_PROJECT_NAME اختياري)
 #
 # المرايا الاختيارية لا تُعطّل أبداً سير العمل: إن لم تكن المفاتيح مضبوطة
 # تُتخطى بسلاسة ويبقى الباقي يعمل، مع تقرير واضح في ملخص التشغيل.
@@ -93,6 +94,28 @@ jobs:
             --project-name=vipyemen --branch=main --commit-dirty=true
           echo "enabled=true" >> "$GITHUB_OUTPUT"
 
+      # ── Tencent EdgeOne Pages (اختياري) ─────────
+      # التوكن: EdgeOne Console → API Token، ثم EDGEONE_API_TOKEN في أسرار المستودع.
+      # المشروع يُنشأ تلقائياً باسم vipyemen إن لم يكن موجوداً.
+      - name: نشر إلى EdgeOne Pages
+        id: edgeone
+        continue-on-error: true
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+          EDGEONE_PROJECT_NAME: ${{ vars.EDGEONE_PROJECT_NAME || 'vipyemen' }}
+        run: |
+          set -uo pipefail
+          if [ -z "${EDGEONE_API_TOKEN:-}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "⏭️  EdgeOne Pages — لا توكن (تعطيل اختياري)"
+            exit 0
+          fi
+          npx --yes edgeone@latest makers deploy ./dist \
+            --name "$EDGEONE_PROJECT_NAME" \
+            --token "$EDGEONE_API_TOKEN" \
+            --env production
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
       - name: التحقق من كل المرايا
         id: verify
         env:
@@ -141,4 +164,4 @@ jobs:
       - name: تقرير الخلاصة
         run: |
           echo "مرايا غير صحية: ${{ steps.verify.outputs.unhealthy }}"
-          echo "Netlify: ${{ steps.netlify.outputs.enabled || 'false' }} · Cloudflare: ${{ steps.cloudflare.outputs.enabled || 'false' }}"
+          echo "Netlify: ${{ steps.netlify.outputs.enabled || 'false' }} · Cloudflare: ${{ steps.cloudflare.outputs.enabled || 'false' }} · EdgeOne: ${{ steps.edgeone.outputs.enabled || 'false' }}"

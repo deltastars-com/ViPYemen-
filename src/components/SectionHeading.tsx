@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { motion } from "framer-motion";
+import { Reveal } from "./Reveal";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,13 +25,7 @@ export function SectionHeading({
   className?: string;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.5 }}
-      transition={{ duration: 0.45, ease: "easeOut" }}
-      className={cn("mb-10", center && "text-center", className)}
-    >
+    <Reveal className={cn("mb-10", center && "text-center", className)}>
       <div
         className={cn(
           "relative inline-flex flex-wrap items-center gap-3 rounded-2xl border border-gold-500/20 bg-ink-950/40 px-5 py-3 backdrop-blur-md",
@@ -61,6 +55,6 @@ export function SectionHeading({
           {subtitle}
         </p>
       ) : null}
-    </motion.div>
+    </Reveal>
   );
 }

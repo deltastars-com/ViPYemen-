@@ -23,6 +23,26 @@ export default defineConfig(({ mode }) => ({
     // target it explicitly so the APK never ships unparseable JS.
     target: "chrome87",
     cssTarget: "chrome87",
+    // 🚀 أداء أعلى (PageSpeed):
+    //  • تقطيع المكتبات الثقيلة إلى مقاطع مستقلة ثابتة الهشّ يجعل التحميل
+    //    الأولي أسرع (تمثيل/تحليل متوازٍ) ويبيّن الكاش بين الزيارات لأن
+    //    تغيير كود المنصة لا يُبطل كاش المكتبات.
+    //  • preload للمقاطع الثابتة المطلوبة في المسار الأولي فقط، فلا تُحمَّل
+    //    مقاطع الصفحات الكسولة قبل الحاجة.
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return undefined;
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/.test(id))
+            return "vendor-react";
+          if (id.includes("node_modules/convex/")) return "vendor-convex";
+          if (id.includes("node_modules/framer-motion/") || id.includes("node_modules/motion-dom/") || id.includes("node_modules/motion-utils/"))
+            return "vendor-motion";
+          if (id.includes("node_modules/lucide-react/")) return "vendor-icons";
+          return undefined;
+        },
+      },
+    },
   },
   plugins: [
     react(),

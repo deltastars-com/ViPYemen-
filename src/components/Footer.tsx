@@ -33,6 +33,7 @@ import {
   FACEBOOK_PAGE_URL,
   INSTAGRAM_URL,
   LINKEDIN_URL,
+  LINKTREES,
   TELEGRAM_BOT_URL,
   TELEGRAM_CHANNEL_URL,
   TIKTOK_URL,
@@ -110,12 +111,9 @@ const SOCIALS = [
   { icon: LinkedInIcon, href: LINKEDIN_URL, brand: "#0A66C2", labelAr: "لينكدإن", labelEn: "LinkedIn" },
 ];
 
-const LINKTREES = [
-  { label: "Beacons", href: "https://beacons.ai/vipservicesyemen" },
-  { label: "Linkfly", href: "https://linkfly.to/vipservicesyemen" },
-  { label: "Taplink", href: "https://taplink.cc/vipservicesyemen" },
-  { label: "AllMyLinks", href: "https://allmylinks.com/vipservicesyemen" },
-];
+// صفحات الربط — من المصدر الواحد socialLinks.ts (الروابط المحدَّثة
+// beacons.ai/vipyemen · linkfly.to/Vipyemen · taplink.cc/vipservicesyemen ·
+// allmylinks.com/vipyemen) فلا تختلف عن الباك اند ولا عن الإعدادات.
 
 const SECTION_LINKS = [
   { to: "/jobs", ar: "قسم التوظيف", en: "Jobs Section" },

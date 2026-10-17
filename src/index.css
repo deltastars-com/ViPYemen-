@@ -161,6 +161,43 @@
   animation-play-state: paused;
 }
 
+/* ── Reveal on scroll (بديل framer-motion الخفيف) ───────────────────
+ * opacity + transform فقط (يُركّبان على GPU) بلا أي مكتبة خارجية،
+ * فلا كود JS إضافي في الحزمة الأولية ولا حجب للـLCP.
+ */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+html.tier-low .reveal {
+  transition-duration: 0.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+html.reduced-motion .reveal {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
 /* ── Progressive Enhancement: Device-Tier CSS ──────────────────────
  * Applied by applyDeviceTier() in main.tsx → <html class="tier-low"> etc.
  * Ensures graceful degradation on Android 6.0.1+ and older iOS devices.

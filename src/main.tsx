@@ -26,10 +26,23 @@ import "@fontsource/cairo/800.css";
 import "@fontsource/cairo/900.css";
 import App from "./App";
 
-// Initialize security protections (anti-copy, anti-devtools, anti-scraping)
-initSecurity();
 // Apply device-tier classes to <html> for CSS-based progressive enhancement
+// (sync: classes must exist before first paint so CSS tiers are correct).
 applyDeviceTier();
+
+/**
+ * ⚡ جدولة العمل غير الحرج بعد أول رسم مريح للمستخدم.
+ * خطافات الأمان ونظام الطلبات دون اتصال ومراقب الصحة والتحديث التلقائي
+ * لا علاقة لها بأول رسم (LCP) — تأجيلها يقلّل JavaScript المحجوب للخيط
+ * الرئيسي ويرفع درجة الأداء (TBT/INP) دون أي تغيير وظيفي.
+ */
+function whenIdle(fn: () => void) {
+  const ric = (window as unknown as {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  }).requestIdleCallback;
+  if (typeof ric === "function") ric(fn, { timeout: 2500 });
+  else window.setTimeout(fn, 1200);
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -41,15 +54,19 @@ createRoot(document.getElementById("root")!).render(
   </StrictMode>
 );
 
-registerServiceWorker().catch(() => {
-  /* never let SW registration break the app */
+// الأمان + التحديث التلقائي + أنظمة الاستمرارية: بعد أول رسم فقط.
+whenIdle(() => {
+  try {
+    // 🔐 Anti-copy, anti-scraping, anti-devtools security layer.
+    initSecurity();
+    // Continuity: flush the offline outbox + monitor backend health so the
+    // apps keep accepting work even while the site/backend is unreachable.
+    startOutbox();
+    startHealthProbe();
+    registerServiceWorker().catch(() => {
+      /* never let SW registration break the app */
+    });
+  } catch {
+    /* enhancements — never block boot */
+  }
 });
-
-// Continuity systems: flush the offline outbox + monitor backend health so
-// the apps keep accepting work even while the site/backend is unreachable.
-try {
-  startOutbox();
-  startHealthProbe();
-} catch {
-  /* continuity systems are enhancements — never block boot */
-}

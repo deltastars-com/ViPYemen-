@@ -41,21 +41,122 @@ function chunk(type, data) {
   crc.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])));
   return Buffer.concat([len, typeBuf, data, crc]);
 }
-function encodePNG(width, height, rgba) {
-  const stride = 1 + width * 4;
-  const raw = Buffer.alloc(height * stride);
-  for (let y = 0; y < height; y++) {
-    raw[y * stride] = 0;
-    rgba.copy(raw, y * stride + 1, y * width * 4, (y + 1) * width * 4);
+/**
+ * 🔍 ضغط بلا فقدان (lossless): اختيار أفضل مُرشِّح لكل سطر (PNG row filter)
+ * بدل «بلا مُرشِّح» لكل السطور — نفس البكسلات تماماً، لكن حجم أصغر بكثير
+ * على التدرجات الذهبية (يقلّل ملفات الأيقونات إلى نحو النصف دون أي تغيير
+ * في الهوية البصرية: الفك يعيد البكسلات الأصلية حرفياً).
+ */
+function filterRow(rawByte, a, b, c, type) {
+  switch (type) {
+    case 0:
+      return rawByte;
+    case 1:
+      return (rawByte - a) & 0xff;
+    case 2:
+      return (rawByte - b) & 0xff;
+    case 3:
+      return (rawByte - ((a + b) >> 1)) & 0xff;
+    default: {
+      const p = a + b - c;
+      const pa = Math.abs(p - a);
+      const pb = Math.abs(p - b);
+      const pc = Math.abs(p - c);
+      const pred = pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+      return (rawByte - pred) & 0xff;
+    }
   }
+}
+
+/** يبني تدفق أسطر PNG بمرشّح ثابت (0 = بلا مرشّح) أو adaptive لأفضل مرشّح لكل سطر. */
+function buildScanlines(src, width, height, bpp, adaptive) {
+  const rowBytes = width * bpp;
+  const stride = 1 + rowBytes;
+  const raw = Buffer.alloc(height * stride);
+  const prevRow = Buffer.alloc(rowBytes);
+  const candidates = adaptive ? [0, 1, 2, 3, 4].map(() => Buffer.alloc(rowBytes)) : null;
+
+  for (let y = 0; y < height; y++) {
+    const rowStart = y * rowBytes;
+    let bestType = 0;
+    if (!adaptive) {
+      src.copy(raw, y * stride + 1, rowStart, rowStart + rowBytes);
+    } else {
+      let bestScore = Infinity;
+      for (let type = 0; type < 5; type++) {
+        const dst = candidates[type];
+        let score = 0;
+        for (let x = 0; x < rowBytes; x++) {
+          const left = x >= bpp ? src[rowStart + x - bpp] : 0;
+          const up = prevRow[x];
+          const upLeft = x >= bpp ? prevRow[x - bpp] : 0;
+          const v = filterRow(src[rowStart + x], left, up, upLeft, type);
+          dst[x] = v;
+          score += v < 128 ? v : 256 - v;
+        }
+        if (score < bestScore) {
+          bestScore = score;
+          bestType = type;
+        }
+      }
+      raw[y * stride] = bestType;
+      candidates[bestType].copy(raw, y * stride + 1);
+    }
+    for (let x = 0; x < rowBytes; x++) prevRow[x] = src[rowStart + x];
+  }
+  return raw;
+}
+
+/**
+ * ترميز PNG بأصغر حجم ممكن بلا فقدان أي بكسل:
+ *  1. إن كان كل البكسلات معتمة (alpha=255) يُكتب RGB (3 بايت) بدل RGBA (4)
+ *     — الأيقونة كلها معتمة، فتوفير 25% من البيانات مجاناً وبلا تغيير شكلي.
+ *  2. يُجرّب الترميز بلا مرشّح وبأفضل مرشّح لكل سطر ويُحتفظ بالأصغر.
+ * كلاهما قابل للفك إلى نفس البكسلات الأصلية حرفياً.
+ */
+function encodePNG(width, height, rgba) {
+  let opaque = true;
+  for (let i = 3; i < rgba.length; i += 4) {
+    if (rgba[i] !== 255) {
+      opaque = false;
+      break;
+    }
+  }
+  // RGB (بلا قناة alpha الثابتة) غالباً أصغر — لكن ليس دائماً، فنجرّب الاثنين.
+  const rgb = Buffer.alloc(width * height * 3);
+  for (let p = 0, q = 0; p < rgba.length; p += 4, q += 3) {
+    rgb[q] = rgba[p];
+    rgb[q + 1] = rgba[p + 1];
+    rgb[q + 2] = rgba[p + 2];
+  }
+  const sources = opaque
+    ? [{ pixels: rgb, bpp: 3, colorType: 2 }, { pixels: rgba, bpp: 4, colorType: 6 }]
+    : [{ pixels: rgba, bpp: 4, colorType: 6 }];
+
+  let best = null;
+  let bestColorType = 6;
+  for (const { pixels, bpp, colorType } of sources) {
+    for (const adaptive of [false, true]) {
+      const idat = zlib.deflateSync(buildScanlines(pixels, width, height, bpp, adaptive), {
+        level: 9,
+      });
+      if (!best || idat.length < best.length) {
+        best = idat;
+        bestColorType = colorType;
+      }
+    }
+  }
+
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8; ihdr[9] = 6; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  ihdr[8] = 8;
+  ihdr[9] = bestColorType; // 2 = RGB، 6 = RGBA
+  ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk("IHDR", ihdr),
-    chunk("IDAT", zlib.deflateSync(raw, { level: 9 })),
+    chunk("IDAT", best),
     chunk("IEND", Buffer.alloc(0)),
   ]);
 }

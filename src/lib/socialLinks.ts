@@ -47,3 +47,24 @@ export const LINKEDIN_URL = "https://www.linkedin.com/in/ali-aldahan-57b5a2231";
  * ⚠️ الحساب القديم `@ViPservicesYeme` لم يعد موجوداً (404) فلا يُستعمل أبداً.
  */
 export const X_URL = "https://x.com/Vipyemen7";
+
+/**
+ * 🔗 صفحات الربط (Link-tree) الرسمية — الروابط المحدَّثة المعتمدة من الإدارة.
+ * تظهر أسفل أيقونات مواقع التواصل في الفوتر، وهي أيضًا القيم الافتراضية
+ * للإعدادات في الباك اند (مصدر واحد فلا تختلف).
+ * التحقق الفعلي: linkfly.to/Vipyemen و taplink.cc/vipservicesyemen تستجيب 200
+ * بعنوان مطابق، و beacons/allmylinks تحجب الطلبات الآلية بـ Cloudflare (403)
+ * لكل الاسمتين — الرابط نفسه سليم في المتصفح.
+ */
+export const BEACONS_URL = "https://beacons.ai/vipyemen";
+export const LINKFLY_URL = "https://linkfly.to/Vipyemen";
+export const TAPLINK_URL = "https://taplink.cc/vipservicesyemen";
+export const ALLMYLINKS_URL = "https://allmylinks.com/vipyemen";
+
+/** قائمة صفحات الربط بأسمائها كما تظهر أسفل الأيقونات. */
+export const LINKTREES: { label: string; href: string }[] = [
+  { label: "Beacons", href: BEACONS_URL },
+  { label: "Linkfly", href: LINKFLY_URL },
+  { label: "Taplink", href: TAPLINK_URL },
+  { label: "AllMyLinks", href: ALLMYLINKS_URL },
+];

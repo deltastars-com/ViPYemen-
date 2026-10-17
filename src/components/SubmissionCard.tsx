@@ -104,6 +104,10 @@ export function SubmissionCard({ item }: { item: PublicSubmission }) {
                   src={a.url}
                   alt={a.name}
                   loading="lazy"
+                  decoding="async"
+                  width={64}
+                  height={64}
+                  sizes="64px"
                   className="h-16 w-16 rounded-lg border border-ink-600/50 object-cover transition-transform hover:scale-105"
                 />
               </a>

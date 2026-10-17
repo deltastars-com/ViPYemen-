@@ -73,8 +73,30 @@ jobs:
             git diff --stat -- package.json package-lock.json
           fi
 
+      # ── ⬆️ Convex إلى أحدث إصدار دائماً (لا ينتظر نطاق SemVer) ──────────
+      # منصة Convex تُصدر تحسينات أمن/أداء متكررة؛ نرفعها إلى latest في كل
+      # تشغيل أسبوعي، ولا تُقبل إلا إذا نجح فحص الأنواع والبناء أدناه.
+      - name: أحدث إصدار من Convex
+        id: convex
+        run: |
+          set -uo pipefail
+          CUR=$(node -p "require('./package.json').dependencies.convex.replace(/[^0-9.]/g,'')")
+          LATEST=$(npm view convex version 2>/dev/null || echo "$CUR")
+          echo "Convex المثبت: $CUR · الأحدث: $LATEST"
+          if [ "$CUR" != "$LATEST" ]; then
+            npm install "convex@$LATEST" --save --ignore-scripts --no-audit --no-fund
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo "### 🧠 Convex"
+            echo ""
+            echo "\`$CUR\` → \`$LATEST\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: بوّابة الجودة (فحص الأنواع + بناء Convex)
-        if: steps.bump.outputs.changed == 'true'
+        if: steps.bump.outputs.changed == 'true' || steps.convex.outputs.changed == 'true'
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY || secrets.VITE_CONVEX_DEPLOY_KEY }}
         run: |
@@ -82,7 +104,7 @@ jobs:
           npm run build
 
       - name: فتح/تحديث طلب الدمج
-        if: steps.bump.outputs.changed == 'true'
+        if: steps.bump.outputs.changed == 'true' || steps.convex.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

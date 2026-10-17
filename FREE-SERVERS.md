@@ -18,6 +18,7 @@
 | **GitHub Pages** | `.github/workflows/pages.yml` | مجاني | نسخة ثابتة دائمة على نطاق GitHub |
 | **Netlify** (اختياري) | `.github/workflows/mirrors.yml` | مجاني | يحتاج `NETLIFY_AUTH_TOKEN` + `NETLIFY_SITE_ID` |
 | **Cloudflare Pages** (اختياري) | `.github/workflows/mirrors.yml` | مجاني | يحتاج `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` |
+| **EdgeOne Pages** (اختياري) | `.github/workflows/mirrors.yml` | مجاني | يحتاج `EDGEONE_API_TOKEN` (Tencent) — مشروع `vipyemen` يُنشأ تلقائياً |
 
 **إضافة أي مرآة جديدة بلا تعديل كود:** أضف متغير المستودع
 `EXTRA_MIRROR_URLS` بصيغة:
@@ -131,6 +132,9 @@ cron-job.org) وستصلك تنبيهات فورية عند أي انقطاع �
 
 - **Netlify (اختياري):** `NETLIFY_AUTH_TOKEN`, `NETLIFY_SITE_ID`
 - **Cloudflare Pages (اختياري):** `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+- **EdgeOne Pages (اختياري):** `EDGEONE_API_TOKEN` — من EdgeOne Console → API Token،
+  ويمكن تغيير اسم المشروع عبر متغير المستودع `EDGEONE_PROJECT_NAME` (الافتراضي `vipyemen`).
+  أمر النشر المستخدم: `npx edgeone makers deploy ./dist --name <project> --token <token> --env production`.
 - **تحديث التبعيات مع نشر Convex (اختياري):** `CONVEX_DEPLOY_KEY`
 - **قنوات التواصل:** مفاتيح القسم 4 أعلاه بحسب القنوات التي تريد تفعيلها
 - **متغير مستودع (اختياري):** `EXTRA_MIRROR_URLS` لإضافة مرايا بلا تعديل كود

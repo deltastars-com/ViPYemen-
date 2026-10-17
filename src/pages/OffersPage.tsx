@@ -74,6 +74,9 @@ export function OffersPage() {
                   <img
                     src={featured.imageUrl}
                     alt={featured.title}
+                    fetchPriority="high"
+                    decoding="async"
+                    sizes="100vw"
                     className="absolute inset-0 h-full w-full object-cover opacity-45"
                   />
                 )}

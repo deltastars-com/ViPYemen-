@@ -59,4 +59,15 @@ crons.interval(
   {}
 );
 
+// ── 🗄️ نسخة احتياطية كاملة لقاعدة البيانات → تيليجرام (يومياً 03:00 UTC) ─
+// يجمّع كل الجداول (بلا الجداول المؤقتة الحساسة) في ملف JSON مضغوط،
+// ويرسله إلى محادثة الإدارة عبر البوت — نسخة خارجية دائمة لا تعتمد على
+// أي استضافة. الحالة تُحفظ في الإعدادات `dbBackupStatus`.
+crons.daily(
+  "db-backup-telegram",
+  { hourUTC: 3, minuteUTC: 0 },
+  internal.backup.runBackup,
+  {}
+);
+
 export default crons;

@@ -4,6 +4,17 @@
 
 ---
 
+## v6.8.3 — حزمة المصدر تبني نفسها بنفسها (كل ملفات الإعداد والقفل داخل الحزمة)
+
+- `vip-yemen-source-<tag>.zip` صار يشمل `package-lock.json` · `tsconfig.json` · `tsconfig.app.json`
+  · `tsconfig.node.json` · `netlify.toml` · `vercel.json` · `render.yaml` · `codemagic.yaml`
+  · `edgeone.config.js` · `edgeone.json` — فبعد فك الضغط يعمل `npm ci && npm run build` مباشرة
+  بلا أي ملف ناقص (كان الـbuild يفشل سابقاً لغياب إعدادات TypeScript).
+- **تحقّق فعلي:** فُكّت الحزمة المولّدة في مجلد نظيف ثم نجح `tsc -b --noEmit` داخلها (بلا أخطاء)،
+  مع بقاء وثيقة الملكية `SITE-OWNERSHIP.md` أصلاً منفصلاً في نفس الإصدار.
+
+---
+
 ## v6.8.2 — حزمة إصدار كاملة أكثر متانة (رفع قابل لإعادة المحاولة) + توثيق الملكية داخل الحزمة
 
 ### 🛡️ متانة سير الإصدار

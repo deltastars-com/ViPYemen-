@@ -14,7 +14,7 @@
  */
 import { useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
-import { KeyRound, Save, ShieldCheck, Stethoscope, Youtube, Send, Radio, Bot, RefreshCw } from "lucide-react";
+import { KeyRound, Save, ShieldCheck, Stethoscope, Send, Radio, Bot, RefreshCw, LucidePlayCircle as Youtube } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Button, Card, Input, Label, Textarea } from "@/components/ui";
 

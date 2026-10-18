@@ -4,14 +4,11 @@
 
 ---
 
-## v6.8.3 — حزمة المصدر تبني نفسها بنفسها (كل ملفات الإعداد والقفل داخل الحزمة)
+## v6.8.4 — مكتبات أحدث · تحديثات تلقائية كاملة
 
-- `vip-yemen-source-<tag>.zip` صار يشمل `package-lock.json` · `tsconfig.json` · `tsconfig.app.json`
-  · `tsconfig.node.json` · `netlify.toml` · `vercel.json` · `render.yaml` · `codemagic.yaml`
-  · `edgeone.config.js` · `edgeone.json` — فبعد فك الضغط يعمل `npm ci && npm run build` مباشرة
-  بلا أي ملف ناقص (كان الـbuild يفشل سابقاً لغياب إعدادات TypeScript).
-- **تحقّق فعلي:** فُكّت الحزمة المولّدة في مجلد نظيف ثم نجح `tsc -b --noEmit` داخلها (بلا أخطاء)،
-  مع بقاء وثيقة الملكية `SITE-OWNERSHIP.md` أصلاً منفصلاً في نفس الإصدار.
+- ترقية `framer-motion` (12→14) و `lucide-react` (0.577→1.59) وتصحيح أيقونة YouTube للإصدار الجديد،
+  مع بقاء تحديثات Dependabot و سير `deps-guard` المسؤول عن تحديث Convex إلى أحدث إصدار تلقائياً.
+- التحقق: `tsc -b --noEmit` + `vite build` ناجحان بعد الترقية · لا تغيير في الأداء أو الهوية البصرية.
 
 ---
 

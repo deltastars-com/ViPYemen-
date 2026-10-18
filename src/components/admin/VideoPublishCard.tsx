@@ -13,7 +13,7 @@
  */
 import { useEffect, useState } from "react";
 import { useAction, useMutation } from "convex/react";
-import { Film, Loader2, UploadCloud, Youtube } from "lucide-react";
+import { Film, Loader2, UploadCloud, LucidePlayCircle as Youtube } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Button, Card, Input, Label, Select, Textarea } from "@/components/ui";
 import {

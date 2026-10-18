@@ -1,7 +1,7 @@
 {
   "name": "vip-yemen-platform",
   "private": true,
-  "version": "6.8.3",
+  "version": "6.8.4",
   "type": "module",
   "description": "ViP Yemen — منصة التوظيف والتسويق العقاري والإلكتروني والخدمات البرمجية",
   "scripts": {
@@ -27,8 +27,8 @@
     "@vercel/analytics": "^2.0.1",
     "capacitor-native-biometric": "^4.2.2",
     "convex": "^1.47.0",
-    "framer-motion": "^12.23.0",
-    "lucide-react": "^0.577.0",
+    "framer-motion": "^14.3.0",
+    "lucide-react": "^1.59.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.4"
@@ -42,7 +42,7 @@
     "harfbuzzjs": "^1.6.3",
     "opentype.js": "^2.0.0",
     "tailwindcss": "^4.1.11",
-    "typescript": "^5.8.3",
+    "typescript": "~5.9",
     "vite": "^7.3.7",
     "vite-plugin-pwa": "^1.0.1"
   }

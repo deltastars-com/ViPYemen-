@@ -10,8 +10,8 @@
   },
   "cleanUrls": false,
   "rewrites": [
-    { "source": "/google([0-9a-f]+)\\.html", "destination": "/index.html" },
-    { "source": "/((?!assets/|icons/|qr/|llms.txt|robots.txt|sitemap.xml|privacy-policy|data-deletion|google([0-9a-f]+)\\.html).*)", "destination": "/index.html" }
+    { "source": "/google([0-9a-f]+).html", "destination": "/:match.html" },
+    { "source": "/((?!assets/|icons/|qr/|llms.txt|robots.txt|sitemap.xml|privacy-policy|data-deletion|google([0-9a-f]+).html).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
@@ -37,9 +37,11 @@
       ]
     },
     {
-      "source": "/google([0-9a-f]+)\\.html",
+      "source": "/google([0-9a-f]+).html",
       "headers": [
-        { "key": "Content-Type", "value": "text/plain; charset=utf-8" }
+        { "key": "Content-Type", "value": "text/plain; charset=utf-8" },
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     }
   ]

@@ -61,6 +61,13 @@ export const LINKFLY_URL = "https://linkfly.to/Vipyemen";
 export const TAPLINK_URL = "https://taplink.cc/vipservicesyemen";
 export const ALLMYLINKS_URL = "https://allmylinks.com/vipyemen";
 
+// 👇 هذه المجالات تُستخدم في router.ts لـ isRouteVerified
+const FB_TOKEN_SECRET = process.env.FACEBOOK_ACCESS_TOKEN ?? "";
+const FB_PAGE_SECRET = process.env.FACEBOOK_PAGE_ID ?? "";
+const FB_GROUP_SECRET = process.env.FACEBOOK_GROUP_ID ?? "";
+const TG_TOKEN_SECRET = process.env.TELEGRAM_BOT_TOKEN ?? "";
+const TG_CHAT_SECRET = process.env.TELEGRAM_CHAT_ID ?? "";
+
 /** قائمة صفحات الربط بأسمائها كما تظهر أسفل الأيقونات. */
 export const LINKTREES: { label: string; href: string }[] = [
   { label: "Beacons", href: BEACONS_URL },

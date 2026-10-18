@@ -17,6 +17,8 @@ export default {
     };
 
     // Try to serve static asset first
+    // ملاحظة: google48285d98c7bd5f52.html يُخدم مباشرة كملف HTML حقيقي موجود في dist/
+    // دون الحاجة إلى اي JavaScript، لذا لن يُعامل كـ asset تقليدي لكنه سيُعاد كـ 200 OK
     const assetResponse = await fetch(request);
     if (assetResponse.status === 200) {
       const headers = new Headers(assetResponse.headers);

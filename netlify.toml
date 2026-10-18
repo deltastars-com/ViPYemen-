@@ -17,7 +17,10 @@
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {Path = ["!/**/*.{js,css,png,jpg,jpeg,gif,svg,ico,webp,woff,woff2,ttf,eot,otf,map}"]}
+  conditions = {Path = ["!/**/*.{js,css,png,jpg,jpeg,gif,svg,ico,webp,woff,woff2,ttf,eot,otf,map}"]
+  # ملاحظة: google48285d98c7bd5f52.html يُخدم مباشرة من dist/ دون redirect
+  # لأن ملف HTML حقيقي موجود بالمجلد và لا يحتاج إلى JavaScript
+  # لذلك لا يُضمّن في شرط الاستثناء أعلاه، وسيعمل بشكل صحيح
 
 [[headers]]
   for = "/*"

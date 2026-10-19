@@ -147,7 +147,8 @@ setTimeout(function () {
       .getRegistrations()
       .then(function (regs) {
         regs.forEach(function (r) {
-          r.unregister();
+          // unregister() يرجع وعداً — نلتقط رفضه حتى لا يبقى عالقاً
+          r.unregister().catch(function () {});
         });
       })
       .catch(function () {});
@@ -156,7 +157,7 @@ setTimeout(function () {
         .keys()
         .then(function (keys) {
           keys.forEach(function (k) {
-            caches.delete(k);
+            caches.delete(k).catch(function () {});
           });
         })
         .catch(function () {});

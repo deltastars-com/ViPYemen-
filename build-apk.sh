@@ -19,7 +19,9 @@ echo ""
 
 # ---------- Step 1: Web PWA ----------
 echo "📦 Step 1: Installing dependencies..."
-bun install --frozen-lockfile || bun install
+# --ignore-scripts: هذا السكربت يبني كل شيء صراحةً أدناه، فلا حاجة لسكربتات
+# دورة الحياة عند التثبيت (توصية أمنية: S6867).
+bun install --frozen-lockfile --ignore-scripts || bun install --ignore-scripts
 
 echo "🏗️  Step 2: Generating icons..."
 bun run icons

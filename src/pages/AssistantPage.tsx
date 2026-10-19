@@ -182,8 +182,9 @@ export function AssistantPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                runWikiSearch();
-                runAiAnswer();
+                // كل دالة تدير أخطاءهاinternally — الالتقاط هنا للوعود الطافية فقط
+                runWikiSearch().catch(() => {});
+                runAiAnswer().catch(() => {});
               }}
               className="mx-auto mt-8 flex max-w-2xl gap-2"
             >

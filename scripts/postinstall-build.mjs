@@ -70,7 +70,10 @@ if (hasIndex("dist")) {
 }
 
 console.log("[postinstall] Building production bundle (vite build)…");
-execSync("npx vite build", { stdio: "inherit", cwd: root });
+// تشغيل vite من المسار المثبَّت مسبقاً (node_modules) بدل npx الذي قد
+// ينزّل حزمًا عند الطلب أو يعتمد على PATH قابل للتعديل.
+const viteBin = resolve(root, "node_modules", "vite", "bin", "vite.js");
+execSync(`node "${viteBin}" build`, { stdio: "inherit", cwd: root });
 
 if (!hasIndex("dist")) {
   console.error("[postinstall] vite build did not produce dist/index.html");

@@ -131,7 +131,8 @@ jobs:
       # on every push. This path is not subject to the github-pages
       # environment protection rules that block native Actions deploys.
       - name: Publish to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
+        # مثبَّت ببصمة commit كاملة (توصية أمنية: S6898)
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist

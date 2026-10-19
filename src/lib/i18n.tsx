@@ -200,10 +200,6 @@ const DICT: Record<string, { ar: string; en: string }> = {
   biometricOpenAdmin: { ar: "فتح لوحة التحكم", en: "Open admin panel" },
   biometricErrorUnexpected: { ar: "خطأ غير متوقع", en: "Unexpected error" },
   biometricSupabaseUnavailable: { ar: "خدمة Supabase غير متاحة في هذا الإصدار.", en: "Supabase service not available in this version." },
-  hideBanner: { ar: "إخفاء", en: "Hide" },
-  /* ── Offline banners ── */
-  previewMode: { ar: "وضع المعاينة — المحتوى الحي يظهر بعد ضبط رابط الخادم", en: "Preview mode — live content shows after setting the server URL" },
-  offlineMode: { ar: "وضع دون اتصال — التطبيق يعمل من الذاكرة، ويتحدث المحتوى تلقائياً عند عودة الشبكة", en: "Offline mode — app runs from cache, content updates automatically when back online" },
   menuClose: { ar: "إغلاق القائمة", en: "Close menu" },
   close: { ar: "إغلاق", en: "Close" },
   menuOpen: { ar: "فتح القائمة", en: "Open menu" },

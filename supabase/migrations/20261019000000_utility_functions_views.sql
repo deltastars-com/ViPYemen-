@@ -1,34 +1,10 @@
--- ViP Yemen — Database Functions and Triggers
--- Run AFTER 004_rls.sql
-
--- =============================================================================
--- AUTO-UPDATE TIMESTAMP TRIGGER
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS trigger AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Apply trigger to tables with updated_at
-CREATE TRIGGER set_updated_at_submissions
-  BEFORE UPDATE ON public.submissions
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER set_updated_at_followups
-  BEFORE UPDATE ON public.followups
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER set_updated_at_users
-  BEFORE UPDATE ON public.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER set_updated_at_settings
-  BEFORE UPDATE ON public.settings
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+-- ViP Yemen — Utility functions and analytics views
+-- These objects previously lived only in `backend/sql/005_functions.sql` and
+-- `backend/sql/006_views.sql`, which were seed/reference copies that CI never
+-- applied. Moving them here makes `supabase/migrations/` the single source of
+-- truth for the schema (the duplicated copies were removed).
+-- `handle_updated_at`, `submissions_stats`, `daily_submissions`, and
+-- `recent_activity` already exist in the initial schema migration.
 
 -- =============================================================================
 -- PHONE OTP CLEANUP (delete expired codes)
@@ -91,4 +67,34 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-SELECT 'Functions created successfully' as status;
+-- =============================================================================
+-- PENDING REVIEWS
+-- =============================================================================
+
+CREATE OR REPLACE VIEW public.pending_reviews AS
+SELECT
+  'submission' as entity_type,
+  id::text,
+  title,
+  full_name,
+  phone,
+  category,
+  created_at
+FROM public.submissions
+WHERE status = 'pending'
+ORDER BY created_at ASC;
+
+-- =============================================================================
+-- MONTHLY REVENUE
+-- =============================================================================
+
+CREATE OR REPLACE VIEW public.monthly_revenue AS
+SELECT
+  date_trunc('month', created_at) as month,
+  type,
+  sum(amount) as total,
+  count(*) as transactions
+FROM public.finance
+WHERE created_at > now() - interval '12 months'
+GROUP BY date_trunc('month', created_at), type
+ORDER BY month DESC;

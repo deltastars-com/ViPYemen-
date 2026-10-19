@@ -90,7 +90,9 @@ jobs:
             echo "⏭️  Cloudflare Pages — لا مفاتيح (تعطيل اختياري)"
             exit 0
           fi
-          npx --yes wrangler@4 pages deploy dist \
+          # تثبيت مثبّت بإصدار محدّد (بدل npx الذي ينزّل الحزم عند الطلب)
+          npm install --global wrangler@4.151.2 --no-audit --no-fund
+          wrangler pages deploy dist \
             --project-name=vipyemen --branch=main --commit-dirty=true
           echo "enabled=true" >> "$GITHUB_OUTPUT"
 
@@ -110,7 +112,9 @@ jobs:
             echo "⏭️  EdgeOne Pages — لا توكن (تعطيل اختياري)"
             exit 0
           fi
-          npx --yes edgeone@latest makers deploy ./dist \
+          # تثبيت مثبّت بإصدار محدّد (بدل npx الذي ينزّل الحزم عند الطلب)
+          npm install --global edgeone@1.6.42 --no-audit --no-fund
+          edgeone makers deploy ./dist \
             --name "$EDGEONE_PROJECT_NAME" \
             --token "$EDGEONE_API_TOKEN" \
             --env production

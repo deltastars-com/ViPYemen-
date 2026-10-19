@@ -298,6 +298,8 @@ export const bootstrapFromEnv = internalAction({
   args: {},
   handler: async (ctx: ActionCtx): Promise<Record<string, unknown>> => {
     // أسماء متغيرات البيئة المرئية فقط (لا قيم) — لتحديد نقصان أي مفتاح.
+    // مفاتيح البيئة أسماء ASCII، فالترتيب الافتراضي (بترتيب رموز UTF-16)
+    // أدق من الترتيب حسب اللغة ولا حاجة لـ localeCompare.
     const envKeys = Object.keys(process.env)
       .filter((k) => k.startsWith("FACEBOOK_"))
       .sort();

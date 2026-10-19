@@ -14,8 +14,10 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: no write access at workflow level — each job that needs
+# to create/upload release assets declares `contents: write` itself (S6763).
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # One-time release preparation: create the GitHub Release as a DRAFT
@@ -27,6 +29,8 @@ jobs:
   prepare-release:
     name: Prepare GitHub release (draft)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Create the draft release (idempotent)
         if: github.ref_type == 'tag'
@@ -48,6 +52,8 @@ jobs:
     name: Build PWA and publish release
     needs: [prepare-release]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -152,6 +158,8 @@ jobs:
     name: Build signed APK + AAB
     needs: [prepare-release]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -313,6 +321,8 @@ jobs:
     needs: [prepare-release, build-web, build-android, build-ios]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Verify every platform asset is attached
         env:
@@ -366,6 +376,8 @@ jobs:
     name: Build iOS app + App Store bundle
     needs: [prepare-release]
     runs-on: macos-15
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -487,6 +499,8 @@ jobs:
     needs: [prepare-release]
     if: github.ref_type == 'tag' && vars.APPLE_SIGNING_ENABLED == 'true'
     runs-on: macos-15
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7

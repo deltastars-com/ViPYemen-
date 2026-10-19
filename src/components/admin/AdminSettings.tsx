@@ -1349,7 +1349,9 @@ function BiometricCard({ accountName }: { accountName: string }) {
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    isBiometricSupported().then(setSupported);
+    isBiometricSupported()
+      .then(setSupported)
+      .catch(() => setSupported(false));
   }, []);
 
   async function handleEnroll() {

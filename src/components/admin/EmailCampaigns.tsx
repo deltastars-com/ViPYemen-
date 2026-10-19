@@ -216,7 +216,7 @@ export function EmailCampaigns({ token }: { token: string }) {
                         loading={busyId === c.id}
                         onClick={() => {
                           if (confirm(`حذف الحملة «${c.subject}» نهائياً؟`))
-                            run(() => removeCampaign({ token, id: c.id }), c.id);
+                            run(() => removeCampaign({ token, id: c.id }), c.id).catch(() => {});
                         }}
                         className="!py-1.5 text-[11px] !text-rose-300"
                       >
@@ -286,7 +286,7 @@ export function EmailCampaigns({ token }: { token: string }) {
                     loading={busyId === s.id}
                     onClick={() => {
                       if (confirm(`حذف ${s.email} من قائمة المشتركين؟`))
-                        run(() => removeSubscriber({ token, id: s.id }), s.id);
+                        run(() => removeSubscriber({ token, id: s.id }), s.id).catch(() => {});
                     }}
                     className="!py-1 text-[10px] !text-rose-300"
                   >

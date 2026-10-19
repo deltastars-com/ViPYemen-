@@ -37,16 +37,32 @@ type ContractDoc = {
   createdAt: number;
 };
 
+/**
+ * عشوائيات كريبتوجرافية آمنة (Web Crypto) بدل Math.random —
+ * أرقام السندات وروابط التوقيع يجب أن تكون غير قابلة للتخمين.
+ */
+function secureRandomInt(maxExclusive: number): number {
+  const range = 0x1_0000_0000;
+  const limit = Math.floor(range / maxExclusive) * maxExclusive;
+  const buf = new Uint32Array(1);
+  let value: number;
+  do {
+    crypto.getRandomValues(buf);
+    value = buf[0];
+  } while (value >= limit);
+  return value % maxExclusive;
+}
+
 /** رقم سند تسلسلي غير قابل للتكرار عمليًا: VIP-السنة-خمس خانات. */
 export function makeReceiptNo(now: number): string {
   const year = new Date(now).getFullYear();
-  const serial = Math.floor(10000 + Math.random() * 90000);
+  const serial = 10000 + secureRandomInt(90000);
   return `VIP-${year}-${serial}`;
 }
 
 function randomToken(): string {
   const bytes = new Uint8Array(24);
-  for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 

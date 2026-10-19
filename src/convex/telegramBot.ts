@@ -391,7 +391,7 @@ async function renderCategory(
   return [
     `${route.label} — أحدث ${found.length} عنصراً منشوراً${needle ? ` لـ«${keyword}»` : ""}:`,
     "",
-    shown.map(itemLine).join("\n\n"),
+    shown.map((item, i) => itemLine(item, i)).join("\n\n"),
     "",
     `📄 كل النتائج على: ${PLATFORM_BASE}${route.path}`,
     `🔎 بحث أدق: /${route.cmd} ${needle || "كلمة"}`,

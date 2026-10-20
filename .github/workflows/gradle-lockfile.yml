@@ -16,6 +16,7 @@ on:
       - "android/app/build.gradle"
       - "android/variables.gradle"
       - "android/gradle/wrapper/gradle-wrapper.properties"
+      - ".github/workflows/gradle-lockfile.yml"
 
 permissions:
   contents: write
@@ -45,6 +46,15 @@ jobs:
       - name: تثبيت حزم node_modules (بدون سكربتات دورة الحياة)
         run: npm ci --ignore-scripts --no-audit --no-fund
 
+      # cap sync يولّد الملفات التي يطلبها Gradle من node_modules
+      # (منها capacitor-cordova-android-plugins/cordova.variables.gradle) —
+      # نفس الترتيب المعتمد في سير عمل الإصدار release.yml.
+      - name: بناء الويب ثم مزامنة Capacitor
+        run: |
+          set -uo pipefail
+          npm run build
+          ./node_modules/.bin/cap sync android
+
       - name: تفعيل Android SDK (مثبّت مسبقاً على عمال GitHub)
         run: |
           echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
@@ -62,7 +72,15 @@ jobs:
       - name: حفظ ملفات القفل إن تغيّرت
         run: |
           set -uo pipefail
-          git add -A android
+          FILES=""
+          [ -f android/gradle.lockfile ] && FILES="$FILES android/gradle.lockfile"
+          [ -f android/app/gradle.lockfile ] && FILES="$FILES android/app/gradle.lockfile"
+          if [ -z "$FILES" ]; then
+            echo "##[error]لم يُولَّد أي ملف قفل — يحتاج تدخّلاً."
+            exit 1
+          fi
+          # نرفع ملفات القفل فقط (لا ملفات المزامنة المولَّدة أو أصول الويب)
+          git add $FILES
           if git diff --cached --quiet; then
             echo "لا تغيير في ملفات القفل — كل شيء محدَّث."
             exit 0

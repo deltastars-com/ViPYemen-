@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
@@ -126,11 +128,17 @@ jobs:
       - name: Skip Vercel previews for this generated branch
         run: printf '%s\n' '{"git":{"deploymentEnabled":false}}' > dist/vercel.json
 
-      # Publish to the gh-pages branch — the repo's Pages site is served from
-      # this branch ("Deploy from a branch" source), which GitHub auto-builds
-      # on every push. This path is not subject to the github-pages
-      # environment protection rules that block native Actions deploys.
-      - name: Publish to gh-pages branch
+      # ⚠️ مصدر النشر في إعدادات المستودع هو «GitHub Actions» (build_type=workflow)
+      # وليس فرع gh-pages — فدفع الفرع وحده لا يُحدّث الموقع ولا يغيّر تاريخ
+      # آخر نشر (تحقّقنا: آخر بناء 2026-10-19 وآخر دفعة لـ gh-pages 2026-09-17).
+      # لذلك نرفع dist كأثر Pages ثم ننشره بالوظيفة الرسمية أدناه.
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      # الاحتفاظ بنسخة على gh-pages كنسخة احتياطية/مرآة (لا يضرّ ولا يعطّل).
+      - name: Publish to gh-pages branch (backup mirror)
         # مثبَّت ببصمة commit كاملة (توصية أمنية: S6898)
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
         with:
@@ -138,3 +146,18 @@ jobs:
           publish_dir: ./dist
           force_orphan: true
           commit_message: "Pages deploy: ${{ github.sha }}"
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

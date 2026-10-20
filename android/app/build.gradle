@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+// قفل التبعيات (Sonar text:S8569): ملف app/gradle.lockfile يُولَّد تلقائياً
+// عبر سير العمل .github/workflows/gradle-lockfile.yml — لا يُحرَّر يدوياً.
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 // Release signing: reads keystore.properties (ignored by git).
 // Codemagic / CI writes this file from encrypted credentials before building.
 def keystorePropertiesFile = rootProject.file('keystore.properties')

@@ -70,7 +70,15 @@ jobs:
           # buildEnvironment: يحلّ classpath البناء في الجذر (buildscript)؛ و
           # --write-verification-metadata sha256 يكتب android/gradle/verification-metadata.xml
           # (البديل الآخر الذي تقبله قاعدة S8569 لجذر المشروع) مع بصمات كل الأصول.
-          ./gradlew buildEnvironment dependencies :app:dependencies :app:assembleDebug \
+          #
+          # ⚠️ يجب أن تُحلّ إعداديات الإصدار نفسها أيضاً (assembleRelease +
+          # bundleRelease): بناء الـ debug وحده لا يمرّ على مهام استخراج
+          # التعليقات التوضيحية (extractReleaseAnnotations) التي تجلب
+          # lint/groovy/kotlin-compiler، فتفشل بناءات المتجر لأن بصماتها غير
+          # مسجّلة. هذه المهام تُبنى هنا بلا توقيع (keystore.properties غير موجود)
+          # وهو ما يكفي لتسجيل بصمات كل أصولها.
+          ./gradlew buildEnvironment dependencies :app:dependencies \
+            :app:assembleDebug :app:assembleRelease :app:bundleRelease \
             --write-locks --write-verification-metadata sha256 \
             --no-daemon --console=plain
 

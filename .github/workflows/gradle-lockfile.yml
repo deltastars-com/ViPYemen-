@@ -67,7 +67,9 @@ jobs:
           set -uo pipefail
           cd android
           chmod +x gradlew
-          ./gradlew dependencies :app:dependencies :app:assembleDebug --write-locks --no-daemon --console=plain
+          # buildEnvironment: يحلّ classpath البناء في الجذر (buildscript) فيُكتب
+          # android/gradle.lockfile — ومهمّة dependencies تُكتب قفل تبعيات كل مشروع.
+          ./gradlew buildEnvironment dependencies :app:dependencies :app:assembleDebug --write-locks --no-daemon --console=plain
 
       - name: حفظ ملفات القفل إن تغيّرت
         run: |

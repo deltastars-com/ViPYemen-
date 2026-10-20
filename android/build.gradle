@@ -1,4 +1,8 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
+//
+// ملاحظة قفل التبعيات (Sonar text:S8569): ملف gradle.lockfile يُولَّد تلقائياً عبر
+// سير العمل .github/workflows/gradle-lockfile.yml على بيئة Android SDK ويدفع إلى
+// main عند تغيّر أي ملفات Gradle هنا — لا تحرّره يدوياً.
 
 buildscript {
     

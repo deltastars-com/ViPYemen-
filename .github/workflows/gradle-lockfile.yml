@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       # وحدات Capacitor (project(':capacitor-android')…) تُحلَّ من node_modules —
       # نثبّتها بدون سكربتات دورة الحياة حتى يرى Gradle مجلدات المشاريع كاملة.

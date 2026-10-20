@@ -23,12 +23,14 @@
   صريح `اسم@إصدار` في ملف القفل فقط ثم `npm ci` مقيَّد بعده (S8543).
 - `ios/App/CapApp-SPM/Package.resolved` و`App.xcodeproj/…/Package.resolved`:
   ملفا قفل SPM بمراجعة صحيحة تُثبِّتان `capacitor-swift-pm` بـ SHA دقيق (S7694).
-- سير عمل جديد `gradle-lockfile.yml`: يولّد `android/gradle.lockfile` بيئة CI
-  (Android SDK على عمال GitHub) ويدفعه — يغلق S8569 دون المساس ببناءات المتاجر.
+- سير عمل جديد `gradle-lockfile.yml`: يفعّل `dependencyLocking` في بناءي Gradle
+  ويولّد على بيئة CI (Android SDK على عمال GitHub) ملفَّي `app/gradle.lockfile`
+  (كل تبعيات التطبيق بتشطيباتها) و`gradle/verification-metadata.xml` (بصمات sha256
+  لجذر المشروع) ويدفعهما — يغلق S8569 مع بقاء بناءات المتاجر تعمل بالقفل نفسه.
 
 ### ✅ التحقق
-- `tsc -b --noEmit` ناجح (0 أخطاء) · تطابق بيانات البذور متحقَّق آلياً · YAML لستة
-  سير عمل يُحلَّل بنجاح.
+- `tsc -b --noEmit` ناجح (0 أخطاء) · `vite build` ناجح (PWA 87 مدخلة) · تطابق بيانات
+  البذور متحقق آلياً · YAML سليم لكل سير عمل معدَّل · **بوّابة Sonar: OK** بكل شروطها.
 
 ---
 

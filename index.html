@@ -10,6 +10,16 @@
     <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!--
+      🔐 CSP داخل الصفحة: Vercel وNetlify يرسلان السياسة في ترويسات HTTP،
+      لكن GitHub Pages لا يسمح بترويسات مخصّصة — فهذه النسخة تحمي مرآة Pages
+      وتطبيق Capacitor أيضاً. مبنية من نفس سياسة vercel.json مع إضافة مضيفي
+      المرايا التي يفحصها التطبيق (onrender/netlify/pages) وواجهات Google.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://*.convex.cloud https://*.convex.site wss://*.convex.cloud wss://*.convex.site https://*.supabase.co https://api.telegram.org https://graph.facebook.com https://api.github.com https://text.pollinations.ai https://*.wikipedia.org https://api.resend.com https://*.onrender.com https://*.netlify.app https://*.pages.dev https://vi-p-yemen.vercel.app https://deltastars-com.github.io https://oauth2.googleapis.com https://www.googleapis.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), clipboard-write=(self)" />
     <link rel="canonical" href="https://vi-p-yemen.vercel.app/" />
     <title>ViP Yemen — منصة التوظيف والتسويق العقاري والإلكتروني والخدمات البرمجية</title>

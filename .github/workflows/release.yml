@@ -102,6 +102,11 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
+      # حدّ المتاجر صارم: عنوان Play 30 حرفاً، والعنوان الفرعي في App Store 30،
+      # والكلمات المفتاحية 100 بايت. أي تجاوز يوقف النشر هنا بدل رفض الرفع لاحقاً.
+      - name: Validate store listing limits
+        run: npm run store:check
+
       - name: Ensure lockfiles exist for packaging
         run: |
           # Some packaging steps expect bun.lock or bun.lockb to exist. Create placeholder files in the workspace so zip won't fail (these are NOT committed).
@@ -124,6 +129,8 @@ jobs:
             edgeone.config.js edgeone.json || true
           cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md SITE-OWNERSHIP.md IOS-APPSTORE-GUIDE.md FREE-SERVERS.md PLATFORM-GUIDE.md ENV-VARIABLES.md SECRETS-SETUP.md META-DATA-ACCESS-RENEWAL.md SUPABASE-TOKEN-RENEWAL.md CLOUD-STORAGE.md ViP-Yemen-Complete-Documentation.md README.md CHANGELOG.md store-listing.json release/ || true
           cp store-graphics/*.png release/ || true
+          # لقطات شاشة حقيقية بحجم هاتف (1080×1920) مطلوبة لقائمة Google Play
+          zip -qry release/vip-yemen-store-screenshots-${{ github.ref_name }}.zip store-graphics/screenshots || true
 
       # Assets go straight from this job onto the GitHub Release (no CI
       # artifact storage involved) — see prepare-release above.
@@ -384,7 +391,7 @@ jobs:
             echo '- **تطبيق iOS (IPA + ملفات المتجر)**: حزمة iOS جاهزة للتوقيع والرفع إلى App Store Connect مع دليل IOS-APPSTORE-GUIDE'
             echo '- **تطبيق الويب (PWA)**: مجلد web-pwa جاهز للاستضافة — يعمل بدون إنترنت'
             echo '- **الكود المصدري الكامل**: الواجهة + الباك إند (Convex) + مشروعي Android/iOS (Capacitor)'
-            echo '- **ملفات المتجر**: أيقونة 512، صورة المتجر 1024×500، بيانات القائمة (AR/EN)، أدلة Google Play وApp Store'
+            echo '- **ملفات المتجر**: أيقونة 512، صورة المتجر 1024×500، لقطات شاشة حقيقية 1080×1920، بيانات القائمة (AR/EN) المطابقة لحدود المتجرين، أدلة Google Play وApp Store'
             echo '- **التوقيع والملكية**: بصمة SHA-256/SHA-1 وسجل الملكية في SIGNING-AND-OWNERSHIP.md'
             echo '- **توثيق ملكية الموقع والتطبيقات**: الوثيقة الرسمية (النطاقات · الأصول وبصماتها · الترخيص · الإبلاغ) في SITE-OWNERSHIP.md'
             echo '- **الوثائق**: سياسة الخصوصية (المنصة والتطبيقات)، أدلة النشر والإدارة والتشغيل'

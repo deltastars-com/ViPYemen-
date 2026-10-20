@@ -1,7 +1,7 @@
 {
   "name": "vip-yemen-platform",
   "private": true,
-  "version": "6.8.7",
+  "version": "6.8.8",
   "type": "module",
   "description": "ViP Yemen — منصة التوظيف والتسويق العقاري والإلكتروني والخدمات البرمجية",
   "scripts": {
@@ -13,7 +13,8 @@
     "convex:dev": "convex dev --once",
     "loadtest": "node scripts/loadtest.mjs",
     "icons": "node scripts/generate-icons.mjs",
-    "icons:store": "node scripts/generate-icons.mjs --store"
+    "icons:store": "node scripts/generate-icons.mjs --store",
+    "store:check": "node scripts/validate-store-listing.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
@@ -45,5 +46,8 @@
     "typescript": "~5.9",
     "vite": "^7.3.7",
     "vite-plugin-pwa": "^1.0.1"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

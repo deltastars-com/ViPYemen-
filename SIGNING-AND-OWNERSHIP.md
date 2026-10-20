@@ -79,6 +79,7 @@ Connect first with the same bundle ID, then push "New build" from Codemagic.
 |---|---|
 | `store-graphics/feature-graphic-1024x500.png` | Google Play feature graphic (1024×500) |
 | `store-graphics/icon-512.png` | Store listing icon (512×512) |
+| `store-graphics/screenshots/*.png` | لقطات شاشة حقيقية للتطبيق 1080×1920 (الحد الأدنى في Play لقطتان) |
 | `public/icons/apple-touch-icon.png` | iOS/PWA touch icon |
 | `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png` | iOS app icon (1024×1024) |
 | `store-listing.json` | Play / App Store listing copy (AR/EN) |

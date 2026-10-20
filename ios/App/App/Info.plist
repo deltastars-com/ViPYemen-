@@ -36,7 +36,12 @@
 	<false/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
+		<!-- سياسة Apple: ATS مفعّل للطلبات الأصلية (لا استثناء عام)، والاستثناء
+		     محصور بمحتوى WKWebView الذي تعمل فيه واجهة التطبيق — وهو التكوين
+		     الذي تقبله المراجعة لتطبيقات Capacitor الهجينة. -->
 		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>

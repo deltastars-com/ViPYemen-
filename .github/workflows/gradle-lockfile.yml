@@ -67,9 +67,12 @@ jobs:
           set -uo pipefail
           cd android
           chmod +x gradlew
-          # buildEnvironment: يحلّ classpath البناء في الجذر (buildscript) فيُكتب
-          # android/gradle.lockfile — ومهمّة dependencies تُكتب قفل تبعيات كل مشروع.
-          ./gradlew buildEnvironment dependencies :app:dependencies :app:assembleDebug --write-locks --no-daemon --console=plain
+          # buildEnvironment: يحلّ classpath البناء في الجذر (buildscript)؛ و
+          # --write-verification-metadata sha256 يكتب android/gradle/verification-metadata.xml
+          # (البديل الآخر الذي تقبله قاعدة S8569 لجذر المشروع) مع بصمات كل الأصول.
+          ./gradlew buildEnvironment dependencies :app:dependencies :app:assembleDebug \
+            --write-locks --write-verification-metadata sha256 \
+            --no-daemon --console=plain
 
       - name: حفظ ملفات القفل إن تغيّرت
         run: |
@@ -77,6 +80,7 @@ jobs:
           FILES=""
           [ -f android/gradle.lockfile ] && FILES="$FILES android/gradle.lockfile"
           [ -f android/app/gradle.lockfile ] && FILES="$FILES android/app/gradle.lockfile"
+          [ -f android/gradle/verification-metadata.xml ] && FILES="$FILES android/gradle/verification-metadata.xml"
           if [ -z "$FILES" ]; then
             echo "##[error]لم يُولَّد أي ملف قفل — يحتاج تدخّلاً."
             exit 1
@@ -89,6 +93,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore(deps): توليد gradle.lockfile لقفل تبعيات Gradle (S8569)"
+          git commit -m "chore(deps): توليد ملفات قفل Gradle وبصمات التحقق (S8569)"
           git push
           echo "✅ دُفع ملف القفل إلى main."

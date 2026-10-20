@@ -5,10 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# أقصى صلاحية لكل وظيفة على حدة (مبدأ أقل رخصة، S6763) — التوصية
+# الأمنية لسير Actions Trophy تمنع منح الصلاحيات على مستوى السير.
+
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: pages
@@ -18,6 +19,8 @@ jobs:
   build:
     name: Build PWA
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -128,18 +131,12 @@ jobs:
       - name: Skip Vercel previews for this generated branch
         run: printf '%s\n' '{"git":{"deploymentEnabled":false}}' > dist/vercel.json
 
-      # ⚠️ مصدر النشر في إعدادات المستودع هو «GitHub Actions» (build_type=workflow)
-      # وليس فرع gh-pages — فدفع الفرع وحده لا يُحدّث الموقع ولا يغيّر تاريخ
-      # آخر نشر (تحقّقنا: آخر بناء 2026-10-19 وآخر دفعة لـ gh-pages 2026-09-17).
-      # لذلك نرفع dist كأثر Pages ثم ننشره بالوظيفة الرسمية أدناه.
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-      # الاحتفاظ بنسخة على gh-pages كنسخة احتياطية/مرآة (لا يضرّ ولا يعطّل).
+      # Publish to the gh-pages branch — acted as a backup mirror alongside
+      # the official GitHub Actions page deployment (see deploy job below).
+      # The repo's GitHub Pages source is set to a GitHub Actions deployment,
+      # not to a branch; this push keeps a clean mirror copy for mirrors that
+      # read the branch directly without requiring the Actions artifact.
       - name: Publish to gh-pages branch (backup mirror)
-        # مثبَّت ببصمة commit كاملة (توصية أمنية: S6898)
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,13 +1,27 @@
 #!/usr/bin/env node
-// بوابة جاهزية قائمة المتجر: تمنع أي إصدار من الوصول إلى Google Play / App Store
-// بنصوص تخالف حدودهما الصارمة (كان العنوان 48 حرفاً والحد 30، والعنوان الفرعي
-// في App Store 36 والحد 30، والكلمات المفتاحية 109 بايت والحد 100).
-//
-// الاستخدام: node scripts/validate-store-listing.mjs [path]
-import { readFileSync } from "node:fs";
+import { readFileSync, dirname, resolve, basename } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const file = process.argv[2] ?? "store-listing.json";
-const listing = JSON.parse(readFileSync(file, "utf8"));
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const defaultFile = resolve(__dirname, "..", "store-listing.json");
+// لا تقبل أي مسار من الخارج (يمنع مسار هروب aus injection للتطبيق).
+// التطبيق/سير النشر يقرأ القائمة فقط من جذر المشروع.
+const file =
+  process.argv[2] !== undefined
+    ? basename(process.argv[2])
+      ? resolve(__dirname, "..", process.argv[2])
+      : throw warn()
+    : defaultFile;
+
+// مسار آمن مطلَق داخل جذر المشروع فقط — لا يُسمح بانكماش مسار /../.
+const safeFile = resolve(__dirname, "..");
+const fileResolved = resolve(process.argv[2] !== undefined ? resolve(__dirname, "..", process.argv[2]) : defaultFile);
+if (!fileResolved.startsWith(safeFile + "/")) {
+  console.error("✘ مسار القائمة خارج جذر المشروع ليس مسموحاً.");
+  process.exit(1);
+}
+
+const listing = JSON.parse(readFileSync(fileResolved, "utf8"));
 
 const chars = (s) => [...String(s ?? "")].length;
 const bytes = (s) => Buffer.byteLength(String(s ?? ""), "utf8");
@@ -53,3 +67,11 @@ if (failed) {
   process.exit(1);
 }
 console.log("\n✔ قائمة المتجر مطابقة لحدود Google Play وApp Store.");
+
+function t() {
+  throw new TypeError("Argument must be a string");
+}
+
+function warn() {
+  throw new Error("Argument missing");
+}

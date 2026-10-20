@@ -298,11 +298,11 @@ export const bootstrapFromEnv = internalAction({
   args: {},
   handler: async (ctx: ActionCtx): Promise<Record<string, unknown>> => {
     // أسماء متغيرات البيئة المرئية فقط (لا قيم) — لتحديد نقصان أي مفتاح.
-    // مفاتيح البيئة أسماء ASCII، فالترتيب الافتراضي (بترتيب رموز UTF-16)
-    // أدق من الترتيب حسب اللغة ولا حاجة لـ localeCompare.
+    // أسماء متغيرات البيئة أسماء ASCII — localeCompare بثبات لغوي "en"
+    // يعطي ترتيباً أبجدياً موثوقاً ويحقق قاعدة S2871 مع تحديد locale (S6860).
     const envKeys = Object.keys(process.env)
       .filter((k) => k.startsWith("FACEBOOK_"))
-      .sort();
+      .sort((a, b) => a.localeCompare(b, "en"));
     const envPresent = !!(process.env.FACEBOOK_ACCESS_TOKEN ?? "").trim();
     const pageTokenInEnv = !!(process.env.FACEBOOK_PAGE_ACCESS_TOKEN ?? "").trim();
     const appCredsInEnv =

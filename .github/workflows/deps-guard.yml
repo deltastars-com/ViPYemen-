@@ -64,9 +64,26 @@ jobs:
         id: bump
         run: |
           set -uo pipefail
-          # --package-lock-only: التحديث يُحدَّث في ملف القفل فقط، والتثبيت الفعلي
-          # لاحقاً عبر npm ci (المقيَّد بالقفل) — فلا تُحلَّ إصدارات غير مثبّتة.
-          npm update --package-lock-only --save --ignore-scripts --no-audit --no-fund
+          # بدل `npm update` غير المقيَّد (S8543): نجلب إصدار «wanted» المطلوب
+          # لكل تبعية (داخل نطاق SemVer) ونثبته صراحةً بالشكل الدقيق
+          # `اسم@رقم` — إصدار موثوق ومُتحقَّق منه، وتُكتب النتيجة في ملف القفل
+          # فقط (--package-lock-only) ثم يليها npm ci المقيَّد بالقفل أدناه.
+          OUT=$(npm outdated --json 2>/dev/null || true)
+          PAIRS=$(printf '%s' "$OUT" | node -e '
+            let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{
+              let j={};try{j=JSON.parse(d||"{}")}catch{}
+              const rows=[];
+              for(const [name,v] of Object.entries(j)){
+                const ver=String((v.wanted||v.latest)||"").trim();
+                if(!ver||v.current===ver)continue;
+                rows.push(name+"@"+ver);
+              }
+              process.stdout.write(rows.join(" "));
+            })')
+          if [ -n "$PAIRS" ]; then
+            echo "🔄 تحديث: $PAIRS"
+            npm install $PAIRS --package-lock-only --ignore-scripts --no-audit --no-fund
+          fi
           if git diff --quiet -- package.json package-lock.json; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "✔ لا تحديثات آمنة متاحة الآن — كل شيء محدَّث."

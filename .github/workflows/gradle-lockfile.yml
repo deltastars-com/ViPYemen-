@@ -1,0 +1,74 @@
+name: "🔒 قفل تبعيات Gradle (S8569)"
+
+# لماذا هذا السير؟
+# قاعدة Sonar text:S8569 ترفض غياب ملف قفل التبعيات (gradle.lockfile) في مشروع
+# Gradle لأن إصدارات التبعيات غير متوقّعة بدونه. توليد الملف يتطلّب بيئة Android
+# SDK كاملة — وهي متوفرة على عمال GitHub Actions — فنولّده هناك مرة واحدة (وأيضاً
+# عند تغيّر ملفات Gradle) وندفعه إلى الفرع الرئيسي. بمجرد أن يصبح الملف موجوداً تُغلق
+# الملاحظة، وتبقى بناءات Android الحالية كما هي (--write-locks لا يغيّر السلوك).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "android/build.gradle"
+      - "android/app/build.gradle"
+      - "android/variables.gradle"
+      - "android/gradle/wrapper/gradle-wrapper.properties"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gradle-lockfile-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  generate-lockfiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # وحدات Capacitor (project(':capacitor-android')…) تُحلَّ من node_modules —
+      # نثبّتها بدون سكربتات دورة الحياة حتى يرى Gradle مجلدات المشاريع كاملة.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: تثبيت حزم node_modules (بدون سكربتات دورة الحياة)
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: تفعيل Android SDK (مثبّت مسبقاً على عمال GitHub)
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
+
+      # --write-locks: يكتب حالة القفل لكل إعدادية قابلة للحل (المحلّة فعلياً)
+      # بدون تغيير سلوك البناء المعتاد — الملفات الناتجة هي المرجع المستقبلي.
+      - name: توليد ملفات القفل (gradle.lockfile)
+        run: |
+          set -uo pipefail
+          cd android
+          chmod +x gradlew
+          ./gradlew dependencies :app:dependencies :app:assembleDebug --write-locks --no-daemon --console=plain
+
+      - name: حفظ ملفات القفل إن تغيّرت
+        run: |
+          set -uo pipefail
+          git add -A android
+          if git diff --cached --quiet; then
+            echo "لا تغيير في ملفات القفل — كل شيء محدَّث."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(deps): توليد gradle.lockfile لقفل تبعيات Gradle (S8569)"
+          git push
+          echo "✅ دُفع ملف القفل إلى main."

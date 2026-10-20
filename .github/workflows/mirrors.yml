@@ -91,7 +91,9 @@ jobs:
             exit 0
           fi
           # تثبيت مثبّت بإصدار محدّد (بدل npx الذي ينزّل الحزم عند الطلب)
-          npm install --global wrangler@4.151.2 --no-audit --no-fund
+          # مع --ignore-scripts: لا تعمل سكربتات دورة الحياة أثناء التركيب (S6505)
+          # — تحقّق فعلياً أن wrangler 4.151.2 يعمل بهذا الوضع قبل اعتماده.
+          npm install --global wrangler@4.151.2 --ignore-scripts --no-audit --no-fund
           wrangler pages deploy dist \
             --project-name=vipyemen --branch=main --commit-dirty=true
           echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -113,7 +115,9 @@ jobs:
             exit 0
           fi
           # تثبيت مثبّت بإصدار محدّد (بدل npx الذي ينزّل الحزم عند الطلب)
-          npm install --global edgeone@1.6.42 --no-audit --no-fund
+          # مع --ignore-scripts: لا تعمل سكربتات دورة الحياة أثناء التركيب (S6505)
+          # — تحقّق فعلياً أن edgeone 1.6.42 يعمل بهذا الوضع قبل اعتماده.
+          npm install --global edgeone@1.6.42 --ignore-scripts --no-audit --no-fund
           edgeone makers deploy ./dist \
             --name "$EDGEONE_PROJECT_NAME" \
             --token "$EDGEONE_API_TOKEN" \

@@ -2,7 +2,9 @@
 //
 // ملاحظة قفل التبعيات (Sonar text:S8569): ملف gradle.lockfile يُولَّد تلقائياً عبر
 // سير العمل .github/workflows/gradle-lockfile.yml على بيئة Android SDK ويدفع إلى
-// main عند تغيّر أي ملفات Gradle هنا — لا تحرّره يدوياً.buildscript {
+// main عند تغيّر أي ملفات Gradle هنا — لا تحرّره يدوياً.
+
+buildscript {
     // قفل التبعيات (Sonar text:S8569): يفعّل قراءة/كتابة gradle.lockfile —
     // يُولَّد الملف تلقائياً عبر سير العمل gradle-lockfile.yml على بيئة CI.
     dependencyLocking {

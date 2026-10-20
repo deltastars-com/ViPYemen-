@@ -28,6 +28,19 @@
   (كل تبعيات التطبيق بتشطيباتها) و`gradle/verification-metadata.xml` (بصمات sha256
   لجذر المشروع) ويدفعهما — يغلق S8569 مع بقاء بناءات المتاجر تعمل بالقفل نفسه.
 
+### 📦 جاهزية المتاجر (Google Play / App Store)
+- **رقم الإصدار يُشتق من الوسم**: وظائف `build-android` و`build-ios` و`build-ios-signed`
+  تحسب `MAJOR.MINOR.PATCH` من وسم الإصدار ثم تمرّر `-PappVersionName` و`-PappVersionCode`
+  إلى Gradle (و`MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` إلى Xcode). سبب الإصلاح:
+  القيم كانت ثابتة (‎versionCode 6070062) فيرفض Google Play الرفع التالي لو لم يتغيّر،
+  ولا يطابق اسم الإصدار على الجهاز الوسم المنشور. القيم الاحتياطية للبناء المحلي
+  صارت مطابقة لـ `6.8.7` (‎6080007) في `build.gradle` و`project.pbxproj` و`package.json`.
+
+### 🔄 حراسة توكن Supabase
+- سير عمل `supabase-token-guard.yml`: فحص أسبوعي فعلي لتوكن `SUPABASE_ACCESS_TOKEN`
+  عبر Management API — يفتح/يحدّث Issue قبل انتهاء الصلاحية وبعدها، ويغلقه تلقائياً
+  فور عودتها. التفاصيل في `SUPABASE-TOKEN-RENEWAL.md`.
+
 ### ✅ التحقق
 - `tsc -b --noEmit` ناجح (0 أخطاء) · `vite build` ناجح (PWA 87 مدخلة) · تطابق بيانات
   البذور متحقق آلياً · YAML سليم لكل سير عمل معدَّل · **بوّابة Sonar: OK** بكل شروطها.

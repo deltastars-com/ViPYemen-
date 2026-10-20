@@ -122,7 +122,7 @@ jobs:
             vite.config.ts capacitor.config.ts convex.json \
             netlify.toml vercel.json render.yaml codemagic.yaml \
             edgeone.config.js edgeone.json || true
-          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md SITE-OWNERSHIP.md IOS-APPSTORE-GUIDE.md FREE-SERVERS.md PLATFORM-GUIDE.md ENV-VARIABLES.md SECRETS-SETUP.md META-DATA-ACCESS-RENEWAL.md CLOUD-STORAGE.md ViP-Yemen-Complete-Documentation.md README.md CHANGELOG.md store-listing.json release/ || true
+          cp PRIVACY-POLICY.md PRIVACY-POLICY-APP.md PUBLISHING-GUIDE.md RELEASE-GUIDE.md OPERATIONS-GUIDE.md SIGNING-AND-OWNERSHIP.md SITE-OWNERSHIP.md IOS-APPSTORE-GUIDE.md FREE-SERVERS.md PLATFORM-GUIDE.md ENV-VARIABLES.md SECRETS-SETUP.md META-DATA-ACCESS-RENEWAL.md SUPABASE-TOKEN-RENEWAL.md CLOUD-STORAGE.md ViP-Yemen-Complete-Documentation.md README.md CHANGELOG.md store-listing.json release/ || true
           cp store-graphics/*.png release/ || true
 
       # Assets go straight from this job onto the GitHub Release (no CI
@@ -220,6 +220,31 @@ jobs:
       - name: Sync Capacitor
         run: ./node_modules/.bin/cap sync android
 
+      # رقم الإصدار (versionCode) يجب أن يتزايد في كل رفع إلى Google Play،
+      # واسم الإصدار يجب أن يطابق الوسم المنشور — لذلك يُشتقان من الوسم نفسه
+      # بدل بقاء قيم ثابتة في build.gradle تتقادم مع كل إصدار.
+      - name: Derive store version from the release tag
+        id: ver
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          CORE="${VERSION%%-*}"
+          if [[ ! "$CORE" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Unsupported version '$VERSION' — expected MAJOR.MINOR.PATCH (e.g. v6.8.7)."
+            exit 1
+          fi
+          MAJOR=$((10#${BASH_REMATCH[1]}))
+          MINOR=$((10#${BASH_REMATCH[2]}))
+          PATCH=$((10#${BASH_REMATCH[3]}))
+          CODE=$(( MAJOR * 1000000 + MINOR * 10000 + PATCH ))
+          echo "name=$CORE" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Store version: $CORE · versionCode $CODE"
+
       - name: Configure release keystore (secrets from the admin vault)
         id: keystore
         env:
@@ -251,7 +276,9 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease bundleRelease --no-daemon
+          ./gradlew assembleRelease bundleRelease --no-daemon \
+            "-PappVersionName=${{ steps.ver.outputs.name }}" \
+            "-PappVersionCode=${{ steps.ver.outputs.code }}"
           mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/vip-yemen-android-${{ github.ref_name }}.apk
           mv app/build/outputs/bundle/release/app-release.aab app/build/outputs/bundle/release/vip-yemen-android-${{ github.ref_name }}.aab
 
@@ -424,6 +451,31 @@ jobs:
       #  - sideload-installs for testing via Xcode/Apple Configurator,
       #  - re-signs in seconds with any Apple Developer account
       #    (xcodebuild -exportArchive with ExportOptions.plist).
+      # نسخة App Store تُشتق من الوسم كذلك (MARKETING_VERSION/CFBundleVersion في
+      # Info.plist يقرآن هذين المتغيرين) — فكل إصدار يصل App Store Connect برقم
+      # بناء متزايد بدل رقم ثابت يرفضه المتجر.
+      - name: Derive store version from the release tag
+        id: ver
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          CORE="${VERSION%%-*}"
+          if [[ ! "$CORE" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Unsupported version '$VERSION' — expected MAJOR.MINOR.PATCH (e.g. v6.8.7)."
+            exit 1
+          fi
+          MAJOR=$((10#${BASH_REMATCH[1]}))
+          MINOR=$((10#${BASH_REMATCH[2]}))
+          PATCH=$((10#${BASH_REMATCH[3]}))
+          CODE=$(( MAJOR * 1000000 + MINOR * 10000 + PATCH ))
+          echo "name=$CORE" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Store version: $CORE · build $CODE"
+
       - name: Build iOS app (unsigned, arm64)
         run: |
           set -o pipefail
@@ -436,6 +488,8 @@ jobs:
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="${{ steps.ver.outputs.name }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.code }}" \
             build | tee build.log | tail -20
 
       - name: Package IPA + collect App Store files
@@ -560,6 +614,28 @@ jobs:
           echo "$PROFILE_B64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/vipyemen.mobileprovision
           security find-identity -v -p codesigning
 
+      - name: Derive store version from the release tag
+        id: ver
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          CORE="${VERSION%%-*}"
+          if [[ ! "$CORE" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Unsupported version '$VERSION' — expected MAJOR.MINOR.PATCH (e.g. v6.8.7)."
+            exit 1
+          fi
+          MAJOR=$((10#${BASH_REMATCH[1]}))
+          MINOR=$((10#${BASH_REMATCH[2]}))
+          PATCH=$((10#${BASH_REMATCH[3]}))
+          CODE=$(( MAJOR * 1000000 + MINOR * 10000 + PATCH ))
+          echo "name=$CORE" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Store version: $CORE · build $CODE"
+
       - name: Archive + export the signed IPA
         env:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -591,7 +667,9 @@ jobs:
           cd ios/App
           xcodebuild -project App.xcodeproj -scheme App -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' \
-            -derivedDataPath build -archivePath build/App.xcarchive archive | tail -20
+            -derivedDataPath build -archivePath build/App.xcarchive \
+            MARKETING_VERSION="${{ steps.ver.outputs.name }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.code }}" archive | tail -20
           xcodebuild -exportArchive -archivePath build/App.xcarchive \
             -exportOptionsPlist /tmp/ExportOptions.plist -exportPath build/export | tail -20
           ls -la build/export

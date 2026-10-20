@@ -14,6 +14,13 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// اسم ورقم إصدار المتجر: يشترط Google Play رقماً تصاعدياً في كل رفع، لذلك
+// يُشتق الاثنان من وسم الإصدار في CI عبر `-PappVersionName` و`-PappVersionCode`
+// (انظر .github/workflows/release.yml). القيمة الاحتياطية مطابقة لـ package.json
+// كي يعمل البناء المحلي بلا أي معاملات.
+def appVersionName = (project.findProperty('appVersionName') ?: '6.8.7').toString()
+def appVersionCode = (project.findProperty('appVersionCode') ?: '6080007').toString().toInteger()
+
 android {
     namespace = "com.vip.yemen"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -21,8 +28,8 @@ android {
         applicationId "com.vip.yemen"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 6070062
-        versionName "6.7.62"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

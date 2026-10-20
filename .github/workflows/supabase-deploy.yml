@@ -1,6 +1,10 @@
 # Deploy Supabase migrations automatically on push to main.
 # Requires: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_ID, and SUPABASE_DB_PASSWORD.
 # If secrets are not configured, the workflow skips gracefully.
+#
+# صلاحية التوكن تُراقب أسبوعياً في supabase-token-guard.yml (وتُغلق تنبيهاتها
+# تلقائياً) — انظر SUPABASE-TOKEN-RENEWAL.md. هذا السير يفشل بوضوح إن كان
+# التوكن مرفوضاً، لأن الترحيل حينها سيطبّق مخططات قديمة بدل الجديدة.
 
 name: Deploy Supabase Migrations
 

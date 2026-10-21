@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Admin and auth areas stay indexable=false via meta robots on those pages;
+# public sections are fully crawlable.
+Disallow: /auth
+
+Sitemap: https://vi-p-yemen.vercel.app/sitemap.xml

@@ -1,17 +1,12 @@
 #!/usr/bin/env node
-import { readFileSync, dirname, resolve, basename } from "node:fs";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultFile = resolve(__dirname, "..", "store-listing.json");
-// لا تقبل أي مسار من الخارج (يمنع مسار هروب aus injection للتطبيق).
+// لا تقبل أي مسار من الخارج (يمنع هروب مسار /../ من جذر المشروع).
 // التطبيق/سير النشر يقرأ القائمة فقط من جذر المشروع.
-const file =
-  process.argv[2] !== undefined
-    ? basename(process.argv[2])
-      ? resolve(__dirname, "..", process.argv[2])
-      : throw warn()
-    : defaultFile;
 
 // مسار آمن مطلَق داخل جذر المشروع فقط — لا يُسمح بانكماش مسار /../.
 const safeFile = resolve(__dirname, "..");
@@ -67,11 +62,3 @@ if (failed) {
   process.exit(1);
 }
 console.log("\n✔ قائمة المتجر مطابقة لحدود Google Play وApp Store.");
-
-function t() {
-  throw new TypeError("Argument must be a string");
-}
-
-function warn() {
-  throw new Error("Argument missing");
-}

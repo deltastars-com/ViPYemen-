@@ -14,6 +14,7 @@ import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { requireAdmin } from "./auth";
+import { buildCommitmentText } from "../lib/commitment";
 
 type ContractDoc = {
   _id: any;
@@ -30,6 +31,10 @@ type ContractDoc = {
   fingerprint?: { mode: string; credentialId?: string; verified: boolean };
   signToken?: string;
   receiptNo?: string;
+  serviceType?: string;
+  commitmentText?: string;
+  voiceStorageId?: string;
+  voiceDurationMs?: number;
   status: string;
   signedAt?: number;
   paidAt?: number;
@@ -98,6 +103,9 @@ export const createContract = mutation({
     currency: v.optional(v.string()),
     signature: v.string(),
     signatureType: v.string(),
+    serviceType: v.optional(v.string()),
+    voiceStorageId: v.optional(v.string()),
+    voiceDurationMs: v.optional(v.number()),
     fingerprint: v.optional(
       v.object({
         mode: v.string(),
@@ -117,6 +125,7 @@ export const createContract = mutation({
     }
     const now = Date.now();
     const receiptNo = makeReceiptNo(now);
+    const currency = args.currency ?? "USD";
     const id = await ctx.db.insert("contracts", {
       matchId: args.matchId,
       submissionId: args.submissionId,
@@ -125,10 +134,21 @@ export const createContract = mutation({
       phone: args.phone.trim(),
       amount: args.amount,
       commission: args.commission,
-      currency: args.currency ?? "USD",
+      currency,
       signature: args.signature,
       signatureType: args.signatureType,
       fingerprint: args.fingerprint,
+      serviceType: args.serviceType,
+      voiceStorageId: args.voiceStorageId,
+      voiceDurationMs: args.voiceDurationMs,
+      commitmentText: buildCommitmentText({
+        beneficiaryName: args.beneficiaryName,
+        amount: args.amount,
+        commission: args.commission,
+        currency,
+        serviceType: args.serviceType,
+        title: args.title,
+      }),
       receiptNo,
       status: "signed",
       signedAt: now,
@@ -157,6 +177,7 @@ export const createDraft = mutation({
     amount: v.number(),
     commission: v.number(),
     currency: v.optional(v.string()),
+    serviceType: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<{ id: string; signToken: string }> => {
     await requireAdmin(ctx, args.token);
@@ -171,6 +192,7 @@ export const createDraft = mutation({
       amount: args.amount,
       commission: args.commission,
       currency: args.currency ?? "USD",
+      serviceType: args.serviceType,
       signature: "",
       signatureType: "pending",
       signToken,
@@ -193,6 +215,8 @@ export const getBySignToken = query({
     currency: string;
     status: string;
     receiptNo?: string;
+    serviceType?: string;
+    commitmentText?: string;
   } | null> => {
     if (!t) return null;
     const row = await ctx.db
@@ -209,11 +233,13 @@ export const getBySignToken = query({
       currency: row.currency,
       status: row.status,
       receiptNo: row.receiptNo,
+      serviceType: row.serviceType,
+      commitmentText: row.commitmentText,
     };
   },
 });
 
-/** توقيع المستفيد لعقد مسودة: اسم + هاتف + توقيع + بصمة. */
+/** توقيع المستفيد لعقد مسودة: اسم + هاتف + توقيع + بصمة + التزام صوتي. */
 export const sign = mutation({
   args: {
     t: v.string(),
@@ -221,6 +247,8 @@ export const sign = mutation({
     phone: v.string(),
     signature: v.string(),
     signatureType: v.string(),
+    voiceStorageId: v.optional(v.string()),
+    voiceDurationMs: v.optional(v.number()),
     fingerprint: v.optional(
       v.object({
         mode: v.string(),
@@ -256,6 +284,16 @@ export const sign = mutation({
       signature: args.signature,
       signatureType: args.signatureType,
       fingerprint: args.fingerprint,
+      voiceStorageId: args.voiceStorageId,
+      voiceDurationMs: args.voiceDurationMs,
+      commitmentText: buildCommitmentText({
+        beneficiaryName: args.beneficiaryName,
+        amount: row.amount,
+        commission: row.commission,
+        currency: row.currency,
+        serviceType: row.serviceType,
+        title: row.title,
+      }),
       receiptNo,
       status: "signed",
       signedAt: now,
@@ -343,5 +381,37 @@ export const voidContract = mutation({
       voidReason: reason?.trim() || "أُلغيت من قبل الإدارة",
     });
     return { ok: true };
+  },
+});
+
+/**
+ * 🔊 ربط تسجيل صوتي (التزام صوتي) بوثيقة توثيق — يُرفع أولاً عبر
+ * storage.generateUploadUrl ثم يُسجَّل معرّفه هنا مع مدته.
+ * يُستخدم في مسار الإدارة (وثيقة قائمة) أو عند التوقيع عن بُعد.
+ */
+export const attachVoice = mutation({
+  args: {
+    token: v.string(),
+    id: v.id("contracts"),
+    voiceStorageId: v.string(),
+    voiceDurationMs: v.optional(v.number()),
+  },
+  handler: async (ctx, { token, id, voiceStorageId, voiceDurationMs }): Promise<{ ok: true }> => {
+    await requireAdmin(ctx, token);
+    const row = await ctx.db.get(id);
+    if (!row) throw new ConvexError("الوثيقة غير موجودة");
+    await ctx.db.patch(id, { voiceStorageId, voiceDurationMs });
+    return { ok: true };
+  },
+});
+
+/** جلب رابط تشغيل مؤقت للتسجيل الصوتي — للإدارة فقط (جلسة موثّقة). */
+export const getVoiceUrl = query({
+  args: { token: v.string(), id: v.id("contracts") },
+  handler: async (ctx, { token, id }): Promise<string | null> => {
+    await requireAdmin(ctx, token);
+    const row = await ctx.db.get(id);
+    if (!row?.voiceStorageId) return null;
+    return await ctx.storage.getUrl(row.voiceStorageId as any);
   },
 });

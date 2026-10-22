@@ -2,7 +2,7 @@
 // ViP Yemen — Official app icon generator (zero native deps)
 // -----------------------------------------------------------------------------
 // Renders the OFFICIAL gold seal badge 1:1:
-//   • scalloped metallic-gold edge on a black background
+//   • scalloped metallic-gold edge on the royal-blue (#121685) background
 //   • polished gold disc with engraved seed-of-life circle pattern
 //   • small crown + large chevron crown motif, engraved
 //   • engraved "VIP" / "YEMEN" lettering
@@ -288,7 +288,9 @@ const GOLD_DARK = [138, 102, 34];
 const ENGRAVE = [104, 74, 18];                 // dark engraved bronze
 const ENGRAVE_SOFT = [124, 92, 26];
 const HIGHLIGHT = [252, 240, 190];
-const BLACK = [5, 5, 5];
+// الخلفية الرسمية كحلي ملكي #121685 — نفس هوية المنصة في index.css
+// وtheme-color وخلفية أيقونة أندرويد التكيّفية (ic_launcher_background).
+const NAVY = [18, 22, 133];
 
 // scallop outer radius
 function edgeR(a) {
@@ -361,7 +363,7 @@ function colorAt(x, y, maskable, fgScale) {
   const s = fgScale ?? (maskable ? 0.8 : 1);
   const d0 = Math.hypot(x - CX, y - CY);
   if (d0 > 250 * s) {
-    return fgScale != null ? [0, 0, 0, 0] : [5, 5, 5, 255];
+    return fgScale != null ? [0, 0, 0, 0] : [...NAVY, 255];
   }
   const mx = CX + (x - CX) / s;
   const my = CY + (y - CY) / s;
@@ -369,8 +371,8 @@ function colorAt(x, y, maskable, fgScale) {
   const d = Math.hypot(dx, dy);
   const a = Math.atan2(dy, dx);
 
-  // black background beyond the scalloped edge
-  if (d > edgeR(a)) return [...BLACK, 255];
+  // royal-blue background beyond the scalloped edge
+  if (d > edgeR(a)) return [...NAVY, 255];
 
   // scalloped edge + rim: polished gold with engraved separation lines
   const metal = goldMetalColor(mx, my);
@@ -518,6 +520,7 @@ const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
       <stop offset="100%" stop-color="#8a6622"/>
     </linearGradient>
   </defs>
+  <rect width="512" height="512" fill="#121685"/>
   <path d="${scallopPath()}" fill="url(#gold)"/>
   <circle cx="256" cy="256" r="214" fill="none" stroke="#684a12" stroke-width="2.4"/>
   <circle cx="256" cy="256" r="202" fill="none" stroke="#7c5c1a" stroke-width="2"/>
@@ -565,9 +568,10 @@ if (STORE_ONLY) {
   const canvas = Buffer.alloc(FW * FH * 4);
   for (let y = 0; y < FH; y++) {
     const t = clamp01(y / FH);
-    const bgR = Math.round(lerp(13, 16, t));
-    const bgG = Math.round(lerp(17, 24, t));
-    const bgB = Math.round(lerp(30, 40, t));
+    // تدرّج كحلي ملكي #121685 — نفس خلفية الشعار الرسمي
+    const bgR = Math.round(lerp(14, 26, t));
+    const bgG = Math.round(lerp(18, 32, t));
+    const bgB = Math.round(lerp(110, 155, t));
     const insideSeal = y >= sy0 && y < sy0 + sealBox;
     for (let x = 0; x < FW; x++) {
       let r = bgR, g = bgG, b = bgB;

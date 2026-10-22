@@ -9,18 +9,22 @@
  *   • استخراج سند الدفع PDF وتسجيل التسديد.
  */
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "convex/react";
-import { Fingerprint, FileSignature, Printer, CheckCircle2, Link2, Copy, XCircle, Ban } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { Fingerprint, FileSignature, Printer, CheckCircle2, Link2, Copy, XCircle, Ban, ScrollText, Volume2, Play } from "lucide-react";
 import { api } from "../../convex/_generated/api";
-import { Badge, Button, Input, Label, Modal } from "@/components/ui";
+import { Badge, Button, Input, Label, Modal, Select } from "@/components/ui";
 import { createFingerprint, fallbackFingerprint, FingerprintUnavailable, type FingerprintResult } from "@/lib/fingerprint";
 import { printContractPdf, type PrintableContract } from "@/lib/contractPdf";
+import { SERVICE_TYPES, buildCommitmentText, serviceTypeLabel } from "@/lib/commitment";
+import { VoiceRecorder, type VoiceResult } from "./VoiceRecorder";
 
 export type ContractRecord = PrintableContract & {
   _id: string;
   matchId?: string;
   submissionId?: string;
   signToken?: string;
+  /** معرّف التسجيل الصوتي في التخزين (للاستماع من الوثيقة القائمة) */
+  voiceStorageId?: string;
 };
 
 /* ───────────────────────── خانة التوقيع الإلكتروني ───────────────────────── */
@@ -139,6 +143,11 @@ export function ContractModal({
   const createDraft = useMutation(api.contracts.createDraft);
   const markPaid = useMutation(api.contracts.markPaid);
   const voidContract = useMutation(api.contracts.voidContract);
+  // رابط تشغيل التسجيل الصوتي للوثيقة القائمة (يتخطّى إن لم يوجد تسجيل).
+  const voiceUrl = useQuery(
+    api.contracts.getVoiceUrl,
+    contract && contract.voiceStorageId ? { token, id: contract._id as any } : "skip"
+  );
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -146,6 +155,8 @@ export function ContractModal({
   const [commission, setCommission] = useState("");
   const [signature, setSignature] = useState("");
   const [fingerprint, setFingerprint] = useState<FingerprintResult | null>(null);
+  const [serviceType, setServiceType] = useState("");
+  const [voice, setVoice] = useState<VoiceResult | null>(null);
   const [remoteToken, setRemoteToken] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -157,16 +168,27 @@ export function ContractModal({
     setError("");
     setSignature("");
     setFingerprint(null);
+    setVoice(null);
     setRemoteToken(null);
     setCopied(false);
     setName(contract?.beneficiaryName || requestName || "");
     setPhone(contract?.phone || requestPhone || "");
     setAmount(contract ? String(contract.amount) : "");
     setCommission(contract ? String(contract.commission) : "");
+    setServiceType(contract?.serviceType || "");
   }, [open, contract?._id, matchTitle, requestName, requestPhone]);
 
   const amountNum = Number(amount) || 0;
   const commissionNum = Number(commission) || 0;
+  // نص الالتزام المُعبّأ يُعرض للمستخدم ليقرؤه ويُجمَّد لحظة التوقيع.
+  const commitmentPreview = buildCommitmentText({
+    beneficiaryName: name,
+    amount: amountNum,
+    commission: commissionNum,
+    currency: contract?.currency ?? "USD",
+    serviceType,
+    title: matchTitle,
+  });
   const remoteLink = remoteToken
     ? `${window.location.origin}${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}/contract?t=${remoteToken}`
     : null;
@@ -199,6 +221,9 @@ export function ContractModal({
         commission: commissionNum,
         signature,
         signatureType: "drawn",
+        serviceType: serviceType || undefined,
+        voiceStorageId: voice?.storageId,
+        voiceDurationMs: voice?.durationMs,
         fingerprint: fingerprint ?? undefined,
       });
       onClose();
@@ -222,6 +247,7 @@ export function ContractModal({
         phone,
         amount: amountNum,
         commission: commissionNum,
+        serviceType: serviceType || undefined,
       });
       setRemoteToken(r.signToken);
     } catch (err) {
@@ -277,8 +303,43 @@ export function ContractModal({
             </div>
             {contract.signature && (
               <div className="rounded-xl border border-ink-700/60 p-3">
-                <p className="mb-1 text-[11px] text-ink-400">التوقيع الإلكتروني:</p>
+                <p className="mb-1 text-[11px] text-ink-400">التوقيع الإلكتروني (مطابق 100% لما رسمه المستفيد):</p>
                 <img src={contract.signature} alt="توقيع" className="max-h-24" />
+              </div>
+            )}
+            {contract.serviceType && (
+              <p className="rounded-xl border border-ink-700/60 p-2.5 text-[12px]">
+                <span className="text-ink-400">نوع الخدمة:</span>{" "}
+                <b className="text-gold-300">{serviceTypeLabel(contract.serviceType)}</b>
+              </p>
+            )}
+            {contract.commitmentText && (
+              <div className="rounded-xl border border-gold-500/30 bg-gold-500/[0.05] p-3">
+                <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-black text-gold-300">
+                  <ScrollText className="h-3.5 w-3.5" /> نص الالتزام المُجمَّد عند التوقيع
+                </p>
+                <p className="whitespace-pre-line text-[11.5px] leading-relaxed text-ink-200">
+                  {contract.commitmentText}
+                </p>
+              </div>
+            )}
+            {contract.voiceStorageId && (
+              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-3">
+                <Volume2 className="h-4 w-4 shrink-0 text-emerald-300" />
+                <span className="text-[11.5px] font-bold text-emerald-200">التزام صوتي مُسجَّل ✓</span>
+                {voiceUrl ? (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      const a = new Audio(voiceUrl);
+                      void a.play();
+                    }}
+                  >
+                    <Play className="h-4 w-4" /> استماع
+                  </Button>
+                ) : (
+                  <span className="text-[11px] text-ink-400">…</span>
+                )}
               </div>
             )}
             <div className="flex flex-wrap gap-2">
@@ -353,6 +414,25 @@ export function ContractModal({
                 <Label>عمولة المنصة</Label>
                 <Input value={commission} onChange={(e) => setCommission(e.target.value)} type="number" min="0" dir="ltr" placeholder="0" />
               </div>
+              <div className="sm:col-span-2">
+                <Label>نوع الخدمة (يظهر في نص الالتزام)</Label>
+                <Select value={serviceType} onChange={(e) => setServiceType(e.target.value)}>
+                  <option value="">— اختر نوع الخدمة —</option>
+                  {SERVICE_TYPES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+
+            {/* معاينة نص الالتزام الرسمي (يُجمَّد نصّه لحظة التوقيع) */}
+            <div className="rounded-xl border border-gold-500/30 bg-gold-500/[0.05] p-3">
+              <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-black text-gold-300">
+                <ScrollText className="h-3.5 w-3.5" /> نص الالتزام الرسمي ({serviceTypeLabel(serviceType)})
+              </p>
+              <p className="whitespace-pre-line text-[12px] leading-relaxed text-ink-200">
+                {commitmentPreview}
+              </p>
             </div>
 
             <div>
@@ -376,6 +456,13 @@ export function ContractModal({
                 </span>
               )}
             </div>
+
+            <VoiceRecorder
+              commitmentText={commitmentPreview}
+              onUploaded={setVoice}
+              onCleared={() => setVoice(null)}
+              disabled={busy}
+            />
 
             {error && (
               <p className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-[12px] font-bold text-rose-300">

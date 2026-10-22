@@ -6,11 +6,13 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Link } from "react-router-dom";
-import { FileSignature, Fingerprint, Home, XCircle, CheckCircle2, ShieldCheck } from "lucide-react";
+import { FileSignature, Fingerprint, Home, XCircle, CheckCircle2, ShieldCheck, ScrollText } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { LogoMark } from "@/components/Logo";
 import { Button, Input, Label, Spinner } from "@/components/ui";
 import { SignaturePad } from "@/components/admin/ContractModal";
+import { VoiceRecorder, type VoiceResult } from "@/components/admin/VoiceRecorder";
+import { buildCommitmentText, serviceTypeLabel } from "@/lib/commitment";
 import { createFingerprint, fallbackFingerprint, FingerprintUnavailable, type FingerprintResult } from "@/lib/fingerprint";
 
 export function ContractSignPage() {
@@ -22,6 +24,7 @@ export function ContractSignPage() {
   const [phone, setPhone] = useState("");
   const [signature, setSignature] = useState("");
   const [fingerprint, setFingerprint] = useState<FingerprintResult | null>(null);
+  const [voice, setVoice] = useState<VoiceResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -57,6 +60,8 @@ export function ContractSignPage() {
         phone,
         signature,
         signatureType: "drawn",
+        voiceStorageId: voice?.storageId,
+        voiceDurationMs: voice?.durationMs,
         fingerprint: fingerprint ?? undefined,
       });
       setDone(r.receiptNo);
@@ -66,6 +71,18 @@ export function ContractSignPage() {
       setBusy(false);
     }
   }
+
+  // نص الالتزام الرسمي المعبّأ — يُقرأ صوتياً اختيارياً ويُجمَّد عند التوقيع.
+  const commitmentText = doc
+    ? buildCommitmentText({
+        beneficiaryName: name,
+        amount: doc.amount,
+        commission: doc.commission,
+        currency: doc.currency,
+        serviceType: doc.serviceType,
+        title: doc.title,
+      })
+    : "";
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center px-4 py-16">
@@ -121,6 +138,16 @@ export function ContractSignPage() {
               </p>
             </div>
 
+            {/* نص الالتزام الرسمي — يقرؤه المستفيد ويُجمَّد نصّه لحظة التوقيع */}
+            <div className="rounded-xl border border-gold-500/30 bg-gold-500/[0.05] p-3">
+              <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-black text-gold-300">
+                <ScrollText className="h-3.5 w-3.5" /> نص الالتزام الرسمي ({serviceTypeLabel(doc.serviceType)})
+              </p>
+              <p className="whitespace-pre-line text-[12px] leading-relaxed text-ink-200">
+                {commitmentText}
+              </p>
+            </div>
+
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
                 <Label>الاسم الكامل</Label>
@@ -147,6 +174,15 @@ export function ContractSignPage() {
                   تأكيد بديل مسجّل
                 </Button>
               )}
+            </div>
+
+            <div className="mt-3">
+              <VoiceRecorder
+                commitmentText={commitmentText}
+                onUploaded={setVoice}
+                onCleared={() => setVoice(null)}
+                disabled={busy}
+              />
             </div>
 
             {doc.status !== "draft" && (

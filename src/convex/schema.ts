@@ -501,6 +501,14 @@ export default defineSchema({
     ),
     signToken: v.optional(v.string()),
     receiptNo: v.optional(v.string()),
+    /** نوع الخدمة في نص الالتزام (قيمة من SERVICE_TYPES: توظيف/بيع عقار/…) */
+    serviceType: v.optional(v.string()),
+    /** نص الالتزام الكامل المُجمَّد لحظة التوقيع (إثبات لا يتغيّر بعدها) */
+    commitmentText: v.optional(v.string()),
+    /** مسار التسجيل الصوتي للالتزام في تخزين Convex (اختياري) */
+    voiceStorageId: v.optional(v.string()),
+    /** مدة التسجيل الصوتي بالميلي ثانية (للعرض في السند) */
+    voiceDurationMs: v.optional(v.number()),
     status: v.string(),
     signedAt: v.optional(v.number()),
     paidAt: v.optional(v.number()),

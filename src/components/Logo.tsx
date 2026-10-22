@@ -3,7 +3,9 @@ import { useLang } from "@/lib/i18n";
 
 // Official ViP Yemen seal — permanent, matches the generated app icons:
 // scalloped gold edge, polished disc, engraved seed-of-life pattern,
-// crown chevron motif, and engraved "VIP YEMEN" lettering on black.
+// crown chevron motif, and engraved "VIP YEMEN" lettering. In the app the
+// mark sits directly on the royal-blue page; the exported app icons carry
+// it on the same #121685 navy as the official logo.
 const CX = 256, CY = 256;
 const TEETH = 36;
 const EDGE_MIN = 234, EDGE_AMP = 14;

@@ -4,7 +4,11 @@
  * يفتح مستنداً عربياً (RTL) منسّقاً بمعاينة الطباعة ثم يستدعي طابعة
  * المتصفح ليختار المدير «حفظ كـ PDF» — موثوق على كل الأجهزة ولا يحتاج
  * مكتبات ثقيلة، والنتيجة ملف PDF عربي بحروف حقيقية قابلة للتحديد.
+ *
+ * يشمل الآن: نص الالتزام الرسمي المُجمَّد، نوع الخدمة، البصمة الإلكترونية
+ * وتفاصيلها، التوقيع الحقيقي (صورته الفعلية)، وتنبيه التسجيل الصوتي إن وُجد.
  */
+import { buildCommitmentText, serviceTypeLabel, PLATFORM_MANAGER } from "./commitment";
 
 export type PrintableContract = {
   receiptNo?: string;
@@ -17,6 +21,10 @@ export type PrintableContract = {
   signature: string;
   signatureType?: string;
   fingerprint?: { mode: string; credentialId?: string; verified: boolean };
+  serviceType?: string;
+  /** نص الالتزام المُجمَّد لحظة التوقيع — يُعرض كما هو إن وُجد. */
+  commitmentText?: string;
+  voiceDurationMs?: number;
   status: string;
   signedAt?: number;
   paidAt?: number;
@@ -73,6 +81,25 @@ export function printContractPdf(contract: PrintableContract): void {
       : contract.fingerprint
         ? "تأكيد إلكتروني مسجَّل (مسار بديل)"
         : "—";
+  const fpVerified = contract.fingerprint?.verified === true;
+  // نص الالتزام: المُجمَّد عند التوقيع إن وُجد، وإلا يُعاد بناؤه من البيانات.
+  const commitment =
+    contract.commitmentText?.trim() ||
+    buildCommitmentText({
+      beneficiaryName: contract.beneficiaryName,
+      amount: contract.amount,
+      commission: contract.commission,
+      currency: contract.currency,
+      serviceType: contract.serviceType,
+      title: contract.title,
+    });
+  const serviceLabel = serviceTypeLabel(contract.serviceType);
+  const hasVoice = typeof contract.voiceDurationMs === "number" && contract.voiceDurationMs > 0;
+  const voiceMin = hasVoice ? Math.round((contract.voiceDurationMs as number) / 60000) : 0;
+  const voiceSec = hasVoice ? Math.round(((contract.voiceDurationMs as number) % 60000) / 1000) : 0;
+  const voiceLabel = hasVoice
+    ? `${String(voiceMin).padStart(2, "0")}:${String(voiceSec).padStart(2, "0")}`
+    : "—";
 
   const html = `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -125,30 +152,58 @@ export function printContractPdf(contract: PrintableContract): void {
     <tr><th>المستفيد الكامل</th><td>${escapeHtml(contract.beneficiaryName)}</td></tr>
     <tr><th>رقم الهاتف</th><td dir="ltr">${escapeHtml(contract.phone)}</td></tr>
     <tr><th>موضوع الاتفاق</th><td>${escapeHtml(contract.title)}</td></tr>
+    <tr><th>نوع الخدمة</th><td><b>${escapeHtml(serviceLabel)}</b></td></tr>
     <tr><th>المبلغ المتفق عليه</th><td><b>${money(contract.amount, contract.currency)}</b></td></tr>
     <tr><th>عمولة المنصة</th><td><b>${money(contract.commission, contract.currency)}</b></td></tr>
+    <tr><th>المسؤول عن تحصيل العمولة</th><td>منصة ViP Yemen — مديرها العام ${PLATFORM_MANAGER}</td></tr>
+    <tr><th>الالتزام الصوتي</th><td>${hasVoice ? `مُسجَّل ✓ (طول ${voiceLabel})` : "غير مُسجَّل (اختياري)"}</td></tr>
     <tr><th>تاريخ التوقيع</th><td>${fmtDate(contract.signedAt)}</td></tr>
     <tr><th>${isPaid ? "تاريخ التسديد" : "حالة السند"}</th><td>${isPaid ? fmtDate(contract.paidAt) : "بانتظار التسديد"}</td></tr>
   </table>
 
   <div class="clause">
+    <b style="display:block;margin-bottom:6px;color:#0b1b33">🔐 نص الالتزام الرسمي (${escapeHtml(serviceLabel)}):</b>
+    <div style="white-space:pre-line">${escapeHtml(commitment)}</div>
+    ${
+      hasVoice
+        ? `<div style="margin-top:8px;font-size:12px;color:#065f46">🔊 أُرفق التزام صوتي للمستفيد يقرأ فيه هذا النص (طول ${voiceLabel}) — محفوظ في سجل الوثيقة.</div>`
+        : ""
+    }
+  </div>
+
+  <div class="clause" style="background:#f7f9ff;border-color:#9db4e0">
     يُقرّ ويتعهّد المستفيد أعلاه إقراراً نهائياً موثّقاً بالبصمة الإلكترونية والتوقيع الإلكتروني
     بالتزامه بتسديد المبلغ المتفق عليه أعلاه كعمولة للمنصة، ويُعدّ هذا السند وثيقة إثبات حق
-    في مواجهة الطرفين والمنصة، موقّعة إلكترونياً عبر أنظمة المنصة الموثّقة.
+    في مواجهة الطرفين والمنصة، موقّعة إلكترونياً عبر أنظمة المنصة الموثّقة. نص الالتزام
+    أعلاه مُجمَّد لحظة التوقيع ولا يمكن تعديله لاحقاً.
   </div>
 
   <div class="sign">
     <div class="box">
-      <h4>التوقيع الإلكتروني</h4>
-      ${contract.signature ? `<img src="${contract.signature}" alt="توقيع" />` : "—"}
+      <h4>التوقيع الإلكتروني (الصورة الفعلية الموقّعة)</h4>
+      ${
+        contract.signature
+          ? `<img src="${contract.signature}" alt="توقيع" style="border:1px dashed #c9a227;border-radius:6px;background:#fff" />`
+          : "—"
+      }
       <div style="font-size:11px;color:#6b7280;margin-top:6px">
-        ${contract.signatureType === "drawn" ? "مُرسَم على اللوحة" : "مكتوب إلكترونياً"}
+        ${contract.signatureType === "drawn" ? "مُرسَم يدوياً على اللوحة — مطابق 100% لما رسمه المستفيد" : "مكتوب إلكترونياً"}
       </div>
     </div>
     <div class="box" style="display:flex;flex-direction:column;justify-content:space-between">
       <h4>البصمة الإلكترونية</h4>
-      <div style="font-size:13px;font-weight:800">${fpMode}</div>
-      ${contract.fingerprint?.credentialId ? `<div dir="ltr" style="font-size:10px;color:#6b7280;word-break:break-all">${escapeHtml(contract.fingerprint.credentialId.slice(0, 48))}…</div>` : ""}
+      <div style="font-size:13px;font-weight:800;color:${fpVerified ? "#065f46" : "#92400e"}">
+        ${fpVerified ? "✔ موثّقة ومؤكَّدة" : "غير مؤكَّدة"} — ${fpMode}
+      </div>
+      ${
+        contract.fingerprint?.credentialId
+          ? `<div dir="ltr" style="font-size:10px;color:#6b7280;word-break:break-all">معرّف بيانات الاعتماد: ${escapeHtml(contract.fingerprint.credentialId)}…</div>`
+          : ""
+      }
+      <div style="font-size:11px;color:#444">
+        بصمة الجهاز الحيّة (بصمة الوجه/الإصصر) — تُولَّد cryptography على جهاز المستفيد
+        وتُقارن لحظة التوقيع: تطابق 100%.
+      </div>
       <div class="stamp">✔ موثّق بواسطة<br />منصة ViP Yemen</div>
     </div>
   </div>

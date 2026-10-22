@@ -10,7 +10,7 @@ name: "Keep Supabase alive (نبضة إبقاء)"
 
 on:
   schedule:
-    - cron: "0 3 */5 * * *" # كل 5 أيام 03:00 UTC
+    - cron: "0 3 */5 * *" # كل 5 أيام 03:00 UTC (صيغة GitHub: 5 حقول)
   workflow_dispatch:
 
 permissions:

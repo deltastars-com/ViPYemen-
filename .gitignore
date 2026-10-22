@@ -18,6 +18,11 @@ release/
 *.p12
 *.mobileprovision
 
+# أرشيف TeraBox وحسابات الخدمة (أمان P0 — لا ترفع أبداً)
+terabox_manifest.json
+service-account*.json
+**/google-services.json
+
 # Tooling
 coverage/
 .manus-logs/

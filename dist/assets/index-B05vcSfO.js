@@ -1,2 +1,0 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/web-BAXTOLU7.js","assets/index-CSlLQLIe.js"])))=>i.map(i=>d[i]);
-import{_ as r}from"./index-CfrXEs3B.js";import{registerPlugin as o}from"./index-CSlLQLIe.js";import"./vendor-react-K_sBQnKm.js";import"./vendor-convex-BlUk3JZ8.js";import"./vendor-icons-CaOtI6X6.js";const n=o("App",{web:()=>r(()=>import("./web-BAXTOLU7.js"),__vite__mapDeps([0,1])).then(p=>new p.AppWeb)});export{n as App};

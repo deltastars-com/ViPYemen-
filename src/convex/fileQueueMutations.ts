@@ -80,6 +80,19 @@ export const markFailed = mutation({
   },
 });
 
+/**
+ * 🔒 إيقاف توجيه الملف (حاجز الخصوصية — أمان P0):
+ * مرفقات العملاء تبقى في تخزين المنصة الخاص ولا تُرفع إلى أي قناة.
+ * السبب يُحفظ في السجل كي يراه المشرف.
+ */
+export const markSkipped = mutation({
+  args: { id: v.id("fileQueue"), reason: v.string() },
+  handler: async (ctx, { id, reason }) => {
+    await ctx.db.patch(id, { status: "skipped", error: reason });
+    return { ok: true };
+  },
+});
+
 /** Mark file as cleaned (storage deleted). */
 export const markCleaned = mutation({
   args: { id: v.id("fileQueue") },

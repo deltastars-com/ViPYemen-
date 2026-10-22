@@ -1,70 +1,58 @@
-import { internalAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { internalAction, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 /**
- * Internal action called by the cron job to process the file forwarding queue.
- * Processes files in batches to avoid overwhelming the server.
+ * 🔒 حاجز الخصوصية (أمان P0) — معالج طابور الملفات.
+ *
+ * كان الطابور يوجّه مرفقات العملاء (صور/مستندات/فيديوهات) إلى قناة تيليجرام
+ * العامة ومجموعة فيسبوك ومجتمع واتساب ثم يحذفها من تخزين المنصة — تسرّب
+ * مباشر لبيانات عملاء سرّية قبل أي مراجعة إدارية. أُلغي التوجيه نهائياً:
+ *  • مرفقات العملاء تبقى في تخزين المنصة الخاص فقط.
+ *  • هذا السير يُفرّغ الطابور القديم آلياً بحالة `skipped` (دون إرسال ودون
+ *    حذف أي ملف من التخزين).
+ *  • النشر في قنوات المنصة يقتصر على نصوص الملخص المعتمدة من الإدارة
+ *    عبر channels.publishToChannels — بلا مرفقات أبداً.
+ */
+
+/** يُفرّغ كل المعلّق في الطابور إلى `skipped` دون إرسال أو حذف. */
+export const skipAllPending = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const pending = await ctx.db
+      .query("fileQueue")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .take(200);
+    const reason =
+      "خصوصية: مرفقات العملاء تبقى في تخزين المنصة الخاص ولا تُرسل لأي قناة";
+    for (const row of pending) {
+      await ctx.db.patch(row._id, { status: "skipped", error: reason });
+    }
+    // كذلك أي عنصر عالق في وضع «يُوجَّه» من دورة سابقة — يُخمَّد بلا إرسال.
+    const forwarding = await ctx.db
+      .query("fileQueue")
+      .withIndex("by_status", (q) => q.eq("status", "forwarding"))
+      .take(50);
+    for (const row of forwarding) {
+      await ctx.db.patch(row._id, { status: "skipped", error: reason });
+    }
+    return { skipped: pending.length + forwarding.length };
+  },
+});
+
+/**
+ * دورة الطابور (كل دقيقتين): تُفرّغ المعلّق فقط — لا إرسال إلى أي قناة.
+ * تُبقي الملفات في تخزين المنصة؛ حذفها يتم مع حذف الطلب نفسه أو بانتهاء
+ * مدة الظهور عبر دورة التنظيف.
  */
 export const processQueue = internalAction({
   args: {},
   handler: async (ctx): Promise<{ processed: number; total: number }> => {
-    const pending = await ctx.runQuery(api.fileQueueMutations.getPendingFiles, {
-      limit: 5,
-    });
-
-    if (!pending || pending.length === 0) return { processed: 0, total: 0 };
-
-    let processed = 0;
-    for (const file of pending) {
-      try {
-        await ctx.runMutation(api.fileQueueMutations.markForwarding, {
-          id: file._id,
-        });
-
-        // Get entity title for caption
-        let entityTitle: string | undefined;
-        const entity = await ctx.runQuery(api.fileQueueMutations.getEntityTitle, {
-          entityType: file.entityType,
-          entityId: file.entityId,
-        });
-        entityTitle = entity?.title;
-
-        const result = await ctx.runAction(api.fileForward.processFileQueue, {
-          queueId: file._id,
-          storageId: file.storageId,
-          fileName: file.fileName,
-          fileKind: file.fileKind,
-          mimeType: file.mimeType,
-          entityType: file.entityType,
-          entityTitle,
-        });
-
-        if (result?.ok) processed++;
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.error(`[FileQueue:Cron] Error processing ${file.fileName}:`, message);
-        await ctx.runMutation(api.fileQueueMutations.markFailed, {
-          id: file._id,
-          error: message,
-        }).catch(() => {});
-      }
+    const { skipped } = await ctx.runMutation(internal.fileQueueInternal.skipAllPending, {});
+    if (skipped > 0) {
+      console.log(
+        `[FileQueue] أُفرغ ${skipped} عنصر إلى skipped (حاجز الخصوصية — بلا إرسال لأي قناة)`
+      );
     }
-
-    // Also clean up forwarded files (delete from Convex storage)
-    const forwarded = await ctx.runQuery(api.fileQueueMutations.getForwardedForCleanup, { limit: 10 });
-    if (forwarded && forwarded.length > 0) {
-      for (const file of forwarded) {
-        try {
-          await ctx.runMutation(api.fileQueueMutations.scheduleCleanup, {
-            queueId: file._id,
-            storageId: file.storageId,
-          });
-        } catch {
-          // Best effort
-        }
-      }
-    }
-
-    return { processed, total: pending.length };
+    return { processed: 0, total: skipped };
   },
 });

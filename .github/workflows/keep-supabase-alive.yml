@@ -1,0 +1,48 @@
+name: "Keep Supabase alive (نبضة إبقاء)"
+
+# خطط Supabase المجانية توقف المشاريع «غير النشطة». هذه النبضة ترسل طلباً
+# حقيقياً إلى واجهة قاعدة البيانات (PostgREST) كل 5 أيام فيُسجل المشروع
+# نشطاً ولا يُوقف. الطلب قراءة فقط (HEAD) وبلا أي كتابة أو بيانات عملاء.
+#
+# المتغيرات المطلوبة في Settings → Secrets and variables → Actions:
+#   SUPABASE_URL           — مثل https://xxxx.supabase.co
+#   SUPABASE_ANON_KEY      — المفتاح العام (anon) — وليس service_role
+
+on:
+  schedule:
+    - cron: "0 3 */5 * * *" # كل 5 أيام 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-supabase-alive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: Ping Supabase REST (SELECT-less keep-alive)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send lightweight request to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::warning title=متغيرات ناقصة::أضف SUPABASE_URL و SUPABASE_ANON_KEY في سرّات Actions."
+            exit 0
+          fi
+          # HEAD على نقطة REST — يكفي لإبقاء المشروع «نشط» ولا يعيد بيانات.
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" -I \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/")
+          echo "Supabase REST responded: $CODE"
+          if [ "$CODE" = "200" ] || [ "$CODE" = "204" ] || [ "$CODE" = "404" ]; then
+            echo "✔ المشروع مستجيب — نبضة إبقاء مسجّلة."
+          else
+            echo "::warning title=استجابة غير متوقعة::رمز $CODE — تحقق من المفتاح أو حالة المشروع."
+          fi

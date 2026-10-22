@@ -35,7 +35,9 @@ const PLATFORM_PHONE_DISPLAY = "00967711780999";
 const PLATFORM_PHONE_LINK = "https://wa.me/967711780999";
 
 // Official channel identifiers
-export const TELEGRAM_BOT_TOKEN_LEGACY = "8876814738:AAFepkzzC0g__-xGz9JE_sqvq0JMM1kHVWM"; // legacy-leaked-secret-allowlisted
+// ⛔ التوكن القديم المسرّر أُزيل نهائياً من الكود (أمان P0): لا يُعتمد إلا
+// TELEGRAM_BOT_TOKEN من متغيرات البيئة أو مفتاح لوحة التحكم — أي قناة
+// بلا توكن مضبوط تُتخطى بدل العمل بسرّ مسرّر في تاريخ المستودع.
 const TELEGRAM_CHAT_ID_DEFAULT = "@vipyemen77";
 const FB_PAGE_ID_DEFAULT = "102672588647591";
 const FB_GROUP_ID_DEFAULT = "346010664332427"; // numeric group ID
@@ -96,26 +98,16 @@ function buildFacebookMessage(args: {
 }
 
 /**
- * ⚠️ توكن تلجرام القديم كان مكتوباً صريحاً في المستودع (تسريب) — يُستخدم كبديل
- * أخير فقط حتى يُبدَّل من @BotFather ويُضاف TELEGRAM_BOT_TOKEN في متغيرات Convex.
- * ووجود `legacy-leaked-secret-allowlisted` في هذا السطر يُعلم حاجز الأسرار الآلي
- * (`.github/workflows/secret-scan.yml`) بأن هذا التوكن معروف ومنتظر إزالته، وأن
- * أي توكن آخر يُكتشف هو تسريب جديد يجب إيقاف البناء عنده.
+ * إزالة التوكن القديم المسرّر (أمان P0): لم يعد هناك أي سرّ مكتوب في الكود.
+ * تُبقى الدالة كي لا يتغيّر شكل سجل صحة القناة، وتُرجع دائماً false الآن.
  */
-/**
- * هل ما نعتمد عليه توكن قديم مسرّب داخل الكود؟
- * (يُبقى كاحتياط فقط حتى تُدخل مفتاحاً حقيقياً من اللوحة أو من متغيرات Convex،
- *  ووجود `legacy-leaked-secret-allowlisted` يُعلم حاجز الأسرار الآلي أن هذا
- *  التوكن معروف ومنتظر إزالته.)
- */
-function telegramTokenUsesLegacy(cfg: TelegramRuntimeConfig): boolean {
-  if (cfg.tokenSource !== "default") return false;
-  return !!TELEGRAM_BOT_TOKEN_LEGACY;
+function telegramTokenUsesLegacy(_cfg: TelegramRuntimeConfig): boolean {
+  return false;
 }
 
 // ── Telegram ──────────────────────────────────────────────────────────
 async function postToTelegram(cfg: TelegramRuntimeConfig, text: string): Promise<boolean> {
-  const token = cfg.token || TELEGRAM_BOT_TOKEN_LEGACY;
+  const token = cfg.token;
   const chats = cfg.chatIds.length > 0 ? cfg.chatIds : [TELEGRAM_CHAT_ID_DEFAULT];
   if (!token || chats.length === 0) {
     console.log("[Channel:Telegram] SKIP — no token or chat ID");
@@ -895,7 +887,7 @@ async function timedJson(
 }
 
 async function checkTelegram(cfg: TelegramRuntimeConfig): Promise<ChannelHealthRow> {
-  const token = cfg.token || TELEGRAM_BOT_TOKEN_LEGACY;
+  const token = cfg.token;
   const chatId = cfg.chatIds[0] ?? TELEGRAM_CHAT_ID_DEFAULT;
   if (!token) {
     return { channel: "telegram", status: "down", detail: "لا يوجد توكن بوت (TELEGRAM_BOT_TOKEN)" };

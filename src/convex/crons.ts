@@ -21,9 +21,9 @@ crons.interval(
 );
 
 // ── File forwarding queue processor (every 2 min) ─────────────────────
-// Processes pending files in the queue and forwards them to
-// Telegram + Facebook, then cleans up Convex storage.
-// Handles thousands of files without impacting app performance.
+// 🔒 حاجز الخصوصية: هذا السير لم يعد يوجّه أي ملف إلى أي قناة — يُفرّغ
+// الطابور القديم فقط بحالة `skipped` ويُبقي مرفقات العملاء في تخزين
+// المنصة الخاص (انظر fileQueueInternal.processQueue).
 crons.interval(
   "file-forward-queue",
   { seconds: 120 },
@@ -59,10 +59,11 @@ crons.interval(
   {}
 );
 
-// ── 🗄️ نسخة احتياطية كاملة لقاعدة البيانات → تيليجرام (يومياً 03:00 UTC) ─
-// يجمّع كل الجداول (بلا الجداول المؤقتة الحساسة) في ملف JSON مضغوط،
-// ويرسله إلى محادثة الإدارة عبر البوت — نسخة خارجية دائمة لا تعتمد على
-// أي استضافة. الحالة تُحفظ في الإعدادات `dbBackupStatus`.
+// ── 🗄️ نسخة احتياطية كاملة لقاعدة البيانات → تخزين المنصة الخاص (يومياً 03:00 UTC) ─
+// تجمّع كل الجداول (بلا الجداول المؤقتة الحساسة) في ملف JSON مضغوط، وترفعه
+// إلى تخزين المنصة الخاص داخل Convex — ⛔ لم يعد يُرسل أي شيء إلى تيليجرام
+// أو أي قناة (حاجز الخصوصية — أمان P0). الحالة تُحفظ في الإعدادات
+// `dbBackupStatus` وقائمة النسخ في `dbBackupList` (تنزيل إداري فقط).
 crons.daily(
   "db-backup-telegram",
   { hourUTC: 3, minuteUTC: 0 },

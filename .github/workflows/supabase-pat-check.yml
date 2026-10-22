@@ -1,0 +1,95 @@
+name: "Supabase PAT check (فحص توكن Supabase)"
+
+# ⛔ لا يمكن تجديد PAT تلقائياً: توكن Supabase الشخصي (PAT) ليس له refresh
+# token — صلاحيته تنتهي بتاريخ انتهائه لدى Supabase ولا يمكن لأي كود تمديده.
+# هذا السير يكتفي بالفحص اليومي: إن انتهى الصلاحية يفتح/يحدّث Issue تنبيه
+# فتكتشفها الإدارة وتُنشئ توكناً جديداً بنفسها من إعدادات حساب Supabase.
+#
+# السرّ لا يُطبع أبداً في السجلات: نستعمله كترويسة Authorization فقط.
+
+on:
+  schedule:
+    - cron: "0 4 * * *" # يومياً 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: supabase-pat-check
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Verify SUPABASE_ACCESS_TOKEN is still valid
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Supabase Management API (no token logging)
+        id: check
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "status=missing" >> "$GITHUB_OUTPUT"
+            echo "::error title=SUPABASE_ACCESS_TOKEN غير مضبوط::أضف التوكن في Secrets المستودع."
+            exit 0
+          fi
+          # نطبع رمز الحالة فقط — لا نطبع التوكن ولا جسم الرد كاملاً.
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "apikey: $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects")
+          echo "http=$CODE"
+          echo "status=$CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Open / update the alert Issue on failure
+        if: steps.check.outputs.status != '200'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS: ${{ steps.check.outputs.status }}
+        run: |
+          set -euo pipefail
+          TITLE="🔴 SUPABASE_ACCESS_TOKEN منتهي أو غير صالح"
+          BODY=$(cat <<'EOF'
+          ## تنبيه: توكن Supabase الشخصي (PAT) لم يعد صالحاً
+
+          أعادت واجهة Supabase رمز **${{ steps.check.outputs.status }}** لفحص الصلاحية اليومي.
+
+          ### لماذا لا يُجدَّد آلياً؟
+          PAT شخصي وليس له refresh token — لا يمكن لأي خدمة تمديد صلاحيته.
+          التجديد يتطلب إنشاء توكن جديد يدوياً من لوحة Supabase.
+
+          ### ما يجب فعله (بالترتيب):
+          1. افتح https://supabase.com/dashboard/account/tokens
+          2. أنشئ توكناً جديداً بصلاحيات واسعة (أو بنفس صلاحيات القديم)
+          3. استبدل قيمة `SUPABASE_ACCESS_TOKEN` في Settings → Secrets and variables → Actions
+          4. أعد تشغيل سير «Supabase PAT check» يدوياً للتأكد
+
+          _أُنشئ آلياً بواسطة سير الفحص اليومي — يُغلق تلقائياً عند عودة الصلاحية._
+          EOF
+          )
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "\"$TITLE\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "الفحص اليومي: رمز الحالة ${{ steps.check.outputs.status }} — التوكن ما زال غير صالح."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Log OK + auto-close a previous alert (token valid again)
+        if: steps.check.outputs.status == '200'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "✔ SUPABASE_ACCESS_TOKEN صالح (200) — لا يُطبع التوكن أبداً."
+          TITLE="🔴 SUPABASE_ACCESS_TOKEN منتهي أو غير صالح"
+          NUM=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "\"$TITLE\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$NUM" ]; then
+            gh issue close "$NUM" --repo "$GITHUB_REPOSITORY" \
+              --comment "عادت الصلاحية (فحص يومي: 200) — أُغلق التنبيه آلياً."
+            echo "✔ أُغلق التنبيه $NUM آلياً."
+          fi

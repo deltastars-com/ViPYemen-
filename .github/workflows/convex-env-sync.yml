@@ -35,7 +35,10 @@ jobs:
           node-version: 22
 
       - name: Install Convex CLI (project dependency)
-        run: npm install --no-save --ignore-scripts convex@1.24.0
+        # نفس نسخة المشروع (convex@1.48) — النسخة القديمة 1.24 كانت تفشل مع
+        # صيغ مفاتيح النشر الحديثة (‎*.convex.cloud?cap=…‎) بخطأ
+        # InvalidDeploymentName فتُخطَّر المزامنة بصمت.
+        run: npm install --no-save --ignore-scripts convex@1.48.0
 
       - name: Push secret values into the Convex deployment
         env:

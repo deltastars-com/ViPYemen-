@@ -520,4 +520,22 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_signToken", ["signToken"])
     .index("by_created", ["createdAt"]),
+
+  /**
+   * 📊 لقطات الاستخدام اليومية — حماية الخطة المجانية في Convex
+   * (0.5GB قاعدة · 1GB ملفات · مليون استدعاء/شهر — docs.convex.dev/production/state/limits).
+   * عدّاد كل جدول رئيسي + عدد الملفات المرفقة، يومياً، مع الاحتفاظ بآخر
+   * 14 يوماً فقط: النمو المفاجئ يُرصد من لوحة التحكم قبل بلوغ أي حدّ.
+   */
+  platformUsage: defineTable({
+    collectedAt: v.number(),
+    /** عدّاد المستندات لكل جدول (سقف العدّ 1000 — يُعرض «1000+» عند بلوغه) */
+    counts: v.record(v.string(), v.number()),
+    /** مجموع الملفات المرفقة في الطلبات — مؤشر استهلاك تخزين الملفات (1GB) */
+    attachmentRefs: v.number(),
+    /** مجموع المستندات المعدودة في هذه اللقطة */
+    totalDocs: v.number(),
+    /** ملفات الطلبات المؤرشفة القابلة للتنظيف اليدوي من المخزن */
+    reclaimableRefs: v.optional(v.number()),
+  }),
 });

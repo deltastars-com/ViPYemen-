@@ -75,6 +75,45 @@ jobs:
             printf '%s' "$FAILED" > /tmp/outage.md
           fi
 
+      # 📊 سجلّ اتجاه المحتوى الحيّ (مجاني — جزء من ملخصات GitHub Actions):
+      # يقرأ استعلام المنصة نفسه (publicState) ويكتب عدّادات المحتوى في
+      # ملخص التشغيل — فيترك منصة الويب/الباك اند تاريخاً يومياً للأعداد
+      # (طلبات · إعلانات · عروض) تُقرأ من صفحة التشغيل بلا أي خدمة مدفوعة.
+      - name: Log live content counts (usage trend)
+        if: always()
+        run: |
+          set -uo pipefail
+          export BODY=$(curl -sS -m 30 -X POST "https://notable-shepherd-367.convex.cloud/api/query" \
+            -H 'content-type: application/json' \
+            -d '{"path":"controlPanel:publicState","args":{},"format":"json"}' 2>/dev/null || true)
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, os, re, sys
+          raw = os.environ.get("BODY", "")
+          print("## 📊 اتجاه المحتوى الحيّ")
+          print()
+          try:
+              d = json.loads(raw)
+              if d.get("status") != "success":
+                  print("⚠️ استعلام المنصة لم ينجح — راجع فحص ‎/health‎ أعلاه.")
+                  sys.exit(0)
+              v = d.get("value") or {}
+              counts = v.get("counts") or {}
+              rows = [
+                  ("طلبات منشورة", v.get("published")),
+                  ("طلبات مفتوحة", counts.get("open")),
+                  ("طلبات مغلقة", counts.get("closed")),
+                  ("طلبات مؤجّرة", counts.get("hired")),
+                  ("إعلانات نشطة", v.get("activeAds")),
+                  ("عروض متاحة", counts.get("available")),
+              ]
+              print("| المؤشر | العدد |")
+              print("|---|---:|")
+              for label, n in rows:
+                  print(f"| {label} | {n if n is not None else '—'} |")
+          except Exception:
+              print("⚠️ تعذّر قراءة عدّادات المحتوى من استعلام المنصة.")
+          PY
+
       - name: Report outage as a single tracked issue
         if: steps.probe.outputs.failed == 'true'
         env:

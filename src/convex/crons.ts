@@ -4,10 +4,10 @@ import { api } from "./_generated/api";
 
 const crons = cronJobs();
 
-// ── Automation tick (every 5 min) ─────────────────────────────────────
+// ── Automation tick (every 10 min — 💰 quota-safe: كل استدعاء cron من حصة المليون/شهر) ─────────────────────────────────────
 crons.interval(
   "automation-tick",
-  { seconds: 300 },
+  { seconds: 600 },
   internal.automation.tick
 );
 
@@ -20,41 +20,43 @@ crons.interval(
   internal.channels.checkChannels
 );
 
-// ── File forwarding queue processor (every 2 min) ─────────────────────
+// ── File forwarding queue processor (every 5 min — 💰 quota-safe) ─────────────────────
 // 🔒 حاجز الخصوصية: هذا السير لم يعد يوجّه أي ملف إلى أي قناة — يُفرّغ
 // الطابور القديم فقط بحالة `skipped` ويُبقي مرفقات العملاء في تخزين
 // المنصة الخاص (انظر fileQueueInternal.processQueue).
 crons.interval(
   "file-forward-queue",
-  { seconds: 120 },
+  { seconds: 300 },
   internal.fileQueueInternal.processQueue
 );
 
-// ── ⏳ انتهاء مدة ظهور المنشورات على وواجهات المنصة (كل 5 دقائق) ─────
+// ── ⏳ انتهاء مدة ظهور المنشورات على وواجهات المنصة (كل 10 دقائق — 💰 quota-safe) ─────
 // دورة مستقلة خفيفة كي لا يثقل فحصُ الأفلام عناوينَ لا غيرها.
 crons.interval(
   "platform-expiry",
-  { seconds: 300 },
+  { seconds: 600 },
   internal.platformExpiry.sweepExpired,
   { limit: 200 }
 );
 
-// ── 📮 دورة حملات البريد الإلكتروني (كل 5 دقائق) ─────────────────────
+// ── 📮 دورة حملات البريد الإلكتروني (كل 10 دقائق — 💰 quota-safe) ─────────────────────
 // تُشغّل الحملات المستحقة، تُعيد متابعة الحملة التي توقّفت بسبب انقطاع
 // مؤقت، وتُنظّف سجل الإرسال القديم — بلا أي تدخل يدوي.
 crons.interval(
   "email-campaigns",
-  { seconds: 300 },
+  { seconds: 600 },
   internal.campaigns.emailTick
 );
 
-// ── 🤖 رد بوت تيليجرام بالاستعلام (كل 5 ثوان) ────────────────────────
+// ── 🤖 رد بوت تيليجرام بالاستعلام (كل 30 ثانية — احتياطي عن الويب هوك)
+// 💰 الاستعلام كل 5 ثوانٍ كان يستهلك وحده ~518 ألف استدعاء شهرياً (52% من
+// حصة المليون!) — 30 ثانية = ~86 ألف (-83%) مع ردود بوت فورية عملياً. ────────────────────────
 // احتياطي عن الـ webhook: يعمل فقط إن كان مُفعّلاً من اللوحة، ويقف تلقائياً
 // ما دام الـ webhook مُفعّلاً لأن تيليجرام لا يسمح بالجمع بينهما (409).
 // بلا مستخدمين لا يفعل الفحص أي نداء خارجي (بلا توكن = لا استعلام).
 crons.interval(
   "telegram-polling",
-  { seconds: 5 },
+  { seconds: 30 },
   internal.telegramBot.pollUpdates,
   {}
 );
@@ -68,6 +70,17 @@ crons.daily(
   "db-backup-telegram",
   { hourUTC: 3, minuteUTC: 0 },
   internal.backup.runBackup,
+  {}
+);
+
+// ── 📊 لقطة الاستخدام اليومية (04:00 UTC — بعد النسخة الاحتياطية بساعة) ──
+// عدّادات الجداول + الملفات المرفقة، مع الاحتفاظ بآخر 14 يوماً فقط:
+// الإدارة ترى النمو في لوحة التحكم وتتصرّف قبل بلوغ حدود الخطة المجانية
+// (0.5GB قاعدة · 1GB ملفات · مليون استدعاء — انظر usageMetrics.ts).
+crons.daily(
+  "platform-usage-snapshot",
+  { hourUTC: 4, minuteUTC: 0 },
+  internal.usageMetrics.collect,
   {}
 );
 

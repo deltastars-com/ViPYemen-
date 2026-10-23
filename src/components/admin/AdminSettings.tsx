@@ -29,6 +29,7 @@ import {
   setWhatsAppChannelLink,
 } from "@/lib/whatsappChannel";
 import { ChannelKeysCard } from "./ChannelKeysCard";
+import { FreePlanUsageCard } from "./FreePlanUsageCard";
 import { api } from "../../convex/_generated/api";
 import { Button, Card, Input, Label, Spinner, Textarea } from "@/components/ui";
 import { ChannelPublishCard } from "@/components/admin/ChannelPublishCard";
@@ -134,6 +135,7 @@ export function AdminSettings({ token }: { token: string }) {
 
   return (
     <div className="space-y-6">
+      <FreePlanUsageCard token={token} />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">
           <h3 className="mb-4 flex items-center gap-2 text-sm font-extrabold text-cream">

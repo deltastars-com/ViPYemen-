@@ -28,6 +28,7 @@ import {
 } from "@/lib/fingerprint";
 import { getType, type CategoryConfig } from "@/lib/categories";
 import { fileKindOf, whatsappLink, PLATFORM_WHATSAPP_DISPLAY } from "@/lib/utils";
+import { compressImage } from "@/lib/imageUtils";
 import { liveText } from "@/lib/liveLabels";
 import { useLang } from "@/lib/i18n";
 
@@ -150,16 +151,20 @@ export function SubmissionForm({ category }: { category: CategoryConfig }) {
           setUploading(false);
           return;
         }
+        // 🗜️ ضغط الصور قبل الرفع (WebP 800px) — يوفّر 90%+ من حجم التخزين
+        // والنقل على الخطة المجانية (1GB ملفات). الملفات غير البصرية وGIF
+        // تمرّ كما هي، وأي فشل في الضغط يُسقط آمناً على الملف الأصلي.
+        const payload = await compressImage(file);
         const url = await generateUploadUrl();
         const result = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": file.type },
-          body: file,
+          headers: { "Content-Type": payload.blob.type || file.type },
+          body: payload.blob,
         });
         const { storageId } = await result.json();
         setAttachments((prev) => [
           ...prev,
-          { name: file.name, storageId, kind: fileKindOf(file.type) },
+          { name: payload.name, storageId, kind: fileKindOf(payload.blob.type || file.type) },
         ]);
       }
     } catch (e: any) {

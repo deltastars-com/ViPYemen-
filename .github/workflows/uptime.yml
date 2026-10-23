@@ -109,6 +109,8 @@ jobs:
               print("| المؤشر | العدد |")
               print("|---|---:|")
               for label, n in rows:
+                  if isinstance(n, float) and n.is_integer():
+                      n = int(n)
                   print(f"| {label} | {n if n is not None else '—'} |")
           except Exception:
               print("⚠️ تعذّر قراءة عدّادات المحتوى من استعلام المنصة.")

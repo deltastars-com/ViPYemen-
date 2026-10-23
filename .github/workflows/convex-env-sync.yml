@@ -72,6 +72,11 @@ jobs:
           PROD_HOST="notable-shepherd-367.convex.cloud"
           TARGET="$(printf '%s' "$CONVEX_DEPLOY_KEY" | grep -oE '[a-z0-9-]+\.convex\.(cloud|site)' | head -1 || true)"
           if [[ -z "$TARGET" ]]; then
+            # الصيغة القديمة القياسية: deployment_<اسم-النشر>_<سرّ>
+            DEP="$(printf '%s' "$CONVEX_DEPLOY_KEY" | grep -oE '^deployment_[a-z0-9-]+' | head -1 || true)"
+            [[ -n "$DEP" ]] && TARGET="${DEP#deployment_}.convex.cloud"
+          fi
+          if [[ -z "$TARGET" ]]; then
             TARGET="$(CONVEX_DEPLOY_KEY="$CONVEX_DEPLOY_KEY" ./node_modules/.bin/convex deploy --dry-run --typecheck disable 2>&1 | grep -oE '[a-z0-9-]+\.convex\.(cloud|site)' | head -1 || true)"
           fi
           if [[ -z "$TARGET" ]]; then

@@ -163,6 +163,13 @@ runs:
             host_of "$from_key"
             return 0
           fi
+          # (د) الصيغة القديمة القياسية: deployment_<اسم-النشر>_<سرّ>
+          local from_dep
+          from_dep=$(printf '%s' "$key" | grep -oE '^deployment_[a-z0-9-]+' | head -1 || true)
+          if [ -n "$from_dep" ]; then
+            printf '%s.convex.cloud' "${from_dep#deployment_}"
+            return 0
+          fi
           # (ب) deploy --dry-run يطبع الهدف دون دفع الشيفرة
           if dry=$(CONVEX_DEPLOY_KEY="$key" "$CLI" deploy --dry-run --typecheck disable 2>&1); then
             local h=""

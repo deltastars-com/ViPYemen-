@@ -53,7 +53,7 @@ function StoreBadges() {
   const { t, lang } = useLang();
   const publicSettings = useQuery(
     api.settings.getPublicSettings,
-    process.env.VITE_CONVEX_URL || (import.meta as any).env?.VITE_CONVEX_URL ? {} : "skip"
+    (import.meta as any).env?.VITE_CONVEX_URL ? {} : "skip"
   );
   const iosUrl = (publicSettings?.iosDownloadUrl as string | undefined)?.trim() || "";
   const androidUrl = (publicSettings?.androidDownloadUrl as string | undefined)?.trim() || APKPURE_URL;

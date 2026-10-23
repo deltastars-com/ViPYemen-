@@ -2,8 +2,8 @@
   "app": {
     "packageId": "com.vip.yemen",
     "appName": "ViP Yemen",
-    "versionName": "6.10.0",
-    "versionCode": 6100000
+    "versionName": "6.10.1",
+    "versionCode": 6100010
   },
   "googlePlay": {
     "title": "ViP Yemen — توظيف وعقارات",

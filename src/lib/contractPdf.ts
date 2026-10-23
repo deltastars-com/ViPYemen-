@@ -1,11 +1,16 @@
 /**
  * 🧾 استخراج «سند الدفع» كملف PDF — ViP Yemen
  *
- * يفتح مستنداً عربياً (RTL) منسّقاً بمعاينة الطباعة ثم يستدعي طابعة
- * المتصفح ليختار المدير «حفظ كـ PDF» — موثوق على كل الأجهزة ولا يحتاج
- * مكتبات ثقيلة، والنتيجة ملف PDF عربي بحروف حقيقية قابلة للتحديد.
+ * يعرض المستند العربي (RTL) منسّقاً **داخل الصفحة نفسها** في طبقة معاينة
+ * كاملة الشاشة (iframe بـ srcdoc) بأزرار: طباعة/حفظ PDF · فتح في نافذة
+ * مستقلة · إغلاق (زر ✕ أو مفتاح Esc). لا نافذة منبثقة ضرورية أصلاً، فلا
+ * يعطل مانع النوافذ المنبثقة (المُفعّل في المعاينة ومتصفحات الهاتف) الزر.
  *
- * يشمل الآن: نص الالتزام الرسمي المُجمَّد، نوع الخدمة، البصمة الإلكترونية
+ * الطباعة من الـiframe تعطي حوار طابعة المتصفح بجودة عربية حقيقية (حفظ كـ
+ * PDF) — موثوقة على كل الأجهزة. إن منع المتصفح طباعة الأطر (بعض إصدارات
+ * iOS Safari) نفتح المستند من مسار بديل (blob URL) حيث تعمل الطباعة.
+ *
+ * يشمل المستند: نص الالتزام الرسمي المُجمَّد، نوع الخدمة، البصمة الإلكترونية
  * وتفاصيلها، التوقيع الحقيقي (صورته الفعلية)، وتنبيه التسجيل الصوتي إن وُجد.
  */
 import { buildCommitmentText, serviceTypeLabel, PLATFORM_MANAGER } from "./commitment";
@@ -67,13 +72,8 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** يفتح سند الدفع في نافذة طباعة جاهزة للحفظ كملف PDF. */
-export function printContractPdf(contract: PrintableContract): void {
-  const win = window.open("", "_blank", "width=820,height=980");
-  if (!win) {
-    alert("تعذّر فتح نافذة الطباعة — اسمح بالنوافذ المنبثقة ثم أعد المحاولة.");
-    return;
-  }
+/** يبني مستند السند كصفحة HTML عربية كاملة (تُحقن في iframe المعاينة). */
+export function buildContractPdfHtml(contract: PrintableContract): string {
   const isPaid = contract.status === "paid";
   const fpMode =
     contract.fingerprint?.mode === "webauthn"
@@ -101,7 +101,7 @@ export function printContractPdf(contract: PrintableContract): void {
     ? `${String(voiceMin).padStart(2, "0")}:${String(voiceSec).padStart(2, "0")}`
     : "—";
 
-  const html = `<!doctype html>
+  return `<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8" />
@@ -173,7 +173,7 @@ export function printContractPdf(contract: PrintableContract): void {
 
   <div class="clause" style="background:#f7f9ff;border-color:#9db4e0">
     يُقرّ ويتعهّد المستفيد أعلاه إقراراً نهائياً موثّقاً بالبصمة الإلكترونية والتوقيع الإلكتروني
-    بالتزامه بتسديد المبلغ المتفق عليه أعلاه كعمولة للمنصة، ويُعدّ هذا السند وثيقة إثبات حق
+    بالالتزامه بتسديد المبلغ المتفق عليه أعلاه كعمولة للمنصة، ويُعدّ هذا السند وثيقة إثبات حق
     في مواجهة الطرفين والمنصة، موقّعة إلكترونياً عبر أنظمة المنصة الموثّقة. نص الالتزام
     أعلاه مُجمَّد لحظة التوقيع ولا يمكن تعديله لاحقاً.
   </div>
@@ -214,11 +214,106 @@ export function printContractPdf(contract: PrintableContract): void {
   </footer>
 </div>
 <div class="noprint"><button onclick="window.print()">🖨️ حفظ / طباعة سند الدفع (PDF)</button></div>
-<script>window.onload = function () { setTimeout(function () { window.focus(); }, 300); };</script>
 </body>
 </html>`;
+}
 
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
+/** الطبقة المفتوحة حالياً (لضمان معاينة واحدة في كل مرة). */
+let activeOverlay: { el: HTMLDivElement; prevOverflow: string; onKey: (e: KeyboardEvent) => void } | null = null;
+
+function closeContractPdfView(): void {
+  if (!activeOverlay) return;
+  activeOverlay.el.remove();
+  document.body.style.overflow = activeOverlay.prevOverflow;
+  document.removeEventListener("keydown", activeOverlay.onKey);
+  activeOverlay = null;
+}
+
+/**
+ * يعرض سند الدفع في معاينة كاملة الشاشة داخل الصفحة — أزرار: طباعة/حفظ PDF،
+ * فتح في نافذة مستقلة، وإغلاق (✕ أو Esc). لا نوافذ منبثقة مطلوبة.
+ */
+export function printContractPdf(contract: PrintableContract): void {
+  closeContractPdfView();
+
+  const html = buildContractPdfHtml(contract);
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+
+  const el = document.createElement("div");
+  el.className =
+    "fixed inset-0 z-[10000] flex flex-col bg-ink-950/95 backdrop-blur-sm";
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-modal", "true");
+  el.setAttribute("aria-label", "معاينة سند الدفع");
+  el.innerHTML = `
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gold-500/30 bg-ink-900 px-4 py-3">
+      <p class="text-sm font-black text-cream">📄 سند الدفع — معاينة جاهزة للحفظ PDF</p>
+      <div class="flex items-center gap-2">
+        <button type="button" data-print class="rounded-xl bg-gold-500 px-4 py-2 text-xs font-black text-ink-950 hover:bg-gold-400">
+          ⬇️ حفظ / طباعة PDF
+        </button>
+        <button type="button" data-pop class="hidden rounded-xl border border-ink-600/60 bg-ink-800/60 px-3 py-2 text-xs font-bold text-ink-200 hover:border-gold-500/50 sm:block">
+          فتح في نافذة مستقلة
+        </button>
+        <button type="button" data-close aria-label="إغلاق"
+          class="flex h-9 w-9 items-center justify-center rounded-xl border border-ink-600/60 bg-ink-800/60 text-lg text-ink-200 hover:border-rose-500/60 hover:text-rose-300">
+          ✕
+        </button>
+      </div>
+    </div>
+    <iframe title="معاينة سند الدفع" class="w-full flex-1 border-0 bg-white"></iframe>`;
+
+  const iframe = el.querySelector("iframe") as HTMLIFrameElement;
+  iframe.srcdoc = html;
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape") closeContractPdfView();
+  };
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(el);
+  activeOverlay = { el, prevOverflow, onKey };
+
+  let loaded = false;
+  iframe.addEventListener("load", () => {
+    loaded = true;
+  });
+
+  el.querySelector("[data-close]")!.addEventListener("click", closeContractPdfView);
+
+  el.querySelector("[data-print]")!.addEventListener("click", () => {
+    const frameWin = iframe.contentWindow as Window | null;
+    if (loaded && frameWin && typeof frameWin.print === "function") {
+      try {
+        frameWin.focus();
+        frameWin.print();
+        return;
+      } catch {
+        /* نسقط إلى المسار البديل أدناه */
+      }
+    }
+    // مسار بديل: متصفحات تمنع طباعة الأطر (بعض إصدارات iOS Safari) —
+    // نفتح المستند من عنوان blob حيث تعمل الطباعة/مشاركة الملف.
+    try {
+      const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+      const w = window.open(url, "_blank");
+      if (!w) {
+        alert("تعذّر فتح نافذة الطباعة — اسمح بالنوافذ المنبثقة ثم أعد المحاولة، أو استخدم زر الطباعة داخل المعاينة.");
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      alert("تعذّر فتح الطباعة على هذا الجهاز — جرّب زر الطباعة داخل المعاينة.");
+    }
+  });
+
+  el.querySelector("[data-pop]")!.addEventListener("click", () => {
+    try {
+      const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+      const w = window.open(url, "_blank", "width=860,height=1000");
+      if (!w) alert("اسمح بالنوافذ المنبثقة لفتح نافذة مستقلة، أو استخدم زر الطباعة.");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      alert("تعذّر فتح النافذة المستقلة على هذا الجهاز.");
+    }
+  });
 }

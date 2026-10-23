@@ -86,7 +86,16 @@ export function ContractSignPage() {
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center px-4 py-16">
-      <div className="card-surface w-full max-w-lg p-7">
+      <div className="card-surface relative w-full max-w-lg p-7">
+        {/* زر خروج ثابت في كل الحالات — لا تبقى شاشة بلا مخرج */}
+        <Link
+          to="/"
+          aria-label="الخروج إلى الصفحة الرئيسية"
+          title="الخروج إلى الصفحة الرئيسية"
+          className="absolute end-4 top-4 flex items-center gap-1 rounded-lg border border-ink-600/60 bg-ink-900/60 px-3 py-1.5 text-[11px] font-bold text-ink-200 transition-colors hover:border-gold-500/50 hover:text-gold-300"
+        >
+          <XCircle className="h-3.5 w-3.5" /> خروج
+        </Link>
         <div className="text-center">
           <LogoMark className="mx-auto h-12 w-12" />
           <h1 className="mt-3 flex items-center justify-center gap-2 text-lg font-black text-cream">
@@ -206,6 +215,10 @@ export function ContractSignPage() {
             >
               <FileSignature className="h-4 w-4" /> توقيع وتأكيد بالبصمة
             </Button>
+
+            <Link to="/" className="btn-ghost mt-3 w-full text-xs">
+              <Home className="h-4 w-4" /> العودة للصفحة الرئيسية
+            </Link>
           </>
         )}
       </div>

@@ -18,8 +18,8 @@ if (keystorePropertiesFile.exists()) {
 // يُشتق الاثنان من وسم الإصدار في CI عبر `-PappVersionName` و`-PappVersionCode`
 // (انظر .github/workflows/release.yml). القيمة الاحتياطية مطابقة لـ package.json
 // كي يعمل البناء المحلي بلا أي معاملات.
-def appVersionName = (project.findProperty('appVersionName') ?: '6.10.0').toString()
-def appVersionCode = (project.findProperty('appVersionCode') ?: '6100000').toString().toInteger()
+def appVersionName = (project.findProperty('appVersionName') ?: '6.10.1').toString()
+def appVersionCode = (project.findProperty('appVersionCode') ?: '6100010').toString().toInteger()
 
 android {
     namespace = "com.vip.yemen"

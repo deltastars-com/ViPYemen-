@@ -59,6 +59,8 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: |
           set -euo pipefail
+          # تقييح المفتاح من مسافات/أسطر زائدة من اللصق (تُرفض بـ InvalidDeploymentName)
+          CONVEX_DEPLOY_KEY="$(printf '%s' "${CONVEX_DEPLOY_KEY:-}" | tr -d '[:space:]')"
           if [[ -z "${CONVEX_DEPLOY_KEY:-}" ]]; then
             echo "::notice::CONVEX_DEPLOY_KEY غير مضبوط في أسرار المستودع — تُتخطّى مزامنة متغيرات Convex."
             exit 0

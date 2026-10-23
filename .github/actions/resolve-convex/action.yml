@@ -115,17 +115,42 @@ runs:
         DEPLOY_HOST=""
         CHOSEN_KEY=""
         FAILED_LAST=""
+        SKIPPED_HOSTS=""
         KEYS=()
         [ -n "${KEY_PRIMARY:-}" ] && KEYS+=("$KEY_PRIMARY")
         if [ -n "${KEY_ALT:-}" ] && [ "$KEY_ALT" != "$KEY_PRIMARY" ]; then
           KEYS+=("$KEY_ALT")
         fi
+        # 🛡️ تحديد هدف المفتاح **قبل** النشر: صيغ المفاتيح الحديثة تحوي رابط
+        # النشر نفسه (‎*.convex.cloud?cap=…‎)، فنقرأه من نص المفتاح مباشرة؛
+        # وإلا نجرّب deploy --dry-run الذي يطبع الهدف دون دفع الشيفرة.
+        # سبب الحماية: النشر إلى نشر أجنبي يفعّل كل crons عليه (استعلام بوت
+        # + أتمتة كل دقائق) = ~150 ألف استدعاء شهرياً بلا أي فائدة، وقد رفع
+        # فعلياً استهلاك الفريق فوق حد الخطة المجانية (1M استدعاء/شهر).
+        key_target_host() {
+          local key="$1" dry=""
+          local from_key
+          from_key=$(printf '%s' "$key" | grep -oE '[a-z0-9-]+\.convex\.cloud' | head -1 || true)
+          if [ -n "$from_key" ]; then
+            printf '%s' "$from_key"
+            return 0
+          fi
+          if dry=$(CONVEX_DEPLOY_KEY="$key" "$CLI" deploy --dry-run --typecheck disable 2>&1); then
+            host_of "$(url_of "$dry")"
+          fi
+        }
         if [ "${MODE:-deploy}" = "deploy" ]; then
           if [ ${#KEYS[@]} -eq 0 ]; then
             echo "::warning::لا يوجد أي مفتاح نشر (CONVEX_DEPLOY_KEY / VITE_CONVEX_DEPLOY_KEY) — تُخطّى ترقية الباك اند، ويستمر البناء على النشر الحيّ."
           fi
           for KEY in ${KEYS[@]+"${KEYS[@]}"}; do
-            echo "… نشر الشيفرة إلى نشر Convex المرتبط بأحد مفاتيح النشر…"
+            TARGET_HOST=$(key_target_host "$KEY")
+            if [ -n "$TARGET_HOST" ] && [ "$TARGET_HOST" != "$CONFIGURED_HOST" ]; then
+              SKIPPED_HOSTS="${SKIPPED_HOSTS}· ${TARGET_HOST}"$'\n'
+              echo "::notice::مفتاح نشر يستهدف $TARGET_HOST (‹› نشر الإنتاج $CONFIGURED_HOST) — نُخطّيه بلا نشر: النشر الأجنبي يفعّل crons على نشر بلا بيانات ويبتلع من حصة الاستدعاءات المجانية."
+              continue
+            fi
+            echo "… نشر الشيفرة إلى نشر Convex المرتبط بالمفتاح…"
             if OUT_TXT=$(CONVEX_DEPLOY_KEY="$KEY" "$CLI" deploy 2>&1); then
               HOST=$(host_of "$(url_of "$OUT_TXT")")
               if [ -z "$HOST" ]; then
@@ -145,9 +170,15 @@ runs:
             fi
           done
           if [ -z "$DEPLOY_HOST" ]; then
-            printf '%s\n' "$FAILED_LAST" | tail -1 | cut -c1-300
-            echo "::error::فشل نشر Convex بكل المفاتيح المتاحة — تحقّق من سرّي المستودع CONVEX_DEPLOY_KEY / VITE_CONVEX_DEPLOY_KEY ثم أعد التشغيل."
-            exit 1
+            if [ -n "$SKIPPED_HOSTS" ]; then
+              echo "::warning::لا يوجد أي مفتاح يستهدف نشر الإنتاج $CONFIGURED_HOST — تُخطّيت المفاتيح التالية **بلا نشر** (حماية حصة الاستدعاءات):"
+              printf '%s' "$SKIPPED_HOSTS"
+              echo "::warning::يستمر البناء على النشر الحيّ الحامل للبيانات $CONFIGURED_URL بشيفرته الحالية. للإصلاح النهائي: أنشئ مفتاح نشر من صفحة نشر **الإنتاج نفسه** في لوحة Convex (Deployment Settings ← Generate Deploy Key) وضعه في سرّ CONVEX_DEPLOY_KEY، ثم احذف المفاتيح القديمة."
+            else
+              printf '%s\n' "$FAILED_LAST" | tail -1 | cut -c1-300
+              echo "::error::فشل نشر Convex بكل المفاتيح المتاحة — تحقّق من سرّي المستودع CONVEX_DEPLOY_KEY / VITE_CONVEX_DEPLOY_KEY ثم أعد التشغيل."
+              exit 1
+            fi
           fi
           # مزامنة مفتاح Gemini إلى بيئة النشر المختار (القيمة لا تُطبع أبداً).
           if [ -n "${GEMINI_KEY_SECRET:-}" ] && [ -n "$CHOSEN_KEY" ]; then

@@ -40,30 +40,6 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # 🔑 أسرار القنوات (فيسبوك · تيليجرام) → بيئة النشر على Convex.
-      # قنوات النشر تُنفَّذ من أكشنات Convex وهي لا ترى أسرار GitHub إطلاقاً؛
-      # فندفع القيم إلى النشر قبل ترقية الشيفرة (ولا تُطبع في السجلات أبداً).
-      # يقبل السرّين CONVEX_DEPLOY_KEY أو VITE_CONVEX_DEPLOY_KEY — أيهما وُجد.
-      - name: Sync channel secrets into the Convex deployment
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY || secrets.VITE_CONVEX_DEPLOY_KEY }}
-          FB_TOKEN_SECRET: ${{ secrets.FACEBOOK_ACCESS_TOKEN }}
-          FB_PAGE_SECRET: ${{ secrets.FACEBOOK_PAGE_ID }}
-          FB_GROUP_SECRET: ${{ secrets.FACEBOOK_GROUP_ID }}
-          TG_TOKEN_SECRET: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TG_CHAT_SECRET: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          if [[ -z "${CONVEX_DEPLOY_KEY:-}" ]]; then
-            echo "::notice::لا يوجد مفتاح نشر في المستودع — تُتخطّى مزامنة أسرار القنوات (يمكن ضبطها من لوحة Convex مباشرة)."
-            exit 0
-          fi
-          [[ -n "$FB_TOKEN_SECRET" ]] && ./node_modules/.bin/convex env set FACEBOOK_ACCESS_TOKEN "$FB_TOKEN_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_ACCESS_TOKEN synced (prod)" || true
-          [[ -n "$FB_PAGE_SECRET" ]] && ./node_modules/.bin/convex env set FACEBOOK_PAGE_ID "$FB_PAGE_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_PAGE_ID synced (prod)" || true
-          [[ -n "$FB_GROUP_SECRET" ]] && ./node_modules/.bin/convex env set FACEBOOK_GROUP_ID "$FB_GROUP_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_GROUP_ID synced (prod)" || true
-          # `--` قبل القيمة: معرّفات محادثات تيليجرام قد تبدأ بـ - فيفسّرها CLI كخيار مجهول.
-          [[ -n "$TG_TOKEN_SECRET" ]] && ./node_modules/.bin/convex env set TELEGRAM_BOT_TOKEN --prod -- "$TG_TOKEN_SECRET" >/dev/null 2>&1 && echo "TELEGRAM_BOT_TOKEN synced (prod)" || true
-          [[ -n "$TG_CHAT_SECRET" ]] && ./node_modules/.bin/convex env set TELEGRAM_CHAT_ID --prod -- "$TG_CHAT_SECRET" >/dev/null 2>&1 && echo "TELEGRAM_CHAT_ID synced (prod)" || true
-
       # 🛡️ نشر الباك اند + تحديد العنوان الحيّ الذي سيتصل به التطبيق.
       # المنطق في إجراء مركزي واحد (‎.github/actions/resolve-convex‎) كي لا
       # تختلف نسخه بين السير عمل: يختار النشر الحامل للبيانات، ينشر الشيفرة
@@ -76,6 +52,39 @@ jobs:
           deploy-key-alt: ${{ secrets.VITE_CONVEX_DEPLOY_KEY }}
           configured-url: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL || secrets.VITE_CONVEX_URL || secrets.VITE_CLOUD_URL }}
           gemini-key: ${{ secrets.VITE_GEMINI_KEY }}
+
+      # 🔑 أسرار القنوات (فيسبوك · تيليجرام) → بيئة النشر على Convex.
+      # قنوات النشر تُنفَّذ من أكشنات Convex وهي لا ترى أسرار GitHub إطلاقاً؛
+      # فندفع القيم إلى **نشر التطبيق نفسه الذي وصلته الشيفرة** حصراً — لا
+      # أسرار إلى نشر أجنبي (خصوصية + لا تغذية crons نشرة لا يخدم أحداً).
+      # إن لم يُنشر إلى نشر التطبيق (مفتاح يستهدف نشراً آخر أو لا مفتاح)،
+      # تُتخطّى المزامنة بتنبيه وتُفعّل تلقائياً في أول نشر بالمفتاح الصحيح.
+      - name: Sync channel secrets into the Convex deployment
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY || secrets.VITE_CONVEX_DEPLOY_KEY }}
+          FB_TOKEN_SECRET: ${{ secrets.FACEBOOK_ACCESS_TOKEN }}
+          FB_PAGE_SECRET: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FB_GROUP_SECRET: ${{ secrets.FACEBOOK_GROUP_ID }}
+          TG_TOKEN_SECRET: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_SECRET: ${{ secrets.TELEGRAM_CHAT_ID }}
+          APP_URL_OUT: ${{ steps.convex.outputs.url }}
+          DEPLOY_HOST_OUT: ${{ steps.convex.outputs.deploy_host }}
+        run: |
+          if [[ -z "${CONVEX_DEPLOY_KEY:-}" ]]; then
+            echo "::notice::لا يوجد مفتاح نشر في المستودع — تُتخطّى مزامنة أسرار القنوات (يمكن ضبطها من لوحة Convex مباشرة)."
+            exit 0
+          fi
+          APP_HOST="${APP_URL_OUT#https://}"
+          if [[ -z "${DEPLOY_HOST_OUT:-}" || "${DEPLOY_HOST_OUT}" != "${APP_HOST}" ]]; then
+            echo "::notice::تُخطّى مزامنة أسرار القنوات: الشيفرة لم تُنشر إلى نشر التطبيق (${DEPLOY_HOST_OUT:-لا نشر} ≠ ${APP_HOST}) — الأسرار لا تُدفع إلى نشر أجنبي. تُفعّل تلقائياً مع أول نشر بالمفتاح الصحيح."
+            exit 0
+          fi
+          [[ -n "$FB_TOKEN_SECRET" ]] && ./node_modules/.bin/convex env set FACEBOOK_ACCESS_TOKEN "$FB_TOKEN_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_ACCESS_TOKEN synced (prod)" || true
+          [[ -n "$FB_PAGE_SECRET" ]] && ./node_modules/.bin/convex env set FACEBOOK_PAGE_ID "$FB_PAGE_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_PAGE_ID synced (prod)" || true
+          [[ -n "$FB_GROUP_SECRET" ]] && ./node_modules/.bin/convex env set FACEBOOK_GROUP_ID "$FB_GROUP_SECRET" --prod >/dev/null 2>&1 && echo "FACEBOOK_GROUP_ID synced (prod)" || true
+          # `--` قبل القيمة: معرّفات محادثات تيليجرام قد تبدأ بـ - فيفسّرها CLI كخيار مجهول.
+          [[ -n "$TG_TOKEN_SECRET" ]] && ./node_modules/.bin/convex env set TELEGRAM_BOT_TOKEN --prod -- "$TG_TOKEN_SECRET" >/dev/null 2>&1 && echo "TELEGRAM_BOT_TOKEN synced (prod)" || true
+          [[ -n "$TG_CHAT_SECRET" ]] && ./node_modules/.bin/convex env set TELEGRAM_CHAT_ID --prod -- "$TG_CHAT_SECRET" >/dev/null 2>&1 && echo "TELEGRAM_CHAT_ID synced (prod)" || true
 
       # GitHub Pages serves this repo under /ViPYemen-/, so the Pages build
       # must use that base for assets to resolve. The main site (Vercel /

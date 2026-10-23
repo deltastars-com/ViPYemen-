@@ -65,6 +65,19 @@ jobs:
             echo "::notice::CONVEX_DEPLOY_KEY غير مضبوط في أسرار المستودع — تُتخطّى مزامنة متغيرات Convex."
             exit 0
           fi
+          # 🛡️ حماية النشر الأجنبي: لا ندفع أي سرّ إلى نشر غير الإنتاج الحيّ
+          # (notable-shepherd-367). صيغ المفاتيح الحديثة تحوي رابط النشر نفسه؛
+          # وإلا نجرّب deploy --dry-run لتحديد الهدف دون نشر. إن كان الهدف
+          # نشراً آخر → تُتخطّى المزامنة كاملة (لا أسرار تُغذّي crons نشرة فارغة).
+          PROD_HOST="notable-shepherd-367.convex.cloud"
+          TARGET="$(printf '%s' "$CONVEX_DEPLOY_KEY" | grep -oE '[a-z0-9-]+\.convex\.cloud' | head -1 || true)"
+          if [[ -z "$TARGET" ]]; then
+            TARGET="$(CONVEX_DEPLOY_KEY="$CONVEX_DEPLOY_KEY" ./node_modules/.bin/convex deploy --dry-run --typecheck disable 2>&1 | grep -oE '[a-z0-9-]+\.convex\.cloud' | head -1 || true)"
+          fi
+          if [[ -n "$TARGET" && "$TARGET" != "$PROD_HOST" ]]; then
+            echo "::notice::مفتاح النشر يستهدف $TARGET وليست $PROD_HOST — تُتخطّى مزامنة الأسرار (لا أسرار إلى نشر أجنبي). أنشئ المفتاح من صفحة نشر الإنتاج نفسه في لوحة Convex."
+            exit 0
+          fi
           KEYS=(
             FACEBOOK_ACCESS_TOKEN
             FACEBOOK_PAGE_ACCESS_TOKEN

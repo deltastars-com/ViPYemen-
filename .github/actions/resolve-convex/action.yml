@@ -182,8 +182,9 @@ runs:
             h2=$(printf '%s' "$envout" | grep -oE '[a-z0-9-]+\.convex\.(cloud|site)' | head -1 || true)
             if [ -n "$h2" ]; then host_of "$h2"; return 0; fi
           fi
-          # تعذّر تحديد الهدف — يُترك المفتاح ليُنشر (نثق به: المفاتيح الصحيحة
-          # من الصيغ القديمة لا تخسر، والقيد الآمن يبقى على الأجنبي المعلوم).
+          # تعذّر تحديد الهدف — تُرجع قيمة فارغة، والحلقة تُخطي المفتاح
+          # بلا نشر (سلوك مغلق أماناً: مفتاح مجهول الهدف لا يفعّل crons
+          # على أي نشر، والتنبيه يشرح إعادة التوليد من صفحة نشر التطبيق).
         }
         if [ "${MODE:-deploy}" = "deploy" ]; then
           if [ ${#KEYS[@]} -eq 0 ]; then
@@ -191,7 +192,12 @@ runs:
           fi
           for KEY in ${KEYS[@]+"${KEYS[@]}"}; do
             TARGET_HOST=$(key_target_host "$KEY")
-            if [ -n "$TARGET_HOST" ] && [ "$TARGET_HOST" != "$APP_HOST" ]; then
+            if [ -z "$TARGET_HOST" ]; then
+              SKIPPED_HOSTS="${SKIPPED_HOSTS}· (تعذّر تحديد هدف مفتاح — صيغة غير معروفة)"$'\n'
+              echo "::notice::تعذّر تحديد هدف أحد مفاتيح النشر من صيغته — نُخطّيه **بلا نشر** (مفتاح مجهول الهدف لا يُسمح له بتفعيل crons على أي نشر). للمتابعة: أنشئ مفتاحاً جديداً من صفحة نشر التطبيق نفسه في لوحة Convex وضَعه في CONVEX_DEPLOY_KEY."
+              continue
+            fi
+            if [ "$TARGET_HOST" != "$APP_HOST" ]; then
               SKIPPED_HOSTS="${SKIPPED_HOSTS}· ${TARGET_HOST}"$'\n'
               echo "::notice::مفتاح نشر يستهدف $TARGET_HOST (‹› نشر التطبيق $APP_HOST) — نُخطّيه بلا نشر: النشر الأجنبي يفعّل crons على نشر بلا بيانات ويبتلع من حصة الاستدعاءات المجانية."
               continue

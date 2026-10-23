@@ -82,8 +82,8 @@ jobs:
           if [[ -z "$TARGET" ]]; then
             TARGET="$(CONVEX_DEPLOY_KEY="$CONVEX_DEPLOY_KEY" ./node_modules/.bin/convex env list 2>&1 | grep -oE '[a-z0-9-]+\.convex\.(cloud|site)' | head -1 || true)"
           fi
-          if [[ -n "$TARGET" && "$TARGET" != "$PROD_HOST" ]]; then
-            echo "::notice::مفتاح النشر يستهدف $TARGET وليست $PROD_HOST — تُتخطّى مزامنة الأسرار (لا أسرار إلى نشر أجنبي). أنشئ المفتاح من صفحة نشر الإنتاج نفسه في لوحة Convex."
+          if [[ -z "$TARGET" || "$TARGET" != "$PROD_HOST" ]]; then
+            echo "::notice::هدف المفتاح ${TARGET:-غير معروف} وليست $PROD_HOST — تُتخطّى مزامنة الأسرار (لا أسرار إلى نشر أجنبي أو مجهول). أنشئ المفتاح من صفحة نشر الإنتاج نفسه في لوحة Convex."
             exit 0
           fi
           KEYS=(

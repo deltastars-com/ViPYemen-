@@ -70,9 +70,12 @@ jobs:
           # وإلا نجرّب deploy --dry-run لتحديد الهدف دون نشر. إن كان الهدف
           # نشراً آخر → تُتخطّى المزامنة كاملة (لا أسرار تُغذّي crons نشرة فارغة).
           PROD_HOST="notable-shepherd-367.convex.cloud"
-          TARGET="$(printf '%s' "$CONVEX_DEPLOY_KEY" | grep -oE '[a-z0-9-]+\.convex\.cloud' | head -1 || true)"
+          TARGET="$(printf '%s' "$CONVEX_DEPLOY_KEY" | grep -oE '[a-z0-9-]+\.convex\.(cloud|site)' | head -1 || true)"
           if [[ -z "$TARGET" ]]; then
-            TARGET="$(CONVEX_DEPLOY_KEY="$CONVEX_DEPLOY_KEY" ./node_modules/.bin/convex deploy --dry-run --typecheck disable 2>&1 | grep -oE '[a-z0-9-]+\.convex\.cloud' | head -1 || true)"
+            TARGET="$(CONVEX_DEPLOY_KEY="$CONVEX_DEPLOY_KEY" ./node_modules/.bin/convex deploy --dry-run --typecheck disable 2>&1 | grep -oE '[a-z0-9-]+\.convex\.(cloud|site)' | head -1 || true)"
+          fi
+          if [[ -z "$TARGET" ]]; then
+            TARGET="$(CONVEX_DEPLOY_KEY="$CONVEX_DEPLOY_KEY" ./node_modules/.bin/convex env list 2>&1 | grep -oE '[a-z0-9-]+\.convex\.(cloud|site)' | head -1 || true)"
           fi
           if [[ -n "$TARGET" && "$TARGET" != "$PROD_HOST" ]]; then
             echo "::notice::مفتاح النشر يستهدف $TARGET وليست $PROD_HOST — تُتخطّى مزامنة الأسرار (لا أسرار إلى نشر أجنبي). أنشئ المفتاح من صفحة نشر الإنتاج نفسه في لوحة Convex."

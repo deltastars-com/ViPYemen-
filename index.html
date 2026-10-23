@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#121685" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <!-- 🔐 Security: Prevent embedding in frames, block MIME sniffing -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!--
+      🔐 CSP داخل الصفحة: Vercel وNetlify يرسلان السياسة في ترويسات HTTP،
+      لكن GitHub Pages لا يسمح بترويسات مخصّصة — فهذه النسخة تحمي مرآة Pages
+      وتطبيق Capacitor أيضاً. مبنية من نفس سياسة vercel.json مع إضافة مضيفي
+      المرايا التي يفحصها التطبيق (onrender/netlify/pages) وواجهات Google.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://*.convex.cloud https://*.convex.site wss://*.convex.cloud wss://*.convex.site https://*.supabase.co https://api.telegram.org https://graph.facebook.com https://api.github.com https://text.pollinations.ai https://*.wikipedia.org https://api.resend.com https://*.onrender.com https://*.netlify.app https://*.pages.dev https://vi-p-yemen.vercel.app https://deltastars-com.github.io https://oauth2.googleapis.com https://www.googleapis.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), clipboard-write=(self)" />
+    <link rel="canonical" href="https://vi-p-yemen.vercel.app/" />
+    <title>ViP Yemen — منصة التوظيف والتسويق العقاري والإلكتروني والخدمات البرمجية</title>
+    <meta
+      name="description"
+      content="منصة ViP Yemen الشاملة في اليمن: التوظيف، التسويق العقاري (أراضي، منازل، عمارات، فيلات)، التسويق الإلكتروني، والخدمات البرمجية — بمراجعة إدارية تضمن الحقوق والجودة، وتواصل مباشر عبر واتساب 00967711780999"
+    />
+    <meta
+      name="keywords"
+      content="ViP Yemen, vipservicesyemen, توظيف اليمن, وظائف صنعاء, عقارات اليمن, بيع اراضي صنعاء, تسويق إلكتروني, بيع وشراء, برمجة تطبيقات, تطوير مواقع, خدمات برمجية, سوق يمني"
+    />
+    <meta name="author" content="المهندس علي درهم الدحان" />
+    <meta name="geo.region" content="YE" />
+    <meta name="geo.placename" content="Sanaa, Yemen" />
+    <meta name="application-name" content="ViP Yemen" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ViP Yemen" />
+    <meta property="og:title" content="ViP Yemen — منصة التوظيف والتسويق الإلكتروني والعقاري والخدمات البرمجية" />
+    <meta
+      property="og:description"
+      content="توظيف · عقارات · تسويق إلكتروني · برمجة وتطوير تطبيقات — منصة يمنية شاملة بمعايير عالمية، كل طلب يُراجع ويُدقَّق قبل النشر."
+    />
+    <meta property="og:url" content="https://vi-p-yemen.vercel.app/" />
+    <meta property="og:locale" content="ar_AR" />
+    <meta property="og:image" content="https://vi-p-yemen.vercel.app/icons/icon-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="شعار منصة ViP Yemen" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ViP Yemen — منصة التوظيف والتسويق الإلكتروني والعقاري والخدمات البرمجية" />
+    <meta
+      name="twitter:description"
+      content="توظيف · عقارات · تسويق إلكتروني · برمجة — منصة يمنية شاملة بمعايير عالمية."
+    />
+    <meta name="twitter:image" content="https://vi-p-yemen.vercel.app/icons/icon-512.png" />
+
+    <!-- PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ViP Yemen" />
+    <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+
+    <!-- Performance: warm up the backend + update-check connections early -->
+    <link rel="preconnect" href="https://animated-blackbird-438.convex.cloud" crossorigin />
+    <link rel="dns-prefetch" href="https://api.github.com" />
+
+    <!-- Structured data: Organization + WebSite -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "ViP Yemen",
+        "alternateName": "vipservicesyemen",
+        "url": "https://vi-p-yemen.vercel.app",
+        "logo": "https://vi-p-yemen.vercel.app/icons/icon-512.png",
+        "email": "vipservicesyemen@gmail.com",
+        "telephone": "+967711780999",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Sanaa",
+          "addressCountry": "YE"
+        },
+        "sameAs": [
+          "https://www.facebook.com/vipyemen1",
+          "https://www.facebook.com/groups/346010664332427",
+          "https://www.instagram.com/vipyemen1",
+          "https://www.tiktok.com/@vip_yemen7",
+          "https://x.com/Vipyemen7",
+          "https://www.linkedin.com/in/ali-aldahan-57b5a2231",
+          "https://www.youtube.com/@vipyemen1",
+          "https://t.me/vipyemen77",
+          "https://beacons.ai/vipyemen"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+967711780999",
+          "contactType": "customer service",
+          "areaServed": "YE",
+          "availableLanguage": ["ar", "en"]
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "ViP Yemen",
+        "url": "https://vi-p-yemen.vercel.app",
+        "inLanguage": "ar",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://vi-p-yemen.vercel.app/assistant?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+    <script type="module" crossorigin src="/ViPYemen-/assets/index-CvwGzQ1Y.js"></script>
+    <link rel="modulepreload" crossorigin href="/ViPYemen-/assets/vendor-react-K_sBQnKm.js">
+    <link rel="modulepreload" crossorigin href="/ViPYemen-/assets/vendor-convex-CQz0PHMz.js">
+    <link rel="modulepreload" crossorigin href="/ViPYemen-/assets/vendor-icons-UntTtfTJ.js">
+    <link rel="stylesheet" crossorigin href="/ViPYemen-/assets/index-CjQJ1SVG.css">
+  <link rel="manifest" href="/ViPYemen-/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div style="direction:rtl;font-family:sans-serif;padding:40px;text-align:center;color:#fff;background:#121685;min-height:100vh">
+        <h1>ViP Yemen</h1>
+        <p>يتطلب تشغيل المنصة تمكين JavaScript في المتصفح.</p>
+      </div>
+    </noscript>
+  </body>
+</html>

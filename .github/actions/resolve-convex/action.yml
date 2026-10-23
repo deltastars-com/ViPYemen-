@@ -65,8 +65,8 @@ runs:
         # تقييح المفاتيح: مسافات/أسطر زائدة من اللصق تُفسد صيغة المفتاح
         # فترفضه Convex بخطأ InvalidDeploymentName — نزيل كل المسافات
         # (مفاتيح النشر لا تحتوي مسافات أصلاً).
-        KEY_PRIMARY="$(printf '%s' "${KEY_PRIMARY:-}" | tr -d '[:space:]')"
-        KEY_ALT="$(printf '%s' "${KEY_ALT:-}" | tr -d '[:space:]')"
+        KEY_PRIMARY="$(printf '%s' "${KEY_PRIMARY:-}" | tr -d '[:space:]' | tr -d "\"'\`")"
+        KEY_ALT="$(printf '%s' "${KEY_ALT:-}" | tr -d '[:space:]' | tr -d "\"'\`")"
 
         CLI="./node_modules/.bin/convex"
         DEFAULT_URL="https://notable-shepherd-367.convex.cloud"

@@ -60,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           # تقييح المفتاح من مسافات/أسطر زائدة من اللصق (تُرفض بـ InvalidDeploymentName)
-          CONVEX_DEPLOY_KEY="$(printf '%s' "${CONVEX_DEPLOY_KEY:-}" | tr -d '[:space:]')"
+          CONVEX_DEPLOY_KEY="$(printf '%s' "${CONVEX_DEPLOY_KEY:-}" | tr -d '[:space:]' | tr -d "\"'\`")"
           if [[ -z "${CONVEX_DEPLOY_KEY:-}" ]]; then
             echo "::notice::CONVEX_DEPLOY_KEY غير مضبوط في أسرار المستودع — تُتخطّى مزامنة متغيرات Convex."
             exit 0

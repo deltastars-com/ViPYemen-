@@ -295,7 +295,7 @@ sh scripts/vault-import.sh
 شريط التنبيهات داخل التطبيق وسجل `/mirrors` وسير النشر والمراقبة.
 
 > بعد إضافة أي مرآة، سجّل رابطها في خدمة مراقبة مجانية (UptimeRobot /
-> cron-job.org) على النقطة `https://notable-shepherd-367.convex.site/health`
+> cron-job.org) على النقطة `https://animated-blackbird-438.convex.site/health`
 > لتصلك تنبيهات فورية إضافة إلى التذكرة التلقائية.
 
 التفاصيل الكاملة لكل سيرفر: انظر `FREE-SERVERS.md`.

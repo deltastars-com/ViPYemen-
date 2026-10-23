@@ -33,7 +33,7 @@ function flag(name, fallback) {
 }
 
 const BASE = (
-  flag("url", process.env.LOADTEST_URL || "https://notable-shepherd-367.convex.cloud") || ""
+  flag("url", process.env.LOADTEST_URL || "https://animated-blackbird-438.convex.cloud") || ""
 ).replace(/\/+$/, "");
 const REQUESTS = arg("requests", 2000);
 const CONCURRENCY = arg("concurrency", 50);

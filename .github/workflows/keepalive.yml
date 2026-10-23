@@ -42,8 +42,8 @@ jobs:
           pulse "Render"       "https://vipyemen.onrender.com"
           pulse "Vercel"       "https://vi-p-yemen.vercel.app"
           pulse "GitHub Pages" "https://deltastars-com.github.io/ViPYemen-/"
-          pulse "Convex backend" "https://notable-shepherd-367.convex.cloud"
-          pulse "Convex HTTP"  "https://notable-shepherd-367.convex.site/ping"
+          pulse "Convex backend" "https://animated-blackbird-438.convex.cloud"
+          pulse "Convex HTTP"  "https://animated-blackbird-438.convex.site/ping"
 
           # مرايا إضافية اختيارية (Netlify / Cloudflare Pages …) — تُضاف
           # كمتغير مستودع EXTRA_MIRROR_URLS بصيغة: "اسم|https://...,اسم|https://..."

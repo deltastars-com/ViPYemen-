@@ -15,7 +15,7 @@ import { ConvexReactClient } from "convex/react";
  */
 
 /** Known-good live deployment used whenever the env value is missing/invalid. */
-export const CONVEX_FALLBACK_URL = "https://notable-shepherd-367.convex.cloud";
+export const CONVEX_FALLBACK_URL = "https://animated-blackbird-438.convex.cloud";
 
 /**
  * A valid Convex deployment address is either a hosted URL of the form

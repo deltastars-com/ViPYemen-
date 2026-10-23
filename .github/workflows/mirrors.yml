@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL || 'https://notable-shepherd-367.convex.cloud' }}
+      VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL || vars.VITE_CLOUD_URL || 'https://animated-blackbird-438.convex.cloud' }}
       VITE_APP_VERSION: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v5

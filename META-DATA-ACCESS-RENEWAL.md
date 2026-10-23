@@ -56,7 +56,7 @@
 ## تحقّق سريع من أن التجديد مكتمل
 
 ```bash
-curl -sS https://notable-shepherd-367.convex.site/channels
+curl -sS https://animated-blackbird-438.convex.site/channels
 # المطلوب بعد نجاح التجديد وربط التوكن:
 #   facebookRenewal.canPost      == true
 #   facebookRenewal.probeDetail  == "✅ تأكدت صلاحية النشر باختبار فعلي..."

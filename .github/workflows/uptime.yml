@@ -54,8 +54,8 @@ jobs:
           check "Vercel mirror"   "https://vi-p-yemen.vercel.app"
           check "Render mirror"   "https://vipyemen.onrender.com"
           check "GitHub Pages"    "https://deltastars-com.github.io/ViPYemen-/"
-          check "Convex backend"  "https://notable-shepherd-367.convex.cloud"
-          check "Convex HTTP"     "https://notable-shepherd-367.convex.site/health"
+          check "Convex backend"  "https://animated-blackbird-438.convex.cloud"
+          check "Convex HTTP"     "https://animated-blackbird-438.convex.site/health"
 
           # مرايا إضافية اختيارية (Netlify / Cloudflare Pages …) — متغير مستودع
           if [ -n "${EXTRA_MIRROR_URLS:-}" ]; then
@@ -83,7 +83,7 @@ jobs:
         if: always()
         run: |
           set -uo pipefail
-          export BODY=$(curl -sS -m 30 -X POST "https://notable-shepherd-367.convex.cloud/api/query" \
+          export BODY=$(curl -sS -m 30 -X POST "https://animated-blackbird-438.convex.cloud/api/query" \
             -H 'content-type: application/json' \
             -d '{"path":"controlPanel:publicState","args":{},"format":"json"}' 2>/dev/null || true)
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"

@@ -38,8 +38,8 @@
 | الموقع الأساسي (Vercel) | https://vi-p-yemen.vercel.app |
 | مرآة Render | https://vipyemen.onrender.com |
 | مرآة GitHub Pages | https://deltastars-com.github.io/ViPYemen-/ |
-| الواجهة الخلفية (Convex) | https://notable-shepherd-367.convex.cloud |
-| واجهة HTTP العامة | https://notable-shepherd-367.convex.site |
+| الواجهة الخلفية (Convex) | https://animated-blackbird-438.convex.cloud |
+| واجهة HTTP العامة | https://animated-blackbird-438.convex.site |
 | المستودع الرسمي | https://github.com/deltastars-com/ViPYemen- |
 | الإصدارات الرسمية | https://github.com/deltastars-com/ViPYemen-/releases |
 | بوت تيليجرام | @vipyemen_bot · القناة @vipyemen77 |

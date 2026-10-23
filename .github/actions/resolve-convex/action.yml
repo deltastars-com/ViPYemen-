@@ -69,7 +69,10 @@ runs:
         KEY_ALT="$(printf '%s' "${KEY_ALT:-}" | tr -d '[:space:]' | tr -d "\"'\`")"
 
         CLI="./node_modules/.bin/convex"
-        DEFAULT_URL="https://notable-shepherd-367.convex.cloud"
+        # نشر الإنتاج الفعلي في لوحة Convex (مشروع ViPYemen ← Production):
+        # animated-blackbird-438 هو الإنتاج الوحيد الذي يملك المستخدم صلاحية
+        # توليد مفتاح نشر له — وكل المفاتيح التي وصلتنا حتى الآن استهدفته.
+        DEFAULT_URL="https://animated-blackbird-438.convex.cloud"
 
         host_of() { printf '%s' "$1" | sed -E 's#^https://([^/]+).*#\1#'; }
         url_of() { printf '%s' "$1" | grep -oE 'https://[a-z0-9-]+\.convex\.(site|cloud)' | head -1 || true; }
@@ -116,22 +119,24 @@ runs:
         APP_URL="$CONFIGURED_URL"
         if [ "$STATE" = "ok" ]; then
           echo "✅ النشر المُعدّ $CONFIGURED_URL حيّ ويحمل محتوى (فحص استعلام المنصة)."
+        elif [ "$STATE" = "empty" ]; then
+          # نشر الإنتاج الفارغ ليس خطأ: نشر الإنتاج الجديد يبدأ فارغاً ثم
+          # تُزرع الإعلانات والعروض تلقائياً عند أول زيارة للتطبيق
+          # (seed.ensureSeedData) — والبيانات القديمة تبقى في نشرها الأصلي
+          # دون أي حذف. القاعدة الصارمة السابقة كانت ترفض نشر الإنتاج وهو
+          # حيّ لكنه حديث، فكان المفتاح الصحيح يُرفض دائماً بلا بديل.
+          echo "::warning::النشر المُعدّ $CONFIGURED_URL حيّ و**فارغ** (0 طلب/إعلان) — وهو نشر الإنتاج المعتمد؛ تُزرع الإعلانات والعروض والإصدارات تلقائياً عند أول زيارة للتطبيق، والبيانات القديمة تبقى في نشرها الأصلي دون حذف."
         elif [ "$CONFIGURED_URL" != "$DEFAULT_URL" ]; then
-          if [ "$STATE" = "empty" ]; then
-            echo "::warning::النشر المُعدّ $CONFIGURED_URL حيّ لكنه **فارغ** (0 طلب/إعلان/عرض) — والتطبيق لا يُشحن على منصة فارغة."
-          else
-            echo "::warning::النشر المُعدّ $CONFIGURED_URL لا يستجيب لاستعلامات المنصة."
-          fi
-          echo "::warning::ثبّتنا عنوان التطبيق على النشر الحامل للبيانات $DEFAULT_URL. لنقل المنصة إلى $CONFIGURED_URL: انسخ البيانات إليه من لوحة Convex (Settings ← Backup & Restore أو Export/Import) ثم أعد تشغيل السير عمل."
+          echo "::warning::النشر المُعدّ $CONFIGURED_URL لا يستجيب لاستعلامات المنصة — نُثبت العنوان على النشر المعروف $DEFAULT_URL."
           APP_URL="$DEFAULT_URL"
           STATE=$(probe "$APP_URL")
           if [ "$STATE" = "dead" ]; then
-            echo "::error::حتى النشر الحامل للبيانات $APP_URL لا يستجيب — أوقفنا البناء بدل شحن تطبيق ميت."
+            echo "::error::حتى النشر المعروف $APP_URL لا يستجيب — أوقفنا البناء بدل شحن تطبيق ميت."
             exit 1
           fi
-          echo "✅ النشر الحامل للبيانات $APP_URL حيّ ($STATE)."
+          echo "✅ النشر المعروف $APP_URL حيّ ($STATE)."
         else
-          echo "::error::النشر الحامل للبيانات $APP_URL لا يستجيب لاستعلامات المنصة ($STATE) — لا يمكن بناء تطبيق سليم."
+          echo "::error::النشر المعروف $APP_URL لا يستجيب لاستعلامات المنصة ($STATE) — لا يمكن بناء تطبيق سليم."
           exit 1
         fi
         APP_HOST=$(host_of "$APP_URL")

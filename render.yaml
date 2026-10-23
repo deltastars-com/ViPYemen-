@@ -24,7 +24,7 @@ services:
       - key: NODE_VERSION
         value: "22"
       - key: VITE_CONVEX_URL
-        value: https://notable-shepherd-367.convex.cloud
+        value: https://animated-blackbird-438.convex.cloud
     headers:
       - path: /*
         name: X-Frame-Options
